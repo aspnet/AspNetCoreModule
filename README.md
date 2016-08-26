@@ -54,5 +54,5 @@ If chose to install from the command prompt, you can run the following command.
 .\build.cmd /property:platform=x64
 
 # Build in Release Configuration
-.\build.cmd /property:configuration:release
+.\build.cmd /property:configuration=release
 ```
