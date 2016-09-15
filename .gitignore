@@ -20,6 +20,9 @@ project.lock.json
 *.psess
 *.vsp
 *.pidb
+*.obj
+*.idb
+*.tlog
 *.userprefs
 *DS_Store
 *.ncrunchsolution
@@ -29,3 +32,9 @@ project.lock.json
 *.vs/
 .testPublish/
 .build/
+src/iislib/x86/
+src/iislib/x64/
+src/iislib/win32/
+src/aspnetcore/x86/
+src/aspnetcore/x64/
+src/aspnetcore/win32/

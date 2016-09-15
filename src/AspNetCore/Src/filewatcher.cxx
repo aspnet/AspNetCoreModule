@@ -98,7 +98,7 @@ Win32 error
             INFINITE);
 
         DBG_ASSERT(fSuccess);		
-		DebugPrint(1, "FILE_WATCHER::ChangeNotificationThread");
+        DebugPrint(1, "FILE_WATCHER::ChangeNotificationThread");
         dwErrorStatus = fSuccess ? ERROR_SUCCESS : GetLastError();
 
         if (completionKey == FILE_WATCHER_SHUTDOWN_KEY)
@@ -106,7 +106,7 @@ Win32 error
             continue;
         }
 
-		DBG_ASSERT(pOverlapped != NULL);
+        DBG_ASSERT(pOverlapped != NULL);
         if (pOverlapped != NULL)
         {
             FileWatcherCompletionRoutine(
@@ -146,16 +146,26 @@ None
 {
     FILE_WATCHER_ENTRY *     pMonitorEntry;
     pMonitorEntry = CONTAINING_RECORD(pOverlapped, FILE_WATCHER_ENTRY, _overlapped);
-
+    pMonitorEntry->DereferenceFileWatcherEntry();
     DBG_ASSERT(pMonitorEntry != NULL);
 
-    pMonitorEntry->HandleChangeCompletion(dwCompletionStatus,
-        cbCompletion);
-	//
-	// Continue monitoring
-	//
-	pMonitorEntry->Monitor();
+    pMonitorEntry->HandleChangeCompletion(dwCompletionStatus, cbCompletion);
 
+    if (pMonitorEntry->QueryIsValid())
+    {
+        //
+        // Continue monitoring
+        //
+        pMonitorEntry->Monitor();
+    }
+    else
+    {
+        //
+        // Marked by application distructor
+        // Deference the entry to delete it
+        // 
+        pMonitorEntry->DereferenceFileWatcherEntry();
+    }
 }
 
 
@@ -164,7 +174,9 @@ FILE_WATCHER_ENTRY::FILE_WATCHER_ENTRY(FILE_WATCHER *   pFileMonitor) :
     _hDirectory(INVALID_HANDLE_VALUE),
     _hImpersonationToken(NULL),
     _pApplication(NULL),
-    _lStopMonitorCalled(0)
+    _lStopMonitorCalled(0),
+    _cRefs(1),
+    _fIsValid(TRUE)
 {
     _dwSignature = FILE_WATCHER_ENTRY_SIGNATURE;
     InitializeSRWLock(&_srwLock);
@@ -216,6 +228,10 @@ HRESULT
     BOOL                        fFileChanged = FALSE;
 
     AcquireSRWLockExclusive(&_srwLock);
+    if (!_fIsValid)
+    {
+        goto Finished;
+    }
 
     // When directory handle is closed then HandleChangeCompletion  
     // happens with cbCompletion = 0 and dwCompletionStatus = 0  
@@ -230,12 +246,12 @@ HRESULT
         goto Finished;
     }
 
-	//
-	// There could be a FCN overflow
-	// Let assume the file got changed instead of checking files 
-	// Othersie we have to cache the file info 
-	//
-	if (cbCompletion == 0)
+    //
+    // There could be a FCN overflow
+    // Let assume the file got changed instead of checking files 
+    // Othersie we have to cache the file info 
+    //
+    if (cbCompletion == 0)
     { 
         fFileChanged = TRUE;
     }
@@ -272,7 +288,7 @@ HRESULT
         }
     }
 
-	if (fFileChanged)
+    if (fFileChanged)
     {
         //
         // so far we only monitoring app_offline
@@ -281,7 +297,7 @@ HRESULT
     }
 
 Finished:
-	ReleaseSRWLockExclusive(&_srwLock);
+    ReleaseSRWLockExclusive(&_srwLock);
     return hr;
 }
 
@@ -293,7 +309,7 @@ FILE_WATCHER_ENTRY::Monitor(VOID)
     DWORD   cbRead;
 
     AcquireSRWLockExclusive(&_srwLock);
-
+    ReferenceFileWatcherEntry();
     ZeroMemory(&_overlapped, sizeof(_overlapped));
 
     if(!ReadDirectoryChangesW(_hDirectory,
@@ -310,7 +326,6 @@ FILE_WATCHER_ENTRY::Monitor(VOID)
 
     ReleaseSRWLockExclusive(&_srwLock);
     return hr;
-
 }
 
 VOID
@@ -403,30 +418,30 @@ FILE_WATCHER_ENTRY::Create(
         }
     }
 
-	_hDirectory = CreateFileW(
-		_strDirectoryName.QueryStr(),
-		FILE_LIST_DIRECTORY,
-		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-		NULL,
-		OPEN_EXISTING,
-		FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
-		NULL);
+    _hDirectory = CreateFileW(
+        _strDirectoryName.QueryStr(),
+        FILE_LIST_DIRECTORY,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+        NULL);
 
-	if (_hDirectory == INVALID_HANDLE_VALUE)
-	{
-		hr = HRESULT_FROM_WIN32(GetLastError());
-		goto Finished;
-	}
+    if (_hDirectory == INVALID_HANDLE_VALUE)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        goto Finished;
+    }
 
-	if (CreateIoCompletionPort(
-		_hDirectory,
-		_pFileMonitor->QueryCompletionPort(),
-		NULL,
-		0) == NULL)
-	{
-		hr = HRESULT_FROM_WIN32(GetLastError());
-		goto Finished;
-	}
+    if (CreateIoCompletionPort(
+        _hDirectory,
+        _pFileMonitor->QueryCompletionPort(),
+        NULL,
+        0) == NULL)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        goto Finished;
+    }
 
     //
     // Start monitoring
