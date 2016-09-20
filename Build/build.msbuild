@@ -10,7 +10,7 @@
    <Target Name="Build"> 
      <MSBuild Targets="$(BuildTargets)" 
        Projects="@(Projects)" 
-       Properties="Configuration=$(Configuration);Platform=$(Platform);PlatformToolset=v120_xp" />
+       Properties="Configuration=$(Configuration);Platform=$(Platform);PlatformToolset=v140_xp" />
    </Target> 
 
    <Target Name="Clean"> 
@@ -21,7 +21,7 @@
    <Target Name="Rebuild"> 
      <MSBuild Targets="Clean;Build" 
        Projects="$(MSBuildProjectFile)" 
-       Properties="BuildTargets=Rebuild;Configuration=$(Configuration);Platform=$(Platform);PlatformToolset=v120_xp"/> 
+       Properties="BuildTargets=Rebuild;Configuration=$(Configuration);Platform=$(Platform);PlatformToolset=v140_xp"/> 
    </Target> 
 
    <Target Name="Test" DependsOnTargets="Build"> 
