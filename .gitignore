@@ -24,6 +24,8 @@ project.lock.json
 *.idb
 *.tlog
 *.userprefs
+*.opendb
+*.db
 *DS_Store
 *.ncrunchsolution
 *.*sdf
@@ -32,9 +34,11 @@ project.lock.json
 *.vs/
 .testPublish/
 .build/
-src/iislib/x86/
-src/iislib/x64/
-src/iislib/win32/
-src/aspnetcore/x86/
-src/aspnetcore/x64/
-src/aspnetcore/win32/
+src/*/x86/
+src/*/x64/
+src/*/win32/
+src/*/x86/
+src/*/x64/
+src/*/win32/
+src/*/version.h
+src/*/aspnetcore_msg.h
