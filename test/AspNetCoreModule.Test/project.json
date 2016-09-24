@@ -1,6 +1,13 @@
 {
   "buildOptions": {
-    "warningsAsErrors": true
+    "warningsAsErrors": true,
+    "copyToOutput": {
+      "include": [
+        "Http.config",
+        "nginx.conf",
+        "NtlmAuthentication.config"
+      ]
+    }
   },
   "testRunner": "xunit",
   "dependencies": {
