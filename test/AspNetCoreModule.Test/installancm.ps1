@@ -292,21 +292,21 @@ if (-not (Check-TargetFiles))
 }
 
 # Extrack nuget package
-if (Extract-ANCMFromNugetPackage)
+if (-not (Extract-ANCMFromNugetPackage))
 {
-    # clean up IIS and IISExpress worker processes
-    Say ("$LogHeader Stopping w3wp.exe process")
-    Stop-Process -Name w3wp -ErrorAction Ignore
-
-    Say ("$LogHeader Stopping iisexpress.exe process")
-    Stop-Process -Name iisexpress -ErrorAction Ignore
-
-    # Update ANCM files for IIS and IISExpress
-    Update-ANCM 
-
-    Say ("$LogHeader Installation finished")
-    exit 0
+    Say ("$LogHeader Error!!! Failed to update ANCM files")
+    exit 1
 }
 
-Say ("$LogHeader Error!!! Failed to update ANCM files")
-exit 1
+# clean up IIS and IISExpress worker processes
+Say ("$LogHeader Stopping w3wp.exe process")
+Stop-Process -Name w3wp -ErrorAction Ignore
+
+Say ("$LogHeader Stopping iisexpress.exe process")
+Stop-Process -Name iisexpress -ErrorAction Ignore
+
+# Update ANCM files for IIS and IISExpress
+Update-ANCM 
+
+Say ("$LogHeader Installation finished")
+exit 0
