@@ -261,7 +261,7 @@ if (-not (Test-Path $ExtractFilesTo))
 $ancmNugetFilePath = Get-ANCMNugetFilePath
 if (-not (Test-Path $ancmNugetFilePath))
 {
-    Say ("$LogHeader Error!!! Failed to AspNetCoreModule nupkg file under the directory $PackagePath")
+    Say ("$LogHeader Error!!! Failed to find AspNetCoreModule nupkg file under $PackagePath nor its child directories")
     exit 1
 }
 
