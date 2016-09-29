@@ -27,28 +27,37 @@ function Check-TargetFiles() {
     $LogHeader = "[$ScriptFileName::$functionName]"
     $result = $true
 
-    if (-not (Test-Path $aspnetCorex64To))
+    if (-not $isIISExpressInstalled -and -not $isIISInstalled)
     {
-        Say ("$LogHeader Error!!! Failed to find the file $aspnetCorex64To")
+        Say ("$LogHeader Both IIS and IISExpress does not have aspnetcore.dll file")
         $result = $false
     }
-    if (-not (Test-Path $aspnetCoreSchemax64To))
+
+    if ($isIISExpressInstalled)
     {
-        Say ("$LogHeader Error!!! Failed to find the file $aspnetCoreSchemax64To")
-        $result = $false
-    }
-    if ($is64BitMachine)
-    {
-        if (-not (Test-Path $aspnetCoreWin32To))
+        if (-not (Test-Path $aspnetCorex64To))
         {
-            Say ("$LogHeader Error!!! Failed to find the file $aspnetCoreWin32To")
+            Say ("$LogHeader Error!!! Failed to find the file $aspnetCorex64To")
             $result = $false
-        }    
-        if (-not (Test-Path $aspnetCoreSchemaWin32To))
+        }
+        if (-not (Test-Path $aspnetCoreSchemax64To))
         {
-            Say ("$LogHeader Error!!! Failed to find the file $aspnetCoreSchemaWin32To")
+            Say ("$LogHeader Error!!! Failed to find the file $aspnetCoreSchemax64To")
             $result = $false
-        }  
+        }
+        if ($is64BitMachine)
+        {
+            if (-not (Test-Path $aspnetCoreWin32To))
+            {
+                Say ("$LogHeader Error!!! Failed to find the file $aspnetCoreWin32To")
+                $result = $false
+            }    
+            if (-not (Test-Path $aspnetCoreSchemaWin32To))
+            {
+                Say ("$LogHeader Error!!! Failed to find the file $aspnetCoreSchemaWin32To")
+                $result = $false
+            }  
+        }
     }
 
     if ($isIISInstalled)
@@ -161,19 +170,26 @@ function Update-ANCM() {
     $functionName = "Update-ANCM"
     $LogHeader = "[$ScriptFileName::$functionName]"
 
-    if ($is64BitMachine)
+    if ($isIISExpressInstalled)
     {
-        Say ("$LogHeader Start updating ANCM files for IISExpress for amd64 machine...")
-        Update-File $aspnetCorex64From $aspnetCorex64To
-        Update-File $aspnetCoreWin32From $aspnetCoreWin32To
-        Update-File $aspnetCoreSchemax64From $aspnetCoreSchemax64To
-        Update-File $aspnetCoreSchemaWin32From $aspnetCoreSchemaWin32To
+        if ($is64BitMachine)
+        {
+            Say ("$LogHeader Start updating ANCM files for IISExpress for amd64 machine...")
+            Update-File $aspnetCorex64From $aspnetCorex64To
+            Update-File $aspnetCoreWin32From $aspnetCoreWin32To
+            Update-File $aspnetCoreSchemax64From $aspnetCoreSchemax64To
+            Update-File $aspnetCoreSchemaWin32From $aspnetCoreSchemaWin32To
+        }
+        else
+        {
+            Say ("$LogHeader Start updating ANCM files for IISExpress for x86 machine...")
+            Update-File $aspnetCoreWin32From $aspnetCorex64To
+            Update-File $aspnetCoreSchemaWin32From $aspnetCoreSchemax64To
+        }
     }
     else
     {
-        Say ("$LogHeader Start updating ANCM files for IISExpress for x86 machine...")
-        Update-File $aspnetCoreWin32From $aspnetCorex64To
-        Update-File $aspnetCoreSchemaWin32From $aspnetCoreSchemax64To
+        Say ("$LogHeader Can't find aspnetcore.dll for IISExpress. Skipping updating ANCM files for IISExpress")
     }
 
     if ($isIISInstalled)
@@ -191,6 +207,10 @@ function Update-ANCM() {
             Update-File $aspnetCoreWin32IISFrom $aspnetCorex64IISTo                
             Update-File $aspnetCoreSchemaWin32From $aspnetCoreSchemax64IISTo
         }
+    }
+    else
+    {
+        Say ("$LogHeader Can't find aspnetcore.dll for IIS. Skipping updating ANCM files for IIS server")
     }
 }
 
@@ -282,6 +302,7 @@ $aspnetCoreWin32IISTo = "$env:windir\syswow64\inetsrv\aspnetcore.dll"
 $aspnetCoreSchemax64IISTo = "$env:windir\system32\inetsrv\config\schema\aspnetcore_schema.xml"
 
 $is64BitMachine = $env:PROCESSOR_ARCHITECTURE.ToLower() -eq "amd64"
+$isIISExpressInstalled = Test-Path $aspnetCorex64To
 $isIISInstalled = Test-Path $aspnetCorex64IISTo
 
 # Check expected files are available on IIS/IISExpress directory
