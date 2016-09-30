@@ -18,13 +18,17 @@
 .PARAMETER ExtractFilesTo
     Default: $PSScriptRoot\..\..\artifacts"
     Output path where aspentcore.dll file is extracted
+
+Example:
+    .\installancm.ps1 "C:\Users\jhkim\AppData\Local\Temp\ihvufnf1.atw\ancm\Debug"
+
 #>
 [cmdletbinding()]
 param(
    [Parameter(Mandatory=$false, Position = 0)]
-   [string]  $ExtractFilesTo="$PSScriptRoot\..\..\artifacts",
+   [string]  $ExtractFilesTo="$PSScriptRoot\..\artifacts",
    [Parameter(Mandatory=$false, Position = 1)]
-   [string]  $PackagePath="$PSScriptRoot\..\..\artifacts",
+   [string]  $PackagePath="$PSScriptRoot\..\artifacts",
    [Parameter(Mandatory=$false)]
    [switch] $Rollback=$false,
    [Parameter(Mandatory=$false)]
@@ -321,22 +325,29 @@ $EXIT_SUCCESS = 0
 $ScriptFileName = "installancm.ps1"
 $LogHeader = "[$ScriptFileName]"
 
-if (-not (Test-Path $PackagePath))
+if ($Extract -and (-Not $Rollback))
 {
-    Say ("$LogHeader Error!!! Failed to find the directory $PackagePath")
-    exit $EXIT_FAIL
-}
-if (-not (Test-Path $ExtractFilesTo))
-{
-    Say ("$LogHeader Error!!! Failed to find the directory $ExtractFilesTo")
-    exit $EXIT_FAIL
+    if (-not (Test-Path $PackagePath))
+    {
+        Say ("$LogHeader Error!!! Failed to find the directory $PackagePath")
+        exit $EXIT_FAIL
+    }
+
+    $ancmNugetFilePath = Get-ANCMNugetFilePath
+    if (-not (Test-Path $ancmNugetFilePath))
+    {
+        Say ("$LogHeader Error!!! Failed to find AspNetCoreModule nupkg file under $PackagePath nor its child directories")
+        exit $EXIT_FAIL
+    }
 }
 
-$ancmNugetFilePath = Get-ANCMNugetFilePath
-if (-not (Test-Path $ancmNugetFilePath))
+if (-Not $Rollback)
 {
-    Say ("$LogHeader Error!!! Failed to find AspNetCoreModule nupkg file under $PackagePath nor its child directories")
-    exit $EXIT_FAIL
+    if (-not (Test-Path $ExtractFilesTo))
+    {
+        Say ("$LogHeader Error!!! Failed to find the directory $ExtractFilesTo")
+        exit $EXIT_FAIL
+    }
 }
 
 $TempExtractFilesTo = $ExtractFilesTo + "\.ancm"
