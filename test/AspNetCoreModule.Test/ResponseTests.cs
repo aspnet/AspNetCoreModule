@@ -18,12 +18,12 @@ namespace AspNetCoreModule.FunctionalTests
     // Uses ports ranging 5080 - 5099.
     public class ResponseTests : IClassFixture<UseLatestAncm>
     {
-        [ConditionalTheory]
-        [OSSkipCondition(OperatingSystems.Linux)]
-        [OSSkipCondition(OperatingSystems.MacOSX)]
-        [InlineData(ServerType.IISExpress, RuntimeFlavor.Clr, RuntimeArchitecture.x64, "http://localhost:5090/", ApplicationType.Portable)]
-        [InlineData(ServerType.IISExpress, RuntimeFlavor.Clr, RuntimeArchitecture.x64, "http://localhost:5091/", ApplicationType.Portable)]
-        //[InlineData(ServerType.IISExpress, RuntimeFlavor.Clr, RuntimeArchitecture.x86, "http://localhost:5090/", ApplicationType.Portable)]
+        //[ConditionalTheory]
+        //[OSSkipCondition(OperatingSystems.Linux)]
+        //[OSSkipCondition(OperatingSystems.MacOSX)]
+        //[InlineData(ServerType.IISExpress, RuntimeFlavor.Clr, RuntimeArchitecture.x64, "http://localhost:5090/", ApplicationType.Portable)]
+        //[InlineData(ServerType.IISExpress, RuntimeFlavor.Clr, RuntimeArchitecture.x64, "http://localhost:5091/", ApplicationType.Portable)]
+        ////[InlineData(ServerType.IISExpress, RuntimeFlavor.Clr, RuntimeArchitecture.x86, "http://localhost:5090/", ApplicationType.Portable)]
         public Task BasicTest(ServerType serverType, RuntimeFlavor runtimeFlavor, RuntimeArchitecture architecture, string applicationBaseUrl, ApplicationType applicationType)
         {
             return ResponseFormats(serverType, runtimeFlavor, architecture, applicationBaseUrl, CheckChunkedAsync, applicationType);
