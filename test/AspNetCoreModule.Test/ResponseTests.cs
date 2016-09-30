@@ -16,7 +16,7 @@ using Xunit.Sdk;
 namespace AspNetCoreModule.FunctionalTests
 {
     // Uses ports ranging 5080 - 5099.
-    public class ResponseTests
+    public class ResponseTests : IClassFixture<UseLatestAncm>
     {
         [ConditionalTheory]
         [OSSkipCondition(OperatingSystems.Linux)]

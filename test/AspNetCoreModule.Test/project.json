@@ -20,14 +20,10 @@
     "xunit": "2.2.0-*"
   },
   "frameworks": {
-    "netcoreapp1.0": {
-      "dependencies": {
-        "Microsoft.NETCore.App": {
-          "version": "1.0.0-*",
-          "type": "platform"
-        }
+    "net451": {
+      "frameworkAssemblies": {
+        "System.IO.Compression.FileSystem": ""
       }
-    },
-    "net451": { }
-  }
+    }
+  }  
 }

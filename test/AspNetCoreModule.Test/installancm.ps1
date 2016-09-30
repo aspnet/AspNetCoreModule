@@ -3,17 +3,34 @@
     Installs asnetcore to IISExpress and IIS directory
 .DESCRIPTION
     Installs asnetcore to IISExpress and IIS directory
+.PARAMETER Rollback
+    Default: $false
+    Rollback the updated files with the original files
+.PARAMETER ForceToBackup
+    Default: $false
+    Force to do the initial backup again (this parameter is meaningful only when you want to replace the existing backup file)
+.PARAMETER Extract
+    Default: $false
+    Search ANCM nugetfile and extract the file to the path of the ExtractFilesTo parameter value
 .PARAMETER PackagePath
-    Default: E:\temp
+    Default: $PSScriptRoot\..\..\artifacts
     Root path where ANCM nuget package is placed
 .PARAMETER ExtractFilesTo
-    Default: E:\temp\output"
+    Default: $PSScriptRoot\..\..\artifacts"
     Output path where aspentcore.dll file is extracted
 #>
 [cmdletbinding()]
 param(
-   [string]$PackagePath="$PSScriptRoot\..\..\artifacts",
-   [string]$ExtractFilesTo="$PSScriptRoot\..\..\artifacts"
+   [Parameter(Mandatory=$false, Position = 0)]
+   [string]  $ExtractFilesTo="$PSScriptRoot\..\..\artifacts",
+   [Parameter(Mandatory=$false, Position = 1)]
+   [string]  $PackagePath="$PSScriptRoot\..\..\artifacts",
+   [Parameter(Mandatory=$false)]
+   [switch] $Rollback=$false,
+   [Parameter(Mandatory=$false)]
+   [switch] $ForceToBackup=$false,
+   [Parameter(Mandatory=$false)]
+   [switch] $Extract=$false
 )
 
 function Get-ANCMNugetFilePath() { 
@@ -166,8 +183,8 @@ function Extract-ANCMFromNugetPackage() {
 }
 
 function Update-ANCM() { 
-
-    $functionName = "Update-ANCM"
+    
+    $functionName = "Update-ANCM -Rollback:$" + $Rollback.ToString()
     $LogHeader = "[$ScriptFileName::$functionName]"
 
     if ($isIISExpressInstalled)
@@ -175,16 +192,16 @@ function Update-ANCM() {
         if ($is64BitMachine)
         {
             Say ("$LogHeader Start updating ANCM files for IISExpress for amd64 machine...")
-            Update-File $aspnetCorex64From $aspnetCorex64To
-            Update-File $aspnetCoreWin32From $aspnetCoreWin32To
-            Update-File $aspnetCoreSchemax64From $aspnetCoreSchemax64To
-            Update-File $aspnetCoreSchemaWin32From $aspnetCoreSchemaWin32To
+            Update-File $aspnetCorex64From $aspnetCorex64To 
+            Update-File $aspnetCoreWin32From $aspnetCoreWin32To 
+            Update-File $aspnetCoreSchemax64From $aspnetCoreSchemax64To 
+            Update-File $aspnetCoreSchemaWin32From $aspnetCoreSchemaWin32To 
         }
         else
         {
             Say ("$LogHeader Start updating ANCM files for IISExpress for x86 machine...")
-            Update-File $aspnetCoreWin32From $aspnetCorex64To
-            Update-File $aspnetCoreSchemaWin32From $aspnetCoreSchemax64To
+            Update-File $aspnetCoreWin32From $aspnetCorex64To 
+            Update-File $aspnetCoreSchemaWin32From $aspnetCoreSchemax64To 
         }
     }
     else
@@ -197,15 +214,15 @@ function Update-ANCM() {
         if ($is64BitMachine)
         {
             Say ("$LogHeader Start updating ANCM files for IIS for amd64 machine...")
-            Update-File $aspnetCorex64From $aspnetCorex64IISTo
-            Update-File $aspnetCoreWin32From $aspnetCoreWin32IISTo
-            Update-File $aspnetCoreSchemax64From $aspnetCoreSchemax64IISTo
+            Update-File $aspnetCorex64From $aspnetCorex64IISTo 
+            Update-File $aspnetCoreWin32From $aspnetCoreWin32IISTo 
+            Update-File $aspnetCoreSchemax64From $aspnetCoreSchemax64IISTo 
         }
         else
         {
             Say ("$LogHeader Start updating ANCM files for IIS for x86 machine...")
-            Update-File $aspnetCoreWin32IISFrom $aspnetCorex64IISTo                
-            Update-File $aspnetCoreSchemaWin32From $aspnetCoreSchemax64IISTo
+            Update-File $aspnetCoreWin32IISFrom $aspnetCorex64IISTo 
+            Update-File $aspnetCoreSchemaWin32From $aspnetCoreSchemax64IISTo 
         }
     }
     else
@@ -214,41 +231,75 @@ function Update-ANCM() {
     }
 }
 
-function Update-File([string]$Source, [string]$Destine) { 
+function Update-File([string]$SourceFilePath, [string]$DestineFilePath) { 
 
-    $functionName = "Update-File"
+    $Source = $SourceFilePath
+    $Destine = $DestineFilePath
+
+    $BackupFilePath = $Destine + ".ancm_backup"
+    if ($Rollback)
+    {
+        $Source = $BackupFilePath
+    }
+        
+    $functionName = "Update-File -Rollback:$" + $Rollback.ToString()
     $LogHeader = "[$ScriptFileName::$functionName]"
 
-    if (-Not (Test-Path $Source))
+    if ($ForceToBackup)
     {
-        throw ("$LogHeader Can't find $Source")
+        if (Test-Path $BackupFilePath)
+        {
+            Say ("    Delete the existing backup file: $BackupFilePath")
+            Remove-Item $BackupFilePath -Force -Confirm:$false
+        }
+        if (Test-Path $BackupFilePath)
+        {
+            throw ("$LogHeader Can't delete $BackupFilePath")
+        }
     }
 
+    # Do the initial back up before updating file
+    if (-Not (Test-Path $BackupFilePath))
+    {
+        Say ("    Create a backup $BackupFilePath")
+        Copy-Item $Destine $BackupFilePath  -Force
+
+        $fileMatched = $null -eq (Compare-Object -ReferenceObject $(Get-Content $Destine) -DifferenceObject $(Get-Content $BackupFilePath))
+        if (-not $fileMatched)
+        {
+            throw ("$LogHeader File not matched!!! $Destine $BackupFilePath")
+        }
+    }
+    if (-Not (Test-Path $BackupFilePath))
+    {
+        throw ("$LogHeader Can't backup $Source to $BackupFilePath")
+    }  
+
+    # Copy file from Source to Destine if those files are different each other
     if (-Not (Test-Path $Destine))
     {
         throw ("$LogHeader Can't find $Destine")
     }
-
     $fileMatched = $null -eq (Compare-Object -ReferenceObject $(Get-Content $Source) -DifferenceObject $(Get-Content $Destine))
     if (-not $fileMatched)
     {
         Say ("    Copying $Source to $Desting...")
         Copy-Item $Source $Destine -Force
+
+        # check file is correctly copied
+        $fileMatched = $null -eq (Compare-Object -ReferenceObject $(Get-Content $Source) -DifferenceObject $(Get-Content $Destine))
+        if (-not $fileMatched)
+        {
+            throw ("$LogHeader File not matched!!! $Source $Destine")
+        }
+        else
+        {
+            Say-Verbose ("$LogHeader File matched!!! $Source to $Destine")
+        }
     }
     else
     {
         Say ("    Skipping the file $Destine that is already identical to $Source ")
-    }
-
-    # check file is correctly copied
-    $fileMatched = $null -eq (Compare-Object -ReferenceObject $(Get-Content $Source) -DifferenceObject $(Get-Content $Destine))
-    if (-not $fileMatched)
-    {
-        throw ("$LogHeader File not matched!!! $Source $Destine")
-    }
-    else
-    {
-        Say-Verbose ("$LogHeader File matched!!! $Source to $Destine")
     }
 }
 
@@ -264,29 +315,40 @@ function Say-Verbose($str) {
 # Start execution point
 #######################################################
 
+$EXIT_FAIL = 1
+$EXIT_SUCCESS = 0
+
 $ScriptFileName = "installancm.ps1"
 $LogHeader = "[$ScriptFileName]"
 
 if (-not (Test-Path $PackagePath))
 {
     Say ("$LogHeader Error!!! Failed to find the directory $PackagePath")
-    exit 1
+    exit $EXIT_FAIL
 }
 if (-not (Test-Path $ExtractFilesTo))
 {
     Say ("$LogHeader Error!!! Failed to find the directory $ExtractFilesTo")
-    exit 1
+    exit $EXIT_FAIL
 }
 
 $ancmNugetFilePath = Get-ANCMNugetFilePath
 if (-not (Test-Path $ancmNugetFilePath))
 {
     Say ("$LogHeader Error!!! Failed to find AspNetCoreModule nupkg file under $PackagePath nor its child directories")
-    exit 1
+    exit $EXIT_FAIL
 }
 
 $TempExtractFilesTo = $ExtractFilesTo + "\.ancm"
-$ExtractFilesRootPath = $TempExtractFilesTo + "\ancm\Debug"
+$ExtractFilesRootPath = ""
+if ($Extract)
+{
+    $ExtractFilesRootPath = $TempExtractFilesTo + "\ancm\Debug"
+}
+else
+{
+    $ExtractFilesRootPath = $ExtractFilesTo
+}
 $aspnetCorex64From = $ExtractFilesRootPath + "\x64\aspnetcore.dll"
 $aspnetCoreWin32From = $ExtractFilesRootPath + "\Win32\aspnetcore.dll"
 $aspnetCoreSchemax64From = $ExtractFilesRootPath + "\x64\aspnetcore_schema.xml"
@@ -309,25 +371,61 @@ $isIISInstalled = Test-Path $aspnetCorex64IISTo
 if (-not (Check-TargetFiles))
 {
     Say ("$LogHeader Error!!! Failed to update ANCM files because AspnetCore.dll is not installed on IIS/IISExpress directory.")
-    exit 1
+    exit $EXIT_FAIL
 }
 
-# Extrack nuget package
-if (-not (Extract-ANCMFromNugetPackage))
+if ($Extract)
 {
-    Say ("$LogHeader Error!!! Failed to update ANCM files")
-    exit 1
+    # Extrack nuget package when $DoExtract is true
+    if (-not (Extract-ANCMFromNugetPackage))
+    {
+        Say ("$LogHeader Error!!! Failed to extract ANCM file")
+        exit $EXIT_FAIL
+    }
 }
 
-# clean up IIS and IISExpress worker processes
+# clean up IIS and IISExpress worker processes and IIS services
 Say ("$LogHeader Stopping w3wp.exe process")
 Stop-Process -Name w3wp -ErrorAction Ignore
 
 Say ("$LogHeader Stopping iisexpress.exe process")
 Stop-Process -Name iisexpress -ErrorAction Ignore
 
-# Update ANCM files for IIS and IISExpress
-Update-ANCM 
+$w3svcGotStopped = $false
+$w3svcWindowsServce = Get-Service W3SVC -ErrorAction Ignore
+if ($w3svcWindowsServce -and $w3svcWindowsServce.Status -eq "Running")
+{
+    Say ("$LogHeader Stopping w3svc service")
+    $w3svcGotStopped = $true
+    Stop-Service W3SVC -Force -ErrorAction Ignore
+    Say ("$LogHeader Stopping w3logsvc service")
+    Stop-Service W3LOGSVC -Force -ErrorAction Ignore
+}
 
-Say ("$LogHeader Installation finished")
-exit 0
+if ($Rollback)
+{
+    Say ("$LogHeader Rolling back ANCM files...")
+}
+else
+{
+    Say  ("Updating ANCM files...")
+}
+Update-ANCM
+
+# Recover w3svc service 
+if ($w3svcGotStopped)
+{
+    Say ("$LogHeader Starting w3svc service")
+    Start-Service W3SVC -ErrorAction Ignore
+    $w3svcServiceStopped = $false
+
+    $w3svcWindowsServce = Get-Service W3SVC -ErrorAction Ignore
+    if ($w3svcWindowsServce.Status -ne "Running")
+    {
+        Say  ("$LogHeader Error!!! Failed to start w3svc service.")
+        exit $EXIT_FAIL
+    }
+}
+
+Say ("$LogHeader Finished!!!")
+exit $EXIT_SUCCESS
