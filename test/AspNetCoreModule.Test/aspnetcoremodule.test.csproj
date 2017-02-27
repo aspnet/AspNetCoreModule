@@ -3,8 +3,6 @@
   <PropertyGroup>
     <TargetFramework>net452</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <AssemblyName>AspNetCoreModule.Test</AssemblyName>
-    <PackageId>AspNetCoreModule.Test</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
   </PropertyGroup>
 
