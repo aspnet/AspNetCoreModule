@@ -1042,12 +1042,9 @@ namespace AspNetCoreModule.Test
                     // Create a new local administrator user
                     string userName = "tempuser" + TestUtility.RandomString(5);
                     string password = "AncmTest123!";
-                    string temp = TestUtility.RunPowershellScript("(  Get-LocalUser -Name " + userName + " 2> $null ).Name");
-                    if (temp == userName)
-                    {
-                        temp = TestUtility.RunPowershellScript("net localgroup IIS_IUSRS /Delete " + userName);
-                        temp = TestUtility.RunPowershellScript("net user " + userName + " /Delete");
-                    }
+                    string temp;
+                    temp = TestUtility.RunPowershellScript("net localgroup IIS_IUSRS /Delete " + userName);
+                    temp = TestUtility.RunPowershellScript("net user " + userName + " /Delete");
                     temp = TestUtility.RunPowershellScript("net user " + userName + " " + password + " /ADD");
                     temp = TestUtility.RunPowershellScript("net localgroup IIS_IUSRS /Add " + userName);
 
