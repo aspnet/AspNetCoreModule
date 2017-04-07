@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <VerifyDependsOn>$(VerifyDependsOn);PublishPackage</VerifyDependsOn>
+    <PublishFeed>https://dotnet.myget.org/F/aspnetcoremodule/api/v2/package</PublishFeed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PackagePublisher" Version="1.0.1-*" />
+  </ItemGroup>
+
+  <Target Name="PackageProjects">
+    <PropertyGroup>
+      <NuGetExePath>$(RepositoryRoot).build\nuget.exe</NuGetExePath>
+      <NuspecPath>$(RepositoryRoot)nuget\AspNetCore.nuspec</NuspecPath>
+    </PropertyGroup>
+
+    <Exec Command="&quot;$(NuGetExePath)&uot; pack &quot;$(NuspecPath)&quot; -OutputDirectory &quot;$(ArtifactsDir) &quot; -prop Version=1.0.0-$(BuildNumber)" />
+  </Target>
+
+    <Target Name="_ResolvePackagePublisherPath" DependsOnTargets="RunResolvePackageDependencies">
+    <ItemGroup>
+      <PackagePublisherPath Include="%(PackageDefinitions.ResolvedPath)" Condition="'%(PackageDefinitions.Name)'=='PackagePublisher'" />
+    </ItemGroup>
+ 
+   <PropertyGroup>
+      <_PackagePublisherPath>@(PackagePublisherPath)\PackagePublisher.exe</_PackagePublisherPath>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="PublishPackage" 
+    DependsOnTargets="_ResolvePackagePublisherPath"
+    Condition="'$(PublishPackage)'=='true'">
+    
+    <Exec Command="&quot;$(PackagePublisherPath)&quot; -d &quot;$(ArtifactsDir) &quot; -f $(PublishFeed)" />
+  </Target>
+</Project>
