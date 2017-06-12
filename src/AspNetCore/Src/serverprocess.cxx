@@ -963,16 +963,16 @@ SERVER_PROCESS::StartProcess(
         CREATE_NEW_PROCESS_GROUP;
 
     if (!CreateProcessW(
-        NULL,                   // applicationName     
-        struCommandLine.QueryStr(),
-        NULL,                   // processAttr
-        NULL,                   // threadAttr
-        TRUE,                   // inheritHandles
-        dwCreationFlags,
-        mszNewEnvironment.QueryStr(),
-        m_pszRootApplicationPath.QueryStr(), // currentDir
-        &startupInfo,
-        &processInformation))
+            NULL,                   // applicationName     
+            struCommandLine.QueryStr(),
+            NULL,                   // processAttr
+            NULL,                   // threadAttr
+            TRUE,                   // inheritHandles
+            dwCreationFlags,
+            mszNewEnvironment.QueryStr(),
+            m_pszRootApplicationPath.QueryStr(), // currentDir
+            &startupInfo,
+            &processInformation))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
         // don't the check return code as we already in error report
@@ -1210,7 +1210,7 @@ SERVER_PROCESS::SetupStdHandles(
                                            systemTime.wDay,
                                            systemTime.wHour,
                                            systemTime.wMinute,
-                                            ystemTime.wSecond );
+                                           systemTime.wSecond );
         if (FAILED(hr))
         {
             goto Finished;
