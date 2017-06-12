@@ -453,7 +453,7 @@ SERVER_PROCESS::InitEnvironmentVariablesTable(
     {
         // have to increase the buffer and try get environment var again
         strStartupAssemblyEnv.Reset();
-        strStartupAssemblyEnv.Resize(dwResult + (DWORD)wcslen(HOSTING_STARTUP_ASSEMBLIES_VALUE) +1);
+        strStartupAssemblyEnv.Resize(dwResult + (DWORD)wcslen(HOSTING_STARTUP_ASSEMBLIES_VALUE) + 1);
         dwResult = GetEnvironmentVariable(HOSTING_STARTUP_ASSEMBLIES_ENV_STR,
             strStartupAssemblyEnv.QueryStr(),
             strStartupAssemblyEnv.QuerySizeCCH());
@@ -963,16 +963,16 @@ SERVER_PROCESS::StartProcess(
         CREATE_NEW_PROCESS_GROUP;
 
     if (!CreateProcessW(
-            NULL,                   // applicationName     
-            struCommandLine.QueryStr(),
-            NULL,                   // processAttr
-            NULL,                   // threadAttr
-            TRUE,                   // inheritHandles
-            dwCreationFlags,
-            mszNewEnvironment.QueryStr(),
-            m_pszRootApplicationPath.QueryStr(), // currentDir
-            &startupInfo,
-            &processInformation))
+        NULL,                   // applicationName     
+        struCommandLine.QueryStr(),
+        NULL,                   // processAttr
+        NULL,                   // threadAttr
+        TRUE,                   // inheritHandles
+        dwCreationFlags,
+        mszNewEnvironment.QueryStr(),
+        m_pszRootApplicationPath.QueryStr(), // currentDir
+        &startupInfo,
+        &processInformation))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
         // don't the check return code as we already in error report
@@ -1904,19 +1904,19 @@ Finished:
 }
 
 SERVER_PROCESS::SERVER_PROCESS() :
-    m_cRefs( 1 ),
-    m_hProcessHandle( NULL ),
-    m_hProcessWaitHandle( NULL ),
-    m_dwProcessId( 0 ),
-    m_cChildProcess( 0 ),
-    m_fReady( FALSE ),
-    m_lStopping( 0L ),
-    m_hStdoutHandle( NULL ),
-    m_fStdoutLogEnabled( FALSE ),
-    m_hJobObject( NULL ),
-    m_pForwarderConnection( NULL ),
-    m_dwListeningProcessId( 0 ),
-    m_hListeningProcessHandle( NULL )
+    m_cRefs(1),
+    m_hProcessHandle(NULL),
+    m_hProcessWaitHandle(NULL),
+    m_dwProcessId(0),
+    m_cChildProcess(0),
+    m_fReady(FALSE),
+    m_lStopping(0L),
+    m_hStdoutHandle(NULL),
+    m_fStdoutLogEnabled(FALSE),
+    m_hJobObject(NULL),
+    m_pForwarderConnection(NULL),
+    m_dwListeningProcessId(0),
+    m_hListeningProcessHandle(NULL)
 {
     InterlockedIncrement(&g_dwActiveServerProcesses);
     srand(GetTickCount());
@@ -2057,7 +2057,7 @@ SERVER_PROCESS::RegisterProcessWait(
 
     if (status < 0)
     {
-        hr = HRESULT_FROM_NT( status );
+        hr = HRESULT_FROM_NT(status);
         goto Finished;
     }
 
