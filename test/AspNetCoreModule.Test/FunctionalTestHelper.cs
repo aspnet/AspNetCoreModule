@@ -711,7 +711,7 @@ namespace AspNetCoreModule.Test
             }
         }
 
-        public static async Task DoShutdownTimeLimitTest(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime)
+        public static async Task DoShutdownTimeLimitTest(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool graceFullShutdown)
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoShutdownTimeLimitTest"))
             {
@@ -719,14 +719,11 @@ namespace AspNetCoreModule.Test
                 {
                     // Set new value (10 second) to make the backend process get the Ctrl-C signal and measure when the recycle happens
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", valueOfshutdownTimeLimit);
-                    iisConfig.SetANCMConfig(
-                        testSite.SiteName, 
-                        testSite.AspNetCoreApp.Name, 
-                        "environmentVariable", 
-                        new string[] { "ANCMTestShutdownDelay", "20000" }
-                        );
+                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestShutdownDelay", "20000" });
 
-                    await VerifyResponseBody(testSite.AspNetCoreApp.GetUri(), "Running", HttpStatusCode.OK);
+                    string response = await GetResponse(testSite.AspNetCoreApp.GetUri(""), HttpStatusCode.OK);
+                    Assert.True(response == "Running");
+                    
                     string backendProcessId = await GetResponse(testSite.AspNetCoreApp.GetUri("GetProcessId"), HttpStatusCode.OK);
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
 
