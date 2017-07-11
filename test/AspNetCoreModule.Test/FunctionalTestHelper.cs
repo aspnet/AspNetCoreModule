@@ -711,7 +711,7 @@ namespace AspNetCoreModule.Test
             }
         }
 
-        public static async Task DoShutdownTimeLimitTest(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool graceFullShutdown)
+        public static async Task DoShutdownTimeLimitTest(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoShutdownTimeLimitTest"))
             {
@@ -720,6 +720,10 @@ namespace AspNetCoreModule.Test
                     // Set new value (10 second) to make the backend process get the Ctrl-C signal and measure when the recycle happens
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", valueOfshutdownTimeLimit);
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestShutdownDelay", "20000" });
+                    if (!isGraceFullShutdownEnabled)
+                    {
+                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "GracefulShutdown", "disabled" });
+                    }
 
                     string response = await GetResponse(testSite.AspNetCoreApp.GetUri(""), HttpStatusCode.OK);
                     Assert.True(response == "Running");

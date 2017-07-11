@@ -41,13 +41,15 @@ namespace AspNetCoreModule.Test
         [OSSkipCondition(OperatingSystems.MacOSX)]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 25, 24, false)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, 25, 24, false)]
+        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 25, 19, true)]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, 25, 19, true)]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 5, 4, false)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, 5, 4, false)]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 0, 0, false)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, 0, 0, false)]
-        public Task ShutdownTimeLimitTest(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool graceFullShutdown)
+        public Task ShutdownTimeLimitTest(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
         {
-            return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, graceFullShutdown);
+            return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
         }
         
         [ConditionalTheory]

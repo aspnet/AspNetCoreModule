@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -302,7 +303,21 @@ namespace AspnetCoreModule.TestSites.Standard
                         {
                             response += de.Key + ":" + de.Value + "<br/>";
                         }
-                    }                    
+                    }
+                }
+
+                // Handle shutdown event from ANCM
+                if (HttpMethods.IsPost(context.Request.Method) &&
+                    //context.Request.Path.Equals(ANCMRequestPath) &&
+                    string.Equals("shutdown", context.Request.Headers["MS-ASPNETCORE-EVENT"], StringComparison.OrdinalIgnoreCase))
+                {
+                    response = "shutdown";
+                    string shutdownMode = Environment.GetEnvironmentVariable("GracefulShutdown");
+                    if (string.IsNullOrEmpty(shutdownMode) || shutdownMode.ToLower() == "enabled")
+                    {
+                        context.Response.StatusCode = StatusCodes.Status202Accepted;
+                        Program.WebAppCancellationTokenSource.Cancel();
+                    }
                 }
                 return context.Response.WriteAsync(response);
             });

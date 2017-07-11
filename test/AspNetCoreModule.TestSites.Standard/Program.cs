@@ -16,6 +16,8 @@ namespace AspnetCoreModule.TestSites.Standard
     {
         private static X509Certificate2 _x509Certificate2;
 
+        public static CancellationTokenSource WebAppCancellationTokenSource = new CancellationTokenSource();
+
         public static void Main(string[] args)
         {
             var config = new ConfigurationBuilder()
@@ -141,7 +143,15 @@ namespace AspnetCoreModule.TestSites.Standard
             }
 
             var host = builder.Build();
-            host.Run();
+            var token = WebAppCancellationTokenSource.Token;
+            try
+            {
+                host.Run(token);
+            }
+            catch
+            {
+                // ignore
+            }
             
             if (Startup.SleeptimeWhileClosing != 0)
             {
