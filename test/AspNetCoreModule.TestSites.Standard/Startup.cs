@@ -313,10 +313,13 @@ namespace AspnetCoreModule.TestSites.Standard
                 {
                     response = "shutdown";
                     string shutdownMode = Environment.GetEnvironmentVariable("GracefulShutdown");
-                    if (string.IsNullOrEmpty(shutdownMode) || shutdownMode.ToLower() == "enabled")
+                    if (string.IsNullOrEmpty(shutdownMode) || shutdownMode.ToLower() == "enabled" || shutdownMode.ToLower() == "enabledButDontCancel")
                     {
                         context.Response.StatusCode = StatusCodes.Status202Accepted;
-                        Program.WebAppCancellationTokenSource.Cancel();
+                        if (shutdownMode.ToLower() != "enabledButDontCancel")
+                        {
+                            Program.WebAppCancellationTokenSource.Cancel();
+                        }
                     }
                 }
                 return context.Response.WriteAsync(response);
