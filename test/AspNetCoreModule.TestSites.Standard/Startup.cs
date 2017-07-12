@@ -200,7 +200,7 @@ namespace AspnetCoreModule.TestSites.Standard
 
             app.Map("/ImpersonateMiddleware", subApp =>
             {
-                subApp.UseMiddleware<ImpersonateMiddleware>();                
+                subApp.UseMiddleware<ImpersonateMiddleware>();
                 subApp.Run(context =>
                 {
                      return context.Response.WriteAsync("");
@@ -313,13 +313,10 @@ namespace AspnetCoreModule.TestSites.Standard
                 {
                     response = "shutdown";
                     string shutdownMode = Environment.GetEnvironmentVariable("GracefulShutdown");
-                    if (string.IsNullOrEmpty(shutdownMode) || shutdownMode.ToLower() == "enabled" || shutdownMode.ToLower() == "enabledButDontCancel")
+                    if (String.IsNullOrEmpty(shutdownMode) || !shutdownMode.ToLower().StartsWith("disabled"))
                     {
                         context.Response.StatusCode = StatusCodes.Status202Accepted;
-                        if (shutdownMode.ToLower() != "enabledButDontCancel")
-                        {
-                            Program.WebAppCancellationTokenSource.Cancel();
-                        }
+                        Program.AappLifetime.StopApplication();
                     }
                 }
                 return context.Response.WriteAsync(response);

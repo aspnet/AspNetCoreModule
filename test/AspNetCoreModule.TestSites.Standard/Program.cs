@@ -14,9 +14,10 @@ namespace AspnetCoreModule.TestSites.Standard
 {
     public static class Program
     {
-        private static X509Certificate2 _x509Certificate2;
+        public static IApplicationLifetime AappLifetime;
+        public static int GracefulShutdownDelayTime = 0;
 
-        public static CancellationTokenSource WebAppCancellationTokenSource = new CancellationTokenSource();
+        private static X509Certificate2 _x509Certificate2;
 
         public static void Main(string[] args)
         {
@@ -143,10 +144,29 @@ namespace AspnetCoreModule.TestSites.Standard
             }
 
             var host = builder.Build();
-            var token = WebAppCancellationTokenSource.Token;
+            AappLifetime = (IApplicationLifetime)host.Services.GetService(typeof(IApplicationLifetime));
+
+            string gracefulShutdownDelay = Environment.GetEnvironmentVariable("GracefulShutdownDelayTime");
+            if (!string.IsNullOrEmpty(gracefulShutdownDelay))
+            {
+                GracefulShutdownDelayTime = Convert.ToInt32(gracefulShutdownDelay);
+            }
+            
+            AappLifetime.ApplicationStarted.Register(
+                () => Thread.Sleep(1000)
+            );
+            AappLifetime.ApplicationStopping.Register(
+                () => Thread.Sleep(Startup.SleeptimeWhileClosing / 2)
+            );
+            AappLifetime.ApplicationStopped.Register(
+                () => {
+                    Thread.Sleep(Startup.SleeptimeWhileClosing / 2);
+                    Startup.SleeptimeWhileClosing = 0;   // All of SleeptimeWhileClosing is used now
+                    }
+            );
             try
             {
-                host.Run(token);
+                host.Run();                
             }
             catch
             {
