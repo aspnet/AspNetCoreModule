@@ -285,10 +285,10 @@ namespace AspNetCoreModule.Test
         [ANCMTestSkipCondition("%ANCMTestFlags%")]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
-        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "MS-ASPNETCORE", "foo")]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, "mS-ASPNETCORE", "bar")]
+        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "MS-ASPNETCORE", "f")]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, "mS-ASPNETCORE", "fo")]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "MS-ASPNETCORE-", "foo")]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, "mS-ASPNETCORE-f", "bar")]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, "mS-ASPNETCORE-f", "fooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo")]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "MS-ASPNETCORE-foo", "foo")]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, "MS-ASPNETCORE-foooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo", "bar")]
         public Task FilterOutMSRequestHeadersTest(IISConfigUtility.AppPoolBitness appPoolBitness, string requestHeader, string requestHeaderValue)
