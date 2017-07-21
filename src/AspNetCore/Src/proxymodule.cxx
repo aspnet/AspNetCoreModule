@@ -79,6 +79,43 @@ CProxyModule::OnExecuteRequestHandler(
     IHttpEventProvider *
 )
 {
+    HRESULT hr;
+    APPLICATION_MANAGER* pApplicationManager;
+    APPLICATION* pApplication;
+
+    pApplicationManager = APPLICATION_MANAGER::GetInstance();
+    if (pApplicationManager == NULL)
+    {
+        hr = E_OUTOFMEMORY;
+        goto Failed;
+    }
+
+    hr = pApplicationManager->GetApplication(pHttpContext,
+        &pApplication);
+    if (FAILED(hr))
+    {
+        goto Failed;
+    }
+
+    ASPNETCORE_CONFIG* config;
+    ASPNETCORE_CONFIG::GetConfig(pHttpContext, &config);
+
+    ASPNETCORE_APPLICATION* pAspNetCoreApplication;
+    hr = pApplication->GetAspNetCoreApplication(config, &pAspNetCoreApplication);
+    if (FAILED(hr))
+    {
+        goto Failed;
+    }
+
+    // TODO: Optimize sync completions
+    pAspNetCoreApplication->ExecuteRequest(pHttpContext);
+    return RQ_NOTIFICATION_PENDING;
+
+Failed:
+    pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
+    return RQ_NOTIFICATION_FINISH_REQUEST;
+
+    /*
     m_pHandler = new FORWARDING_HANDLER(pHttpContext);
     if (m_pHandler == NULL)
     {
@@ -86,7 +123,7 @@ CProxyModule::OnExecuteRequestHandler(
         return RQ_NOTIFICATION_FINISH_REQUEST;
     }
 
-    return m_pHandler->OnExecuteRequestHandler();
+    return m_pHandler->OnExecuteRequestHandler();*/
 }
 
 __override
@@ -99,12 +136,14 @@ CProxyModule::OnAsyncCompletion(
     IHttpCompletionInfo *   pCompletionInfo
 )
 {
-    UNREFERENCED_PARAMETER(dwNotification);
+    // This shouldn't be called
+    return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
+    /*UNREFERENCED_PARAMETER(dwNotification);
     UNREFERENCED_PARAMETER(fPostNotification);
     DBG_ASSERT(dwNotification == RQ_EXECUTE_REQUEST_HANDLER);
     DBG_ASSERT(fPostNotification == FALSE);
 
     return m_pHandler->OnAsyncCompletion(
-            pCompletionInfo->GetCompletionBytes(),
-            pCompletionInfo->GetCompletionStatus());
+        pCompletionInfo->GetCompletionBytes(),
+        pCompletionInfo->GetCompletionStatus());*/
 }

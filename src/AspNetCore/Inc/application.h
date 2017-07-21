@@ -147,8 +147,10 @@ class APPLICATION
 public:
 
     APPLICATION() : m_pProcessManager(NULL), m_pApplicationManager(NULL), m_cRefs(1), 
-        m_fAppOfflineFound(FALSE), m_pAppOfflineHtm(NULL), m_pFileWatcherEntry(NULL)
+        m_fAppOfflineFound(FALSE), m_pAppOfflineHtm(NULL), m_pFileWatcherEntry(NULL),
+        m_pAspNetCoreApplication(NULL)
     {
+        InitializeSRWLock(&m_srwLock);
     }
 
     APPLICATION_KEY *
@@ -179,6 +181,44 @@ public:
     )
     {
         return m_pProcessManager->GetProcess( context, pConfig, ppServerProcess );
+    }
+
+    HRESULT 
+    GetAspNetCoreApplication(
+        _In_    ASPNETCORE_CONFIG       *pConfig,
+        _Out_   ASPNETCORE_APPLICATION  **ppAspNetCoreApplication
+    )
+    {
+        
+        HRESULT hr = S_OK;
+        BOOL fLockTaken = FALSE;
+
+        if (m_pAspNetCoreApplication == NULL)
+        {
+            AcquireSRWLockExclusive(&m_srwLock);
+            fLockTaken = TRUE;
+
+            auto app = new ASPNETCORE_APPLICATION();
+            hr = app->Initialize(pConfig);
+
+            if (FAILED(hr)) 
+            {
+                goto Failed;
+            }
+
+            // Assign after initialization
+            m_pAspNetCoreApplication = app;
+        }
+
+        *ppAspNetCoreApplication = m_pAspNetCoreApplication;
+
+    Failed:
+        if (fLockTaken) 
+        {
+            ReleaseSRWLockExclusive(&m_srwLock);
+        }
+
+        return hr;
     }
 
     HRESULT
@@ -226,14 +266,16 @@ public:
 
 private:
 
-    STRU                 m_strAppPhysicalPath;
-    mutable LONG         m_cRefs;
-    APPLICATION_KEY      m_applicationKey;
-    PROCESS_MANAGER*     m_pProcessManager;
-    APPLICATION_MANAGER *m_pApplicationManager;
-    BOOL                 m_fAppOfflineFound;
-    APP_OFFLINE_HTM     *m_pAppOfflineHtm;
-    FILE_WATCHER_ENTRY  *m_pFileWatcherEntry;
+    STRU                    m_strAppPhysicalPath;
+    mutable LONG            m_cRefs;
+    APPLICATION_KEY         m_applicationKey;
+    PROCESS_MANAGER*        m_pProcessManager;
+    APPLICATION_MANAGER    *m_pApplicationManager;
+    BOOL                    m_fAppOfflineFound;
+    APP_OFFLINE_HTM        *m_pAppOfflineHtm;
+    FILE_WATCHER_ENTRY     *m_pFileWatcherEntry;
+    ASPNETCORE_APPLICATION *m_pAspNetCoreApplication;
+    SRWLOCK                m_srwLock;
 };
 
 class APPLICATION_HASH :

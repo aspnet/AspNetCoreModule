@@ -829,7 +829,7 @@ SERVER_PROCESS::PostStartCheck(
             pStruErrorMessage->SafeSnwprintf(
                 ASPNETCORE_EVENT_PROCESS_START_NOTREADY_ERROR_MSG,
                 m_struAppFullPath.QueryStr(),
-                m_pszRootApplicationPath,
+                m_pszRootApplicationPath.QueryStr(),
                 pStruCommandline->QueryStr(),
                 m_dwPort,
                 hr);
@@ -1068,7 +1068,7 @@ Finished:
                 strEventMsg.SafeSnwprintf(
                 ASPNETCORE_EVENT_PROCESS_START_POSTCREATE_ERROR_MSG,
                 m_struAppFullPath.QueryStr(),
-                m_pszRootApplicationPath,
+                m_pszRootApplicationPath.QueryStr(),
                 struCommandLine.QueryStr(),
                 hr);
         }
