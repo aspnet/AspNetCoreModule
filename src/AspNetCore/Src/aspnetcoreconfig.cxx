@@ -8,11 +8,16 @@ ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
     //
     // the destructor will be called once IIS decides to recycle the module context (i.e., application)
     //
+    // shutting down core application first
+    if (ASPNETCORE_APPLICATION::GetInstance() != NULL) {
+        ASPNETCORE_APPLICATION::GetInstance()->Shutdown();
+    }
+    m_struApplicationFullPath.Reset();
     if (!m_struApplication.IsEmpty())
     {
         APPLICATION_MANAGER::GetInstance()->RecycleApplication(m_struApplication.QueryStr());
     }
-    if(m_pEnvironmentVariables != NULL)
+    if (m_pEnvironmentVariables != NULL)
     {
         m_pEnvironmentVariables->Clear();
         delete m_pEnvironmentVariables;
@@ -118,6 +123,7 @@ ASPNETCORE_CONFIG::Populate(
     STRU                            strEnvName;
     STRU                            strEnvValue;
     STRU                            strExpandedEnvValue;
+    STRU                            applicationFullPath;
     IAppHostAdminManager           *pAdminManager = NULL;
     IAppHostElement                *pAspNetCoreElement = NULL;
     IAppHostElement                *pWindowsAuthenticationElement = NULL;
@@ -144,8 +150,14 @@ ASPNETCORE_CONFIG::Populate(
     }
 
     pAdminManager = g_pHttpServer->GetAdminManager();
-
     hr = strSiteConfigPath.Copy(pHttpContext->GetApplication()->GetAppConfigPath());
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    BSTR test = SysAllocString(pHttpContext->GetApplication()->GetApplicationPhysicalPath());
+    hr = m_struApplicationFullPath.Copy(test);
     if (FAILED(hr))
     {
         goto Finished;
@@ -219,6 +231,14 @@ ASPNETCORE_CONFIG::Populate(
     hr = GetElementStringProperty(pAspNetCoreElement,
         CS_ASPNETCORE_PROCESS_EXE_PATH,
         &m_struProcessPath);
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    hr = GetElementStringProperty(pAspNetCoreElement,
+        CS_ASPNETCORE_HOSTING_MODEL,
+        &m_struHostingModel);
     if (FAILED(hr))
     {
         goto Finished;
@@ -314,14 +334,13 @@ ASPNETCORE_CONFIG::Populate(
     {
         goto Finished;
     }
-
-    hr = GetElementStringProperty(pAspNetCoreElement,
-        CS_ASPNETCORE_STDOUT_LOG_FILE,
-        &m_struStdoutLogFile);
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
+	hr = GetElementStringProperty(pAspNetCoreElement,
+		CS_ASPNETCORE_STDOUT_LOG_FILE,
+		&m_struStdoutLogFile);
+	if (FAILED(hr))
+	{
+		goto Finished;
+	}
 
     hr = GetElementChildByName(pAspNetCoreElement,
         CS_ASPNETCORE_ENVIRONMENT_VARIABLES,

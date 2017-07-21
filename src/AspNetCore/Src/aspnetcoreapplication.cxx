@@ -1,0 +1,516 @@
+#include "precomp.hxx"
+#include "fx_ver.h"
+#include <algorithm>
+
+typedef int(*hostfxr_main_fn) (const int argc, const wchar_t* argv[]);
+
+// Initialization export
+
+extern "C" __declspec(dllexport)
+VOID
+register_callbacks(
+    _In_ PFN_REQUEST_HANDLER request_handler,
+    _In_ PFN_SHUTDOWN_HANDLER shutdown_handler,
+    _In_ VOID* pvRequstHandlerContext,
+    _In_ VOID* pvShutdownHandlerContext
+)
+{
+    ASPNETCORE_APPLICATION::GetInstance()->SetCallbackHandles(request_handler, shutdown_handler, pvRequstHandlerContext, pvShutdownHandlerContext);
+}
+
+extern "C" __declspec(dllexport)
+HTTP_REQUEST*
+http_get_raw_request(
+    _In_ IHttpContext* pHttpContext
+)
+{
+    return pHttpContext->GetRequest()->GetRawHttpRequest();
+}
+
+extern "C" __declspec(dllexport)
+HTTP_RESPONSE*
+http_get_raw_response(
+    _In_ IHttpContext* pHttpContext
+)
+{
+    return pHttpContext->GetResponse()->GetRawHttpResponse();
+}
+
+extern "C" __declspec(dllexport) VOID http_set_response_status_code(
+    _In_ IHttpContext* pHttpContext,
+    _In_ USHORT statusCode,
+    _In_ PCSTR pszReason
+)
+{
+    pHttpContext->GetResponse()->SetStatus(statusCode, pszReason);
+}
+
+extern "C" __declspec(dllexport)
+HRESULT
+http_post_completion(
+    _In_ IHttpContext* pHttpContext
+)
+{
+    return pHttpContext->PostCompletion(0);
+}
+
+extern "C" __declspec(dllexport)
+VOID
+http_indicate_completion(
+    _In_ IHttpContext* pHttpContext,
+    _In_ REQUEST_NOTIFICATION_STATUS notificationStatus
+)
+{
+    pHttpContext->IndicateCompletion(notificationStatus);
+}
+
+extern "C" __declspec(dllexport)
+VOID
+http_get_completion_info(
+    _In_ IHttpCompletionInfo2* info,
+    _Out_ DWORD* cbBytes,
+    _Out_ HRESULT* hr
+)
+{
+    *cbBytes = info->GetCompletionBytes();
+    *hr = info->GetCompletionStatus();
+}
+
+extern "C" __declspec(dllexport)
+BSTR // TODO probably should make this a wide string
+http_get_application_full_path()
+{
+    return SysAllocString(ASPNETCORE_APPLICATION::GetInstance()->GetConfig()->QueryApplicationFullPath()->QueryStr());
+}
+
+extern "C" __declspec(dllexport)
+HRESULT
+http_read_request_bytes(
+    _In_ IHttpContext* pHttpContext,
+    _In_ CHAR* pvBuffer,
+    _In_ DWORD cbBuffer,
+    _In_ PFN_ASYNC_COMPLETION pfnCompletionCallback,
+    _In_ VOID* pvCompletionContext,
+    _In_ DWORD* pDwBytesReceived,
+    _In_ BOOL* pfCompletionPending
+)
+{
+    auto pHttpRequest = (IHttpRequest3*)pHttpContext->GetRequest();
+
+    BOOL fAsync = TRUE;
+
+    HRESULT hr = pHttpRequest->ReadEntityBody(
+        pvBuffer,
+        cbBuffer,
+        fAsync,
+        pfnCompletionCallback,
+        pvCompletionContext,
+        pDwBytesReceived,
+        pfCompletionPending);
+
+    if (hr == HRESULT_FROM_WIN32(ERROR_HANDLE_EOF))
+    {
+        // We reached the end of the data
+        hr = S_OK;
+    }
+
+    return hr;
+}
+
+extern "C" __declspec(dllexport)
+HRESULT
+http_write_response_bytes(
+    _In_ IHttpContext* pHttpContext,
+    _In_ HTTP_DATA_CHUNK* pDataChunks,
+    _In_ DWORD nChunks,
+    _In_ PFN_ASYNC_COMPLETION pfnCompletionCallback,
+    _In_ VOID* pvCompletionContext,
+    _In_ BOOL* pfCompletionExpected
+)
+{
+    auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
+
+    BOOL fAsync = TRUE;
+    BOOL fMoreData = TRUE;
+    DWORD dwBytesSent;
+
+    HRESULT hr = pHttpResponse->WriteEntityChunks(
+        pDataChunks,
+        nChunks,
+        fAsync,
+        fMoreData,
+        pfnCompletionCallback,
+        pvCompletionContext,
+        &dwBytesSent,
+        pfCompletionExpected);
+
+    return hr;
+}
+
+extern "C" __declspec(dllexport)
+HRESULT
+http_flush_response_bytes(
+    _In_ IHttpContext* pHttpContext,
+    _In_ PFN_ASYNC_COMPLETION pfnCompletionCallback,
+    _In_ VOID* pvCompletionContext,
+    _In_ BOOL* pfCompletionExpected
+)
+{
+    auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
+
+    BOOL fAsync = TRUE;
+    BOOL fMoreData = TRUE;
+    DWORD dwBytesSent;
+
+    HRESULT hr = pHttpResponse->Flush(
+        fAsync,
+        fMoreData,
+        pfnCompletionCallback,
+        pvCompletionContext,
+        &dwBytesSent,
+        pfCompletionExpected);
+    return hr;
+}
+
+// Thread execution callback
+static
+VOID
+ExecuteAspNetCoreProcess(
+    _In_ LPVOID pContext
+)
+{
+    auto pApplication = (ASPNETCORE_APPLICATION*)pContext;
+
+    pApplication->ExecuteApplication();
+}
+
+ASPNETCORE_APPLICATION* ASPNETCORE_APPLICATION::s_Application = NULL;
+
+
+VOID
+ASPNETCORE_APPLICATION::SetCallbackHandles(
+    _In_ PFN_REQUEST_HANDLER request_handler,
+    _In_ PFN_SHUTDOWN_HANDLER shutdown_handler,
+    _In_ VOID* pvRequstHandlerContext,
+    _In_ VOID* pvShutdownHandlerContext
+)
+{
+    m_RequestHandler = request_handler;
+    m_RequstHandlerContext = pvRequstHandlerContext;
+    m_ShutdownHandler = shutdown_handler;
+    m_ShutdownHandlerContext = pvShutdownHandlerContext;
+
+    // Initialization complete
+    SetEvent(m_InitalizeEvent);
+}
+
+
+
+HRESULT
+ASPNETCORE_APPLICATION::Initialize(
+    _In_ ASPNETCORE_CONFIG * pConfig
+)
+{
+    DWORD dwTimeout;
+    DWORD dwResult;
+
+    m_pConfiguration = pConfig;
+
+    m_InitalizeEvent = CreateEvent(
+        NULL,   // default security attributes
+        TRUE,   // manual reset event
+        FALSE,  // not set
+        NULL);  // name
+
+    if (m_InitalizeEvent == NULL)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    m_hThread = CreateThread(
+        NULL,       // default security attributes
+        0,          // default stack size
+        (LPTHREAD_START_ROUTINE)ExecuteAspNetCoreProcess,
+        this,       // thread function arguments
+        0,          // default creation flags
+        NULL);      // receive thread identifier
+
+    if (m_hThread == NULL)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    // If the debugger is attached, never timeout
+    if (IsDebuggerPresent())
+    {
+        dwTimeout = INFINITE;
+    }
+    else
+    {
+        dwTimeout = pConfig->QueryStartupTimeLimitInMS();
+    }
+
+    // What should the timeout be? (This is sorta hacky)
+    const HANDLE pHandles[2]{ m_hThread, m_InitalizeEvent };
+
+    // Wait on either the thread to complete or the event to be set
+    dwResult = WaitForMultipleObjects(2, pHandles, FALSE, dwTimeout);
+
+    // It all timed out
+    if (dwResult == WAIT_TIMEOUT)
+    {
+        return HRESULT_FROM_WIN32(dwResult);
+    }
+
+    dwResult = WaitForSingleObject(m_hThread, 0);
+    // The thread ended it means that something failed
+    if (dwResult == WAIT_OBJECT_0)
+    {
+        return HRESULT_FROM_WIN32(dwResult);
+    }
+
+    return S_OK;
+}
+
+VOID
+ASPNETCORE_APPLICATION::ExecuteApplication(
+    VOID
+)
+{
+    HRESULT     hr = S_OK;
+
+    STRU            strFullPath;
+    STRU            strDotnetExeLocation;
+    STRU            strHostFxrSearchExpression;
+    STRU            strDotnetFolderLocation;
+    STRU            strHighestDotnetVersion;
+    STRU            strApplicationFullPath;
+    PWSTR           strDelimeterContext = NULL;
+    PCWSTR          pszDotnetExeLocation = NULL;
+    PCWSTR          pszDotnetExeString(L"dotnet.exe");
+    DWORD           dwCopyLength;
+    HMODULE         hModule;
+    PCWSTR          argv[2];
+    hostfxr_main_fn pProc;
+
+    // Get the System PATH value.
+    hr = GetEnv(L"PATH", &strFullPath);
+    if (FAILED(hr))
+    {
+        // TODO log error?
+        return;
+    }
+
+    // Split on ';', checking to see if dotnet.exe exists in any folders.
+    pszDotnetExeLocation = wcstok_s(strFullPath.QueryStr(), L";", &strDelimeterContext);
+
+    while (pszDotnetExeLocation != NULL)
+    {
+        dwCopyLength = wcsnlen_s(pszDotnetExeLocation, 260);
+        if (dwCopyLength == 0)
+        {
+            continue;
+        }
+
+        // We store both the exe and folder locations as we eventually need to check inside of host\\fxr
+        // which doesn't need the dotnet.exe portion of the string
+        // TODO consider reducing allocations.
+        strDotnetExeLocation.Reset();
+        strDotnetFolderLocation.Reset();
+        strDotnetExeLocation.Copy(pszDotnetExeLocation, dwCopyLength);
+        strDotnetFolderLocation.Copy(pszDotnetExeLocation, dwCopyLength);
+
+        if (dwCopyLength > 0 && pszDotnetExeLocation[dwCopyLength - 1] != L'\\')
+        {
+            strDotnetExeLocation.Append(L"\\");
+        }
+
+        strDotnetExeLocation.Append(pszDotnetExeString);
+        if (PathFileExists(strDotnetExeLocation.QueryStr()))
+        {
+            break;
+        }
+        pszDotnetExeLocation = wcstok_s(NULL, L";", &strDelimeterContext);
+    }
+    strDotnetFolderLocation.Append(L"\\host\\fxr");
+
+    if (!DirectoryExists(&strDotnetFolderLocation))
+    {
+        // TODO log error?
+        return;
+    }
+
+    // Find all folders under host\\fxr\\ for version numbers.
+    strHostFxrSearchExpression.Copy(strDotnetFolderLocation);
+    strHostFxrSearchExpression.Append(L"\\*");
+
+    // As we use the logic from core-setup, we are opting to use std here.
+    // TODO remove all uses of std?
+    std::vector<std::wstring> vVersionFolders;
+    FindDotNetFolders(&strHostFxrSearchExpression, &vVersionFolders);
+
+    if (vVersionFolders.size() == 0)
+    {
+        // TODO log error?
+        return;
+    }
+
+    FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
+
+    strDotnetFolderLocation.Append(L"\\");
+    strDotnetFolderLocation.Append(strHighestDotnetVersion.QueryStr());
+    strDotnetFolderLocation.Append(L"\\hostfxr.dll");
+
+    hModule = LoadLibraryW(strDotnetFolderLocation.QueryStr());
+
+    if (hModule == nullptr)
+    {
+        // .NET Core not installed (we can log a more detailed error message here)
+        return;
+    }
+
+    // Get the entry point for main
+    pProc = (hostfxr_main_fn)GetProcAddress(hModule, "hostfxr_main");
+    // The first argument is mostly ignored
+    strDotnetExeLocation.Append(pszDotnetExeString);
+    argv[0] = strDotnetExeLocation.QueryStr();
+    PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(), m_pConfiguration->QueryApplicationFullPath()->QueryStr(), &strApplicationFullPath);
+    argv[1] = strApplicationFullPath.QueryStr();
+
+    // There can only ever be a single instance of .NET Core
+    // loaded in the process but we need to get config information to boot it up in the
+    // first place. This is happening in an execute request handler and everyone waits
+    // until this initialization is done.
+
+    // We set a static so that managed code can call back into this instance and
+    // set the callbacks
+    s_Application = this;
+
+    m_ProcessExitCode = pProc(2, argv);
+
+    // TODO add a failed section here?
+}
+
+BOOL
+ASPNETCORE_APPLICATION::GetEnv(
+    _In_ PCWSTR pszEnvironmentVariable,
+    _Out_ STRU *pstrResult
+)
+{
+    DWORD dwLength;
+    PWSTR pszBuffer= NULL;
+
+    if (pszEnvironmentVariable == NULL) {
+        return false;
+    }
+    pstrResult->Reset();
+    dwLength = GetEnvironmentVariableW(pszEnvironmentVariable, nullptr, 0);
+
+    if (dwLength == 0)
+    {
+        if (GetLastError() != ERROR_ENVVAR_NOT_FOUND)
+        {
+        }
+        goto Failed;
+    }
+
+    pszBuffer = new WCHAR[dwLength];
+    if (GetEnvironmentVariableW(pszEnvironmentVariable, pszBuffer, dwLength) == 0)
+    {
+        goto Failed;
+    }
+
+    pstrResult->Copy(pszBuffer);
+
+    return true;
+
+Failed:
+    if (pszBuffer != NULL) {
+        delete[] pszBuffer;
+    }
+    return false;
+}
+
+VOID
+ASPNETCORE_APPLICATION::FindDotNetFolders(
+    _In_ STRU *pstrPath,
+    _Out_ std::vector<std::wstring> *pvFolders
+)
+{
+    HANDLE handle = NULL;
+    WIN32_FIND_DATAW data = { 0 };
+
+    handle = FindFirstFileExW(pstrPath->QueryStr(), FindExInfoStandard, &data, FindExSearchNameMatch, NULL, 0);
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        return;
+    }
+
+    do
+    {
+        std::wstring folder(data.cFileName);
+        pvFolders->push_back(folder);
+    } while (FindNextFileW(handle, &data));
+
+    FindClose(handle);
+}
+
+VOID
+ASPNETCORE_APPLICATION::FindHighestDotNetVersion(
+    _In_ std::vector<std::wstring> vFolders,
+    _Out_ STRU *pstrResult
+)
+{
+    fx_ver_t max_ver(-1, -1, -1);
+    for (const auto& dir : vFolders)
+    {
+        fx_ver_t fx_ver(-1, -1, -1);
+        if (fx_ver_t::parse(dir, &fx_ver, false))
+        {
+            max_ver = std::max(max_ver, fx_ver);
+        }
+    }
+    pstrResult->Copy(max_ver.as_str().c_str());
+}
+
+
+BOOL
+ASPNETCORE_APPLICATION::DirectoryExists(
+    _In_ STRU *pstrPath
+)
+{
+    WIN32_FILE_ATTRIBUTE_DATA data;
+
+    if (pstrPath->QuerySizeCCH() == 0)
+    {
+        return false;
+    }
+
+    return GetFileAttributesExW(pstrPath->QueryStr(), GetFileExInfoStandard, &data);
+}
+
+REQUEST_NOTIFICATION_STATUS
+ASPNETCORE_APPLICATION::ExecuteRequest(
+    _In_ IHttpContext* pHttpContext
+)
+{
+    if (m_RequestHandler != NULL)
+    {
+        return m_RequestHandler(pHttpContext, m_RequstHandlerContext);
+    }
+
+    pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
+    return RQ_NOTIFICATION_FINISH_REQUEST;
+}
+
+
+VOID
+ASPNETCORE_APPLICATION::Shutdown(
+    VOID
+)
+{
+    // First call into the managed server and shutdown
+    BOOL result = m_ShutdownHandler(m_ShutdownHandlerContext);
+
+    delete this;
+}
