@@ -103,7 +103,13 @@ HRESULT ASPNETCORE_APPLICATION::Initialize(ASPNETCORE_CONFIG * pConfig)
 
 void ASPNETCORE_APPLICATION::ExecuteApplication()
 {
-    // REVIEW: How do we get the right version of hostfxr?
+    // TODO: Implement steps to properly find the version:
+    // 1. Look at the PATH and find the muxer location (split PATH on ; and find location with dotnet.exe)
+    // 2. Look at the application path to figure out which version of hostfxr.dll to pick.
+    // This data is in the runtimeconfig.json file
+    // Ideally this would be an export from a library in an unversioned folder
+    // See https://github.com/dotnet/core-setup/blob/4e075b0c2abfbdaa564977ae2daba5b2b2f5c481/src/corehost/corehost.cpp#L83
+
     auto module = LoadLibraryW(L"C:\\Program Files\\dotnet\\host\\fxr\\2.0.0-preview2-25407-01\\hostfxr.dll");
 
     if (module == nullptr)
