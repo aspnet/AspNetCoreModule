@@ -198,16 +198,19 @@ public:
             AcquireSRWLockExclusive(&m_srwLock);
             fLockTaken = TRUE;
 
-            auto app = new ASPNETCORE_APPLICATION();
-            hr = app->Initialize(pConfig);
-
-            if (FAILED(hr)) 
+            if (m_pAspNetCoreApplication == NULL)
             {
-                goto Failed;
-            }
+                auto application = new ASPNETCORE_APPLICATION();
+                hr = application->Initialize(pConfig);
 
-            // Assign after initialization
-            m_pAspNetCoreApplication = app;
+                if (FAILED(hr))
+                {
+                    goto Failed;
+                }
+
+                // Assign after initialization
+                m_pAspNetCoreApplication = application;
+            }
         }
 
         *ppAspNetCoreApplication = m_pAspNetCoreApplication;

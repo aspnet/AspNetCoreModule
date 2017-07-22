@@ -2,10 +2,14 @@
 
 typedef int(*hostfxr_main_fn) (const int argc, const wchar_t* argv[]);
 
+// Initialization export
+
 extern "C" __declspec(dllexport) void register_request_callback(request_handler requestHandler)
 {
     ASPNETCORE_APPLICATION::GetInstance()->SetRequestHandlerCallback(requestHandler);
 }
+
+// HTTP exports
 
 extern "C" __declspec(dllexport) void http_write_response_bytes(IHttpContext* pHttpContext, CHAR* buffer, int count)
 {
