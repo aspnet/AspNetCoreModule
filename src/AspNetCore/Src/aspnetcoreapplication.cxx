@@ -7,10 +7,27 @@ extern "C" __declspec(dllexport) void register_request_callback(request_handler 
     ASPNETCORE_APPLICATION::GetInstance()->SetRequestHandlerCallback(requestHandler);
 }
 
-// Request callback
-static void OnRequestCompleted(int error, void* http_context, void* state)
+extern "C" __declspec(dllexport) void http_write_response_bytes(IHttpContext* pHttpContext, CHAR* buffer, int count)
 {
-    ((ASPNETCORE_APPLICATION*)state)->CompleteRequest((IHttpContext*)http_context, error);
+    auto pHttpResponse = pHttpContext->GetResponse();
+
+    HTTP_DATA_CHUNK chunk;
+    chunk.DataChunkType = HttpDataChunkFromMemory;
+    chunk.FromMemory.pBuffer = buffer;
+    chunk.FromMemory.BufferLength = count;
+
+    BOOL fAsync = FALSE; // TODO: Use async
+    BOOL fMoreData = FALSE;
+    BOOL fCompletionExpected = FALSE;
+    DWORD dwBytesSent;
+
+    pHttpResponse->WriteEntityChunks(&chunk, 1, fAsync, fMoreData, &dwBytesSent, &fCompletionExpected);
+}
+
+// Request callback
+static void OnRequestCompleted(int error, IHttpContext* pHttpContext, void* state)
+{
+    ((ASPNETCORE_APPLICATION*)state)->CompleteRequest(pHttpContext, error);
 }
 
 // Thread execution callback
@@ -56,7 +73,7 @@ HRESULT ASPNETCORE_APPLICATION::Initialize(ASPNETCORE_CONFIG * pConfig)
     }
 
     // If the debugger is attached, never timeout
-    auto dwTimeout = INFINITE; // IsDebuggerPresent() ? INFINITE : 10000;
+    auto dwTimeout = INFINITE; // IsDebuggerPresent() ? INFINITE : 30000;
 
     // What should the timeout be? (This is sorta hacky)
     const HANDLE pHandles[2]{ m_Thread, m_InitalizeEvent };
@@ -96,7 +113,7 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
     const wchar_t* argv[2];
 
     // The first argument is mostly ignored
-    argv[0] = L"C:\\Users\\dfowler\\.dotnet\\x64\\dotnet.exe";
+    argv[0] = L"C:\\Program Files\\dotnet\\dotnet.exe";
     argv[1] = m_pConfiguration->QueryArguments()->QueryStr();
 
     // Hack from hell, there can only ever be a single instance of .NET Core
@@ -121,6 +138,7 @@ void ASPNETCORE_APPLICATION::ExecuteRequest(IHttpContext* pHttpContext)
 
 void ASPNETCORE_APPLICATION::CompleteRequest(IHttpContext* pHttpContext, int error)
 {
+    // Post the completion of the http request
     pHttpContext->PostCompletion(0);
 }
 

@@ -1,7 +1,7 @@
 #pragma once
 
-typedef void(*request_handler_cb) (int error, void* http_context, void* state);
-typedef void(*request_handler) (void* http_context, request_handler_cb callback, void* state);
+typedef void(*request_handler_cb) (int error, IHttpContext* pHttpContext, void* state);
+typedef void(*request_handler) (IHttpContext* pHttpContext, request_handler_cb callback, void* state);
 
 class ASPNETCORE_APPLICATION
 {
