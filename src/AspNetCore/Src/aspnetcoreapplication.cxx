@@ -77,7 +77,7 @@ HRESULT ASPNETCORE_APPLICATION::Initialize(ASPNETCORE_CONFIG * pConfig)
     }
 
     // If the debugger is attached, never timeout
-    auto dwTimeout = INFINITE; // IsDebuggerPresent() ? INFINITE : 30000;
+    auto dwTimeout = INFINITE; // IsDebuggerPresent() ? INFINITE : pConfig->QueryStartupTimeLimitInMS();
 
     // What should the timeout be? (This is sorta hacky)
     const HANDLE pHandles[2]{ m_Thread, m_InitalizeEvent };
