@@ -136,8 +136,12 @@ CProxyModule::OnAsyncCompletion(
     IHttpCompletionInfo *   pCompletionInfo
 )
 {
+
+    auto dwBytes = pCompletionInfo->GetCompletionBytes();
+    auto hr = pCompletionInfo->GetCompletionStatus();
+
     // This shouldn't be called
-    return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
+    return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
     /*UNREFERENCED_PARAMETER(dwNotification);
     UNREFERENCED_PARAMETER(fPostNotification);
     DBG_ASSERT(dwNotification == RQ_EXECUTE_REQUEST_HANDLER);

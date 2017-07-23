@@ -11,21 +11,63 @@ extern "C" __declspec(dllexport) void register_request_callback(request_handler 
 
 // HTTP exports
 
-extern "C" __declspec(dllexport) void http_write_response_bytes(IHttpContext* pHttpContext, CHAR* buffer, int count)
+typedef void(*write_cb)(int status, void* state);
+
+struct write_state {
+    void* pvCompletionContext;
+    write_cb callback;
+};
+
+REQUEST_NOTIFICATION_STATUS OnWriteCompleted(IHttpContext3* pHttpContext, IHttpCompletionInfo2* completionInfo, void* pvCompletionContext)
 {
-    auto pHttpResponse = pHttpContext->GetResponse();
+    auto state = (write_state*)pvCompletionContext;
+
+    state->callback(completionInfo->GetCompletionStatus(), state->pvCompletionContext);
+
+    delete state;
+
+    return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
+};
+
+extern "C" __declspec(dllexport) BOOL http_write_response_bytes(IHttpContext* pHttpContext, CHAR* buffer, int count, write_cb callback, void* state)
+{
+    auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
 
     HTTP_DATA_CHUNK chunk;
     chunk.DataChunkType = HttpDataChunkFromMemory;
     chunk.FromMemory.pBuffer = buffer;
     chunk.FromMemory.BufferLength = count;
 
-    BOOL fAsync = FALSE; // TODO: Use async
+    BOOL fAsync = TRUE
     BOOL fMoreData = FALSE;
-    BOOL fCompletionExpected = FALSE;
+    BOOL fCompletionExpected;
     DWORD dwBytesSent;
 
-    pHttpResponse->WriteEntityChunks(&chunk, 1, fAsync, fMoreData, &dwBytesSent, &fCompletionExpected);
+    write_state* callback_state = new write_state();
+    callback_state->callback = callback;
+    callback_state->pvCompletionContext = state;
+
+    HRESULT hr = pHttpResponse->WriteEntityChunks(
+        &chunk, 
+        1, 
+        fAsync, 
+        fMoreData,
+        OnWriteCompleted,
+        callback_state,
+        &dwBytesSent, 
+        &fCompletionExpected);
+
+    if (FAILED(hr))
+    {
+        // TODO: Do something 
+    }
+
+    if (!fCompletionExpected) 
+    {
+        delete callback_state;
+    }
+
+    return fCompletionExpected;
 }
 
 // Request callback
@@ -82,7 +124,7 @@ HRESULT ASPNETCORE_APPLICATION::Initialize(ASPNETCORE_CONFIG * pConfig)
     // What should the timeout be? (This is sorta hacky)
     const HANDLE pHandles[2]{ m_Thread, m_InitalizeEvent };
 
-    // Wait on either the thread tot
+    // Wait on either the thread to complete or the event to be set
     auto dwResult = WaitForMultipleObjects(2, pHandles, FALSE, dwTimeout);
 
     // It all timed out
