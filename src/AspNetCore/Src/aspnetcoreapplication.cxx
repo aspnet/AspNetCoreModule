@@ -11,25 +11,7 @@ extern "C" __declspec(dllexport) void register_request_callback(request_handler 
 
 // HTTP exports
 
-typedef void(*write_cb)(int status, void* state);
-
-struct write_state {
-    void* pvCompletionContext;
-    write_cb callback;
-};
-
-REQUEST_NOTIFICATION_STATUS OnWriteCompleted(IHttpContext3* pHttpContext, IHttpCompletionInfo2* completionInfo, void* pvCompletionContext)
-{
-    auto state = (write_state*)pvCompletionContext;
-
-    state->callback(completionInfo->GetCompletionStatus(), state->pvCompletionContext);
-
-    delete state;
-
-    return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
-};
-
-extern "C" __declspec(dllexport) BOOL http_write_response_bytes(IHttpContext* pHttpContext, CHAR* buffer, int count, write_cb callback, void* state)
+extern "C" __declspec(dllexport) BOOL http_write_response_bytes(IHttpContext* pHttpContext, CHAR* buffer, int count, PFN_ASYNC_COMPLETION callback, void* state)
 {
     auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
 
@@ -43,28 +25,19 @@ extern "C" __declspec(dllexport) BOOL http_write_response_bytes(IHttpContext* pH
     BOOL fCompletionExpected;
     DWORD dwBytesSent;
 
-    write_state* callback_state = new write_state();
-    callback_state->callback = callback;
-    callback_state->pvCompletionContext = state;
-
     HRESULT hr = pHttpResponse->WriteEntityChunks(
         &chunk, 
         1, 
         fAsync, 
         fMoreData,
-        OnWriteCompleted,
-        callback_state,
+        callback,
+        state,
         &dwBytesSent, 
         &fCompletionExpected);
 
     if (FAILED(hr))
     {
         // TODO: Do something 
-    }
-
-    if (!fCompletionExpected) 
-    {
-        delete callback_state;
     }
 
     return fCompletionExpected;
@@ -192,6 +165,7 @@ void ASPNETCORE_APPLICATION::CompleteRequest(IHttpContext* pHttpContext, int err
 {
     // Post the completion of the http request
     pHttpContext->PostCompletion(0);
+    // pHttpContext->IndicateCompletion(REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE);
 }
 
 
