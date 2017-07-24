@@ -38,7 +38,7 @@ extern "C" __declspec(dllexport) BOOL http_write_response_bytes(IHttpContext* pH
     chunk.FromMemory.pBuffer = buffer;
     chunk.FromMemory.BufferLength = count;
 
-    BOOL fAsync = TRUE
+    BOOL fAsync = TRUE;
     BOOL fMoreData = FALSE;
     BOOL fCompletionExpected;
     DWORD dwBytesSent;
