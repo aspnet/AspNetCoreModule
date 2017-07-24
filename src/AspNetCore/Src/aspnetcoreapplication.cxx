@@ -11,14 +11,63 @@ extern "C" __declspec(dllexport) void register_request_callback(request_handler 
 
 // HTTP exports
 
-extern "C" __declspec(dllexport) BOOL http_write_response_bytes(IHttpContext* pHttpContext, CHAR* buffer, int count, PFN_ASYNC_COMPLETION callback, void* state)
+extern "C" __declspec(dllexport) void http_get_completion_info(IHttpCompletionInfo2* info, DWORD* cbBytes, HRESULT* hr)
+{
+    *cbBytes = info->GetCompletionBytes();
+    *hr = info->GetCompletionStatus();
+}
+
+extern "C" __declspec(dllexport) BOOL http_read_request_bytes(
+    IHttpContext* pHttpContext,
+    CHAR* pvBuffer,
+    DWORD cbBuffer,
+    PFN_ASYNC_COMPLETION pfnCompletionCallback,
+    void* pvCompletionContext,
+    DWORD* dwBytesReceived)
+{
+    auto pHttpRequest = (IHttpRequest3*)pHttpContext->GetRequest();
+
+    BOOL fAsync = TRUE;
+    BOOL fCompletionPending;
+
+    HRESULT hr = pHttpRequest->ReadEntityBody(
+        pvBuffer,
+        cbBuffer,
+        fAsync,
+        pfnCompletionCallback,
+        pvCompletionContext,
+        dwBytesReceived,
+        &fCompletionPending);
+
+    if (hr == HRESULT_FROM_WIN32(ERROR_HANDLE_EOF))
+    {
+        // We reached the end of the data
+        hr = S_OK;
+        fCompletionPending = FALSE;
+        dwBytesReceived = 0;
+    }
+
+    if (FAILED(hr))
+    {
+        // Do something
+    }
+
+    return fCompletionPending;
+}
+
+extern "C" __declspec(dllexport) BOOL http_write_response_bytes(
+    IHttpContext* pHttpContext,
+    CHAR* pvBuffer,
+    DWORD cbBuffer,
+    PFN_ASYNC_COMPLETION pfnCompletionCallback,
+    void* pvCompletionContext)
 {
     auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
 
     HTTP_DATA_CHUNK chunk;
     chunk.DataChunkType = HttpDataChunkFromMemory;
-    chunk.FromMemory.pBuffer = buffer;
-    chunk.FromMemory.BufferLength = count;
+    chunk.FromMemory.pBuffer = pvBuffer;
+    chunk.FromMemory.BufferLength = cbBuffer;
 
     BOOL fAsync = TRUE;
     BOOL fMoreData = FALSE;
@@ -26,13 +75,13 @@ extern "C" __declspec(dllexport) BOOL http_write_response_bytes(IHttpContext* pH
     DWORD dwBytesSent;
 
     HRESULT hr = pHttpResponse->WriteEntityChunks(
-        &chunk, 
-        1, 
-        fAsync, 
+        &chunk,
+        1,
+        fAsync,
         fMoreData,
-        callback,
-        state,
-        &dwBytesSent, 
+        pfnCompletionCallback,
+        pvCompletionContext,
+        &dwBytesSent,
         &fCompletionExpected);
 
     if (FAILED(hr))
