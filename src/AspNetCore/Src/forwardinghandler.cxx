@@ -51,7 +51,8 @@ m_pAppOfflineHtm(NULL),
 m_fErrorHandled(FALSE),
 m_fWebSocketUpgrade(FALSE),
 m_fFinishRequest(FALSE),
-m_fClientDisconnected(FALSE)
+m_fClientDisconnected(FALSE),
+m_pTraceGuid(NULL)
 {
     InitializeSRWLock(&m_RequestLock);
 }
@@ -1030,7 +1031,7 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
     BOOL                        fSecure = FALSE;
     BOOL                        fProcessStartFailure = FALSE;
     HTTP_DATA_CHUNK            *pDataChunk = NULL;
-
+    IHttpTraceContext          *pTraceContext = NULL;
     DBG_ASSERT(m_RequestStatus == FORWARDER_START);
 
     //
@@ -1200,6 +1201,32 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
         }
     }
 
+    // Inject the Request-Id header for tracing and correlation purpose
+    pTraceContext = m_pW3Context->GetTraceContext();
+    if (pTraceContext != NULL)
+    {
+        WCHAR                       szGuidW[40] = { 0 };
+        CHAR                        szGuidA[40] = { 0 };
+        int                         cbBytes = 0;
+
+        m_pTraceGuid = pTraceContext->GetTraceActivityId();
+        if (m_pTraceGuid != NULL)
+        {
+            cbBytes = StringFromGUID2(*m_pTraceGuid, szGuidW, 40);
+            if (cbBytes > 0)
+            {
+                cbBytes = WideCharToMultiByte(CP_ACP, 0, szGuidW, -1, szGuidA, 40, NULL, NULL);
+            }
+            if (cbBytes > 0)
+            {
+                pRequest->SetHeader("Request-Id",
+                    szGuidA,
+                    (USHORT)strlen(szGuidA),
+                    FALSE
+                );
+            }
+        }
+    }
     hr = CreateWinHttpRequest(pRequest,
         pProtocol,
         hConnect,
