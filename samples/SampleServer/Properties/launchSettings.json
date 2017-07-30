@@ -2,7 +2,7 @@
   "profiles": {
     "Local ANCM": {
       "commandName": "Executable",
-      "executablePath": "C:\\Program Files\\IIS Express\\iisexpress.exe",
+      "executablePath": "$(ProgramW6432)\\IIS Express\\iisexpress.exe",
       "commandLineArgs": "/config:\"$(MSBuildThisFileDirectory)applicationhost.config\" /site:\"$(ProjectName)\" /apppool:\"Clr4IntegratedAppPool\"",
       "environmentVariables": {
         "IIS_SITE_PATH": "$(MSBuildThisFileDirectory)",
