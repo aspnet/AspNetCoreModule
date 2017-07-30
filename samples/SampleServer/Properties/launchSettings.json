@@ -5,6 +5,7 @@
       "executablePath": "C:\\Program Files\\IIS Express\\iisexpress.exe",
       "commandLineArgs": "/config:\"$(MSBuildThisFileDirectory)applicationhost.config\" /site:\"$(ProjectName)\" /apppool:\"Clr4IntegratedAppPool\"",
       "environmentVariables": {
+        "IIS_SITE_PATH": "$(MSBuildThisFileDirectory)",
         "ANCM_PATH": "$(SolutionDir)src\\AspNetCore\\bin\\$(Configuration)\\x64\\",
         "LAUNCHER_ARGS": "$(TargetPath)",
         "LAUNCHER_PATH": "dotnet.exe"
