@@ -107,6 +107,9 @@ CProxyModule::OnExecuteRequestHandler(
         goto Failed;
     }
 
+    // Allow reading and writing to simultaneously
+    ((IHttpContext3*)pHttpContext)->EnableFullDuplex();
+
     // TODO: Optimize sync completions
     pAspNetCoreApplication->ExecuteRequest(pHttpContext);
     return RQ_NOTIFICATION_PENDING;
@@ -114,16 +117,6 @@ CProxyModule::OnExecuteRequestHandler(
 Failed:
     pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
     return RQ_NOTIFICATION_FINISH_REQUEST;
-
-    /*
-    m_pHandler = new FORWARDING_HANDLER(pHttpContext);
-    if (m_pHandler == NULL)
-    {
-        pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_OUTOFMEMORY);
-        return RQ_NOTIFICATION_FINISH_REQUEST;
-    }
-
-    return m_pHandler->OnExecuteRequestHandler();*/
 }
 
 __override
@@ -136,18 +129,5 @@ CProxyModule::OnAsyncCompletion(
     IHttpCompletionInfo *   pCompletionInfo
 )
 {
-
-    auto dwBytes = pCompletionInfo->GetCompletionBytes();
-    auto hr = pCompletionInfo->GetCompletionStatus();
-
-    // This shouldn't be called
     return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
-    /*UNREFERENCED_PARAMETER(dwNotification);
-    UNREFERENCED_PARAMETER(fPostNotification);
-    DBG_ASSERT(dwNotification == RQ_EXECUTE_REQUEST_HANDLER);
-    DBG_ASSERT(fPostNotification == FALSE);
-
-    return m_pHandler->OnAsyncCompletion(
-        pCompletionInfo->GetCompletionBytes(),
-        pCompletionInfo->GetCompletionStatus());*/
 }

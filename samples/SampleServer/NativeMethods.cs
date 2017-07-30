@@ -31,6 +31,9 @@ namespace WebApplication26
         public unsafe static extern bool http_write_response_bytes(IntPtr pHttpContext, byte* buffer, int count, completion_callback callback, IntPtr state);
 
         [DllImport("aspnetcore.dll")]
+        public unsafe static extern bool http_flush_response_bytes(IntPtr pHttpContext, completion_callback callback, IntPtr state);
+
+        [DllImport("aspnetcore.dll")]
         public unsafe static extern bool http_read_request_bytes(IntPtr pHttpContext, byte* buffer, int count, completion_callback callback, IntPtr state, out int bytesRead);
 
         [DllImport("aspnetcore.dll")]

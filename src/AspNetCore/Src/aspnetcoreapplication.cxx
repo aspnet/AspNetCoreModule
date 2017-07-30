@@ -70,13 +70,41 @@ extern "C" __declspec(dllexport) BOOL http_write_response_bytes(
     chunk.FromMemory.BufferLength = cbBuffer;
 
     BOOL fAsync = TRUE;
-    BOOL fMoreData = FALSE;
+    BOOL fMoreData = TRUE;
     BOOL fCompletionExpected;
     DWORD dwBytesSent;
 
     HRESULT hr = pHttpResponse->WriteEntityChunks(
         &chunk,
         1,
+        fAsync,
+        fMoreData,
+        pfnCompletionCallback,
+        pvCompletionContext,
+        &dwBytesSent,
+        &fCompletionExpected);
+
+    if (FAILED(hr))
+    {
+        // TODO: Do something 
+    }
+
+    return fCompletionExpected;
+}
+
+extern "C" __declspec(dllexport) BOOL http_flush_response_bytes(
+    IHttpContext* pHttpContext,
+    PFN_ASYNC_COMPLETION pfnCompletionCallback,
+    void* pvCompletionContext)
+{
+    auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
+
+    BOOL fAsync = TRUE;
+    BOOL fMoreData = TRUE;
+    BOOL fCompletionExpected;
+    DWORD dwBytesSent;
+
+    HRESULT hr = pHttpResponse->Flush(
         fAsync,
         fMoreData,
         pfnCompletionCallback,
