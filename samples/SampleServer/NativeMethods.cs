@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
-namespace WebApplication26
+namespace SampleServer
 {
     public static class NativeMethods
     {
@@ -21,26 +18,28 @@ namespace WebApplication26
         public delegate void request_handler(IntPtr pHttpContext, request_handler_cb callback, IntPtr state);
         public delegate REQUEST_NOTIFICATION_STATUS completion_callback(IntPtr pHttpContext, IntPtr completionInfo, IntPtr pvCompletionContext);
 
-        //[DllImport("aspnetcore.dll")]
-        //public static extern void register_shutdown_callback(Action callback);
-
         [DllImport("aspnetcore.dll")]
         public static extern void register_request_callback(request_handler callback);
 
         [DllImport("aspnetcore.dll")]
-        public unsafe static extern bool http_write_response_bytes(IntPtr pHttpContext, byte* buffer, int count, completion_callback callback, IntPtr state);
+        public unsafe static extern bool http_write_response_bytes(IntPtr pHttpContext, byte* pvBuffer, int cbBuffer, completion_callback pfnCompletionCallback, IntPtr pvCompletionContext);
 
         [DllImport("aspnetcore.dll")]
-        public unsafe static extern bool http_flush_response_bytes(IntPtr pHttpContext, completion_callback callback, IntPtr state);
+        public unsafe static extern bool http_flush_response_bytes(IntPtr pHttpContext, completion_callback pfnCompletionCallback, IntPtr pvCompletionContext);
 
         [DllImport("aspnetcore.dll")]
-        public unsafe static extern bool http_read_request_bytes(IntPtr pHttpContext, byte* buffer, int count, completion_callback callback, IntPtr state, out int bytesRead);
+        public unsafe static extern HttpApi.HTTP_REQUEST_V2* http_get_raw_request(IntPtr pHttpContext);
 
         [DllImport("aspnetcore.dll")]
-        public unsafe static extern bool http_get_completion_info(IntPtr pCompletionInfo, out int bytes, out int status);
+        public unsafe static extern HttpApi.HTTP_RESPONSE_V2* http_get_raw_response(IntPtr pHttpContext);
 
-        //[DllImport("aspnetcore.dll")]
-        //public static extern void unregister_request_callback();
+        [DllImport("aspnetcore.dll")]
+        public unsafe static extern void http_set_response_status_code(IntPtr pHttpContext, ushort statusCode, byte* pszReason);
 
+        [DllImport("aspnetcore.dll")]
+        public unsafe static extern bool http_read_request_bytes(IntPtr pHttpContext, byte* pvBuffer, int cbBuffer, completion_callback pfnCompletionCallback, IntPtr pvCompletionContext, out int dwBytesReceived);
+
+        [DllImport("aspnetcore.dll")]
+        public unsafe static extern bool http_get_completion_info(IntPtr pCompletionInfo, out int cbBytes, out int hr);
     }
 }

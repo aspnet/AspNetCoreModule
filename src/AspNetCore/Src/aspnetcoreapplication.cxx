@@ -11,6 +11,21 @@ extern "C" __declspec(dllexport) void register_request_callback(request_handler 
 
 // HTTP exports
 
+extern "C" __declspec(dllexport) HTTP_REQUEST* http_get_raw_request(IHttpContext* pHttpContext)
+{
+    return pHttpContext->GetRequest()->GetRawHttpRequest();
+}
+
+extern "C" __declspec(dllexport) HTTP_RESPONSE* http_get_raw_response(IHttpContext* pHttpContext)
+{
+    return pHttpContext->GetResponse()->GetRawHttpResponse();
+}
+
+extern "C" __declspec(dllexport) void http_set_response_status_code(IHttpContext* pHttpContext, USHORT statusCode, PCSTR pszReason)
+{
+    pHttpContext->GetResponse()->SetStatus(statusCode, pszReason);
+}
+
 extern "C" __declspec(dllexport) void http_get_completion_info(IHttpCompletionInfo2* info, DWORD* cbBytes, HRESULT* hr)
 {
     *cbBytes = info->GetCompletionBytes();

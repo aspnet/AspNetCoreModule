@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace WebApplication26
+namespace SampleServer
 {
     public class IISHttpResponseBody : Stream
     {

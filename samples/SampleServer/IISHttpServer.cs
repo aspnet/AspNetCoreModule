@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace WebApplication26
+namespace SampleServer
 {
     public class IISHttpServer : IServer
     {

@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features;
 
-namespace WebApplication26
+namespace SampleServer
 {
-    public class IISHttpContext : IFeatureCollection
+    public class IISHttpContext : IFeatureCollection, IHttpUpgradeFeature
     {
         private readonly IntPtr _pHttpContext;
         private readonly FeatureCollection _features = new FeatureCollection();
@@ -14,9 +17,16 @@ namespace WebApplication26
         {
             _pHttpContext = pHttpContext;
 
+            unsafe
+            {
+                var pHttpRequest = NativeMethods.http_get_raw_request(pHttpContext);
+                var pHttpResponse = NativeMethods.http_get_raw_request(pHttpContext);
+            }
+
             var request = new HttpRequestFeature();
             request.Body = new IISHttpRequestBody(pHttpContext);
             Set<IHttpRequestFeature>(request);
+            Set<IHttpUpgradeFeature>(this);
             var response = new HttpResponseFeature();
             response.Body = new IISHttpResponseBody(pHttpContext);
             Set<IHttpResponseFeature>(response);
@@ -27,6 +37,8 @@ namespace WebApplication26
         public bool IsReadOnly => _features.IsReadOnly;
 
         public int Revision => _features.Revision;
+
+        public bool IsUpgradableRequest => throw new NotImplementedException();
 
         public TFeature Get<TFeature>()
         {
@@ -41,6 +53,17 @@ namespace WebApplication26
         public void Set<TFeature>(TFeature instance)
         {
             _features.Set(instance);
+        }
+
+        public async Task<Stream> UpgradeAsync()
+        {
+            var response = Get<IHttpResponseFeature>();
+            response.StatusCode = 101;
+
+            await response.Body.FlushAsync();
+
+            // Send 101
+            return new DuplexStream(Get<IHttpRequestFeature>().Body, response.Body);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
