@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace SampleServer
+namespace WebApplication26
 {
     public class Startup
     {
@@ -20,6 +22,8 @@ namespace SampleServer
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
+            // Console.ReadLine();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -27,6 +31,17 @@ namespace SampleServer
 
             app.Run(async (context) =>
             {
+                var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
+
+                if (string.IsNullOrEmpty(body))
+                {
+                    Console.WriteLine("Request body was empty");
+                }
+                else
+                {
+                    Console.WriteLine($"Request body: {body}");
+                }
+
                 await context.Response.WriteAsync("Hello World!");
             });
         }
