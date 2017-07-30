@@ -3,10 +3,10 @@
     "Local ANCM": {
       "commandName": "Executable",
       "executablePath": "C:\\Program Files\\IIS Express\\iisexpress.exe",
-      "commandLineArgs": "/config:\"C:\\Users\\dfowler\\Documents\\GitHub\\AspNetCoreModule\\samples\\SampleServer\\applicationhost.config\" /site:\"SampleServer\" /apppool:\"Clr4IntegratedAppPool\"",
+      "commandLineArgs": "/config:\"$(MSBuildThisFileDirectory)applicationhost.config\" /site:\"$(ProjectName)\" /apppool:\"Clr4IntegratedAppPool\"",
       "environmentVariables": {
-        "ANCM_PATH": "C:\\Users\\dfowler\\Documents\\GitHub\\AspNetCoreModule\\src\\AspNetCore\\bin\\Debug\\x64\\",
-        "LAUNCHER_ARGS": "bin\\Debug\\netcoreapp2.0\\SampleServer.dll",
+        "ANCM_PATH": "$(SolutionDir)src\\AspNetCore\\bin\\$(Configuration)\\x64\\",
+        "LAUNCHER_ARGS": "$(TargetPath)",
         "LAUNCHER_PATH": "dotnet.exe"
       }
     }
