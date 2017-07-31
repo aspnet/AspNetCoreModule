@@ -22,20 +22,15 @@ namespace SampleServer
 
             NativeMethods.http_get_completion_info(pCompletionInfo, out int cbBytes, out int hr);
 
-            awaitable._exception = Marshal.GetExceptionForHR(hr);
-            awaitable._cbBytes = cbBytes;
-
-            var continuation = Interlocked.Exchange(ref awaitable._callback, _callbackCompleted);
-
-            continuation?.Invoke();
+            awaitable.Complete(hr, cbBytes);
 
             return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_CONTINUE;
         };
-
+        
         public IISAwaitable GetAwaiter() => this;
         public bool IsCompleted => _callback == _callbackCompleted;
 
-        public void GetResult()
+        public int GetResult()
         {
             var exception = _exception;
             var cbBytes = _cbBytes;
@@ -45,7 +40,12 @@ namespace SampleServer
             _cbBytes = 0;
             _callback = null;
 
-            // return new UvWriteResult(status, exception);
+            if (exception != null)
+            {
+                throw exception;
+            }
+
+            return cbBytes;
         }
 
         public void OnCompleted(Action continuation)
@@ -66,6 +66,16 @@ namespace SampleServer
         public void UnsafeOnCompleted(Action continuation)
         {
             OnCompleted(continuation);
+        }
+
+        public void Complete(int hr, int cbBytes)
+        {
+            _exception = Marshal.GetExceptionForHR(hr);
+            _cbBytes = cbBytes;
+
+            var continuation = Interlocked.Exchange(ref _callback, _callbackCompleted);
+
+            continuation?.Invoke();
         }
     }
 }

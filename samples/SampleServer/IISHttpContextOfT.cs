@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
 
 namespace SampleServer
 {
@@ -10,8 +11,8 @@ namespace SampleServer
         private readonly NativeMethods.request_handler_cb _pfnCompletionCallback;
         private readonly IntPtr _pvCompletionContext;
 
-        public IISHttpContextOfT(IHttpApplication<T> application, IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
-            : base(pHttpContext)
+        public IISHttpContextOfT(PipeFactory pipeFactory, IHttpApplication<T> application, IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
+            : base(pipeFactory, pHttpContext)
         {
             _application = application;
             _pfnCompletionCallback = pfnCompletionCallback;
@@ -24,6 +25,7 @@ namespace SampleServer
 
             try
             {
+                _ = StartWritingResponseBody();
                 await _application.ProcessRequestAsync(context);
             }
             catch (Exception ex)
@@ -42,7 +44,7 @@ namespace SampleServer
                     await FireOnCompleted();
                 }
             }
-            
+
             try
             {
                 _application.DisposeContext(context, _applicationException);
@@ -55,6 +57,10 @@ namespace SampleServer
             finally
             {
                 _pfnCompletionCallback(_applicationException?.HResult ?? 0, _pHttpContext, _pvCompletionContext);
+
+
+                Input.Reader.Complete();
+                Output.Writer.Complete();
             }
         }
     }

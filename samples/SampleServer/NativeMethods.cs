@@ -22,10 +22,10 @@ namespace SampleServer
         public static extern void register_request_callback(request_handler callback, IntPtr pvRequestContext);
 
         [DllImport("aspnetcore.dll")]
-        public unsafe static extern bool http_write_response_bytes(IntPtr pHttpContext, byte* pvBuffer, int cbBuffer, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext);
+        public unsafe static extern int http_write_response_bytes(IntPtr pHttpContext, byte* pvBuffer, int cbBuffer, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext, out bool fCompletionExpected);
 
         [DllImport("aspnetcore.dll")]
-        public unsafe static extern bool http_flush_response_bytes(IntPtr pHttpContext, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext);
+        public unsafe static extern int http_flush_response_bytes(IntPtr pHttpContext, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext, out bool fCompletionExpected);
 
         [DllImport("aspnetcore.dll")]
         public unsafe static extern HttpApi.HTTP_REQUEST_V2* http_get_raw_request(IntPtr pHttpContext);
@@ -37,7 +37,7 @@ namespace SampleServer
         public unsafe static extern void http_set_response_status_code(IntPtr pHttpContext, ushort statusCode, byte* pszReason);
 
         [DllImport("aspnetcore.dll")]
-        public unsafe static extern bool http_read_request_bytes(IntPtr pHttpContext, byte* pvBuffer, int cbBuffer, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext, out int dwBytesReceived);
+        public unsafe static extern int http_read_request_bytes(IntPtr pHttpContext, byte* pvBuffer, int cbBuffer, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext, out int dwBytesReceived, out bool fCompletionExpected);
 
         [DllImport("aspnetcore.dll")]
         public unsafe static extern bool http_get_completion_info(IntPtr pCompletionInfo, out int cbBytes, out int hr);

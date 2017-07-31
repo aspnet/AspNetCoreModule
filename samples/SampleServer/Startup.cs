@@ -31,14 +31,10 @@ namespace SampleServer
 
             app.Run(async (context) =>
             {
-                var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
 
-                if (string.IsNullOrEmpty(body))
+                if (HttpMethods.IsPost(context.Request.Method))
                 {
-                    Console.WriteLine("Request body was empty");
-                }
-                else
-                {
+                    var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
                     Console.WriteLine($"Request body: {body}");
                 }
 

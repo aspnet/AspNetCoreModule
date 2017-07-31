@@ -5,21 +5,23 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
 
 namespace SampleServer
 {
     public class IISHttpResponseBody : Stream
     {
-        private readonly IntPtr _pHttpContext;
-        private TaskCompletionSource<object> _currentOperation;
-        private IntPtr _thisPtr;
-        private static NativeMethods.PFN_ASYNC_COMPLETION _writeCallback = WriteCb;
-        private object _lockObj = new object();
+        private readonly IISHttpContext _httpContext;
+        private readonly object _lockObj = new object();
 
-        public IISHttpResponseBody(IntPtr pHttpContext)
+        private TaskCompletionSource<object> _flushTcs;
+        private readonly object _flushLock = new object();
+        private Action _flushCompleted;
+
+        public IISHttpResponseBody(IISHttpContext httpContext)
         {
-            _pHttpContext = pHttpContext;
-            _thisPtr = (IntPtr)GCHandle.Alloc(this);
+            _httpContext = httpContext;
+            _flushCompleted = OnFlushCompleted;
         }
 
         public override bool CanRead => false;
@@ -59,55 +61,59 @@ namespace SampleServer
 
         public override unsafe Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            var writableBuffer = default(WritableBuffer);
+
             // Don't allow overlapping writes
             lock (_lockObj)
             {
-                // The data is being copied synchronously in the method so it doesn't
-                // need to be pinned for the length of the async operation
-                fixed (byte* pBuffer = buffer)
+                writableBuffer = _httpContext.Output.Writer.Alloc(1);
+                var writer = new WritableBufferWriter(writableBuffer);
+                if (count > 0)
                 {
-                    bool async = NativeMethods.http_write_response_bytes(
-                        _pHttpContext,
-                        pBuffer + offset,
-                        count,
-                        _writeCallback,
-                        _thisPtr);
-
-                    if (async)
-                    {
-                        // Only allocate if we're going async, this is inside of the lock
-                        // so the callback waits until it's assigned to 
-                        _currentOperation = new TaskCompletionSource<object>(TaskContinuationOptions.RunContinuationsAsynchronously);
-                        return _currentOperation.Task;
-                    }
+                    writer.Write(buffer, offset, count);
                 }
 
+                writableBuffer.Commit();
+            }
+
+            return FlushAsync(writableBuffer, cancellationToken);
+        }
+        private Task FlushAsync(WritableBuffer writableBuffer,
+            CancellationToken cancellationToken)
+        {
+            var awaitable = writableBuffer.FlushAsync(cancellationToken);
+            if (awaitable.IsCompleted)
+            {
+                // The flush task can't fail today
                 return Task.CompletedTask;
             }
+            return FlushAsyncAwaited(awaitable, writableBuffer.BytesWritten, cancellationToken);
         }
 
-        private static NativeMethods.REQUEST_NOTIFICATION_STATUS WriteCb(IntPtr pHttpContext, IntPtr pCompletionInfo, IntPtr state)
+        private async Task FlushAsyncAwaited(WritableBufferAwaitable awaitable, long count, CancellationToken cancellationToken)
         {
-            var handle = GCHandle.FromIntPtr(state);
-            var stream = (IISHttpResponseBody)handle.Target;
-
-            // Lock so that we guarantee WriteAsync completed before executing the callback
-            lock (stream._lockObj)
+            // https://github.com/dotnet/corefxlab/issues/1334
+            // Since the flush awaitable doesn't currently support multiple awaiters
+            // we need to use a task to track the callbacks.
+            // All awaiters get the same task
+            lock (_flushLock)
             {
-                NativeMethods.http_get_completion_info(pCompletionInfo, out var count, out var status);
-
-                // This always dispatches so we're fine doing it inside of the lock
-                if (status != NativeMethods.S_OK)
+                if (_flushTcs == null || _flushTcs.Task.IsCompleted)
                 {
-                    stream._currentOperation.TrySetException(Marshal.GetExceptionForHR(status));
-                }
-                else
-                {
-                    stream._currentOperation.TrySetResult(null);
-                }
+                    _flushTcs = new TaskCompletionSource<object>();
 
-                return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_CONTINUE;
+                    awaitable.OnCompleted(_flushCompleted);
+                }
             }
+
+            await _flushTcs.Task;
+
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        private void OnFlushCompleted()
+        {
+            _flushTcs.TrySetResult(null);
         }
     }
 }

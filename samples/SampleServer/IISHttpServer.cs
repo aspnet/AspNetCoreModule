@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace SampleServer
@@ -15,13 +16,15 @@ namespace SampleServer
 
         private IISContextFactory _iisContextFactory;
 
+        private PipeFactory _pipeFactory = new PipeFactory();
+
         public IFeatureCollection Features { get; } = new FeatureCollection();
 
         public Task StartAsync<TContext>(IHttpApplication<TContext> application, CancellationToken cancellationToken)
         {
             var httpServerHandle = (IntPtr)GCHandle.Alloc(this);
 
-            _iisContextFactory = new IISContextFactory<TContext>(application);
+            _iisContextFactory = new IISContextFactory<TContext>(_pipeFactory, application);
 
             // Start the server by registering the callback
             NativeMethods.register_request_callback(_requestHandler, httpServerHandle);
@@ -63,15 +66,17 @@ namespace SampleServer
         private class IISContextFactory<T> : IISContextFactory
         {
             private readonly IHttpApplication<T> _application;
+            private readonly PipeFactory _pipeFactory;
 
-            public IISContextFactory(IHttpApplication<T> application)
+            public IISContextFactory(PipeFactory pipeFactory, IHttpApplication<T> application)
             {
                 _application = application;
+                _pipeFactory = pipeFactory;
             }
 
             public override IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
             {
-                return new IISHttpContextOfT<T>(_application, pHttpContext, pfnCompletionCallback, pvCompletionContext);
+                return new IISHttpContextOfT<T>(_pipeFactory, _application, pHttpContext, pfnCompletionCallback, pvCompletionContext);
             }
         }
     }

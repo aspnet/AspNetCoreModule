@@ -32,13 +32,14 @@ extern "C" __declspec(dllexport) void http_get_completion_info(IHttpCompletionIn
     *hr = info->GetCompletionStatus();
 }
 
-extern "C" __declspec(dllexport) BOOL http_read_request_bytes(
+extern "C" __declspec(dllexport) HRESULT http_read_request_bytes(
     IHttpContext* pHttpContext,
     CHAR* pvBuffer,
     DWORD cbBuffer,
     PFN_ASYNC_COMPLETION pfnCompletionCallback,
     void* pvCompletionContext,
-    DWORD* dwBytesReceived)
+    DWORD* pDwBytesReceived,
+    BOOL* pfCompletionPending)
 {
     auto pHttpRequest = (IHttpRequest3*)pHttpContext->GetRequest();
 
@@ -51,31 +52,27 @@ extern "C" __declspec(dllexport) BOOL http_read_request_bytes(
         fAsync,
         pfnCompletionCallback,
         pvCompletionContext,
-        dwBytesReceived,
-        &fCompletionPending);
+        pDwBytesReceived,
+        pfCompletionPending);
 
     if (hr == HRESULT_FROM_WIN32(ERROR_HANDLE_EOF))
     {
         // We reached the end of the data
         hr = S_OK;
         fCompletionPending = FALSE;
-        dwBytesReceived = 0;
+        *pDwBytesReceived = 0;
     }
 
-    if (FAILED(hr))
-    {
-        // Do something
-    }
-
-    return fCompletionPending;
+    return hr;
 }
 
-extern "C" __declspec(dllexport) BOOL http_write_response_bytes(
+extern "C" __declspec(dllexport) HRESULT http_write_response_bytes(
     IHttpContext* pHttpContext,
     CHAR* pvBuffer,
     DWORD cbBuffer,
     PFN_ASYNC_COMPLETION pfnCompletionCallback,
-    void* pvCompletionContext)
+    void* pvCompletionContext,
+    BOOL* pfCompletionExpected)
 {
     auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
 
@@ -86,7 +83,6 @@ extern "C" __declspec(dllexport) BOOL http_write_response_bytes(
 
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
-    BOOL fCompletionExpected;
     DWORD dwBytesSent;
 
     HRESULT hr = pHttpResponse->WriteEntityChunks(
@@ -97,26 +93,21 @@ extern "C" __declspec(dllexport) BOOL http_write_response_bytes(
         pfnCompletionCallback,
         pvCompletionContext,
         &dwBytesSent,
-        &fCompletionExpected);
+        pfCompletionExpected);
 
-    if (FAILED(hr))
-    {
-        // TODO: Do something 
-    }
-
-    return fCompletionExpected;
+    return hr;
 }
 
-extern "C" __declspec(dllexport) BOOL http_flush_response_bytes(
+extern "C" __declspec(dllexport) HRESULT http_flush_response_bytes(
     IHttpContext* pHttpContext,
     PFN_ASYNC_COMPLETION pfnCompletionCallback,
-    void* pvCompletionContext)
+    void* pvCompletionContext,
+    BOOL* pfCompletionExpected)
 {
     auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
 
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
-    BOOL fCompletionExpected;
     DWORD dwBytesSent;
 
     HRESULT hr = pHttpResponse->Flush(
@@ -125,14 +116,9 @@ extern "C" __declspec(dllexport) BOOL http_flush_response_bytes(
         pfnCompletionCallback,
         pvCompletionContext,
         &dwBytesSent,
-        &fCompletionExpected);
+        pfCompletionExpected);
 
-    if (FAILED(hr))
-    {
-        // TODO: Do something 
-    }
-
-    return fCompletionExpected;
+    return hr;
 }
 
 // Request callback

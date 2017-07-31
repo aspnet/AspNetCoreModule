@@ -3,15 +3,20 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.System.Buffers;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
 
 namespace SampleServer
 {
     public abstract partial class IISHttpContext
     {
+        private const int MinAllocBufferSize = 2048;
+
         protected readonly IntPtr _pHttpContext;
         private bool _upgradeAvailable;
         private bool _wasUpgraded;
@@ -22,9 +27,21 @@ namespace SampleServer
         protected Stack<KeyValuePair<Func<object, Task>, object>> _onStarting;
         protected Stack<KeyValuePair<Func<object, Task>, object>> _onCompleted;
         protected Exception _applicationException;
+        private PipeFactory _pipeFactory;
 
-        public IISHttpContext(IntPtr pHttpContext)
+        private readonly GCHandle _readOperationGcHandle;
+        private readonly IISAwaitable _readOperation = new IISAwaitable();
+        private BufferHandle _inputHandle;
+
+        private readonly IISAwaitable _writeOperation = new IISAwaitable();
+        private readonly GCHandle _writeOperationGcHandle;
+
+        public IISHttpContext(PipeFactory pipeFactory, IntPtr pHttpContext)
         {
+            _readOperationGcHandle = GCHandle.Alloc(_readOperation);
+            _writeOperationGcHandle = GCHandle.Alloc(_writeOperation);
+
+            _pipeFactory = pipeFactory;
             _pHttpContext = pHttpContext;
 
             unsafe
@@ -71,8 +88,11 @@ namespace SampleServer
                 RequestHeaders = new RequestHeaders(pHttpRequest);
             }
 
-            RequestBody = new IISHttpRequestBody(pHttpContext);
-            ResponseBody = new IISHttpResponseBody(pHttpContext);
+            RequestBody = new IISHttpRequestBody(this);
+            ResponseBody = new IISHttpResponseBody(this);
+
+            Input = _pipeFactory.Create();
+            Output = _pipeFactory.Create();
 
             // TODO: Only upgradable on Win8 or higher
             _upgradeAvailable = true;
@@ -87,7 +107,7 @@ namespace SampleServer
         public string Path { get; set; }
         public string QueryString { get; set; }
         public string RawTarget { get; set; }
-        public int StatusCode { get; set; }
+        public int StatusCode { get; set; } = 200;
         public string ReasonPhrase { get; set; }
         public CancellationToken RequestAborted { get; set; }
         public bool HasResponseStarted { get; set; }
@@ -101,6 +121,9 @@ namespace SampleServer
         public Stream RequestBody { get; set; }
         public Stream ResponseBody { get; set; }
 
+        public IPipe Input { get; set; }
+        public IPipe Output { get; set; }
+
         public IHeaderDictionary RequestHeaders { get; set; }
         public IHeaderDictionary ResponseHeaders { get; set; } = new HeaderDictionary();
 
@@ -112,6 +135,136 @@ namespace SampleServer
         public void Abort()
         {
 
+        }
+
+        public async Task StartReadingRequestBody()
+        {
+            try
+            {
+                while (true)
+                {
+                    // These buffers are pinned
+                    var wb = Input.Writer.Alloc(MinAllocBufferSize);
+                    var handle = wb.Buffer.Pin();
+
+                    try
+                    {
+                        int read = await ReadAsync(wb.Buffer.Length);
+                        wb.Advance(read);
+                        var result = await wb.FlushAsync();
+
+                        if (result.IsCompleted || result.IsCancelled)
+                        {
+                            break;
+                        }
+                    }
+                    finally
+                    {
+                        handle.Free();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Input.Writer.Complete(ex);
+            }
+            finally
+            {
+                Input.Writer.Complete();
+            }
+        }
+
+        public async Task StartWritingResponseBody()
+        {
+            while (true)
+            {
+                ReadResult result;
+
+                try
+                {
+                    result = await Output.Reader.ReadAsync();
+                }
+                catch
+                {
+                    Output.Reader.Complete();
+                    return;
+                }
+
+                var buffer = result.Buffer;
+                var consumed = buffer.End;
+
+                try
+                {
+                    if (result.IsCancelled)
+                    {
+                        break;
+                    }
+
+                    if (!buffer.IsEmpty)
+                    {
+                        var writeResult = await WriteAsync(buffer);
+                    }
+                    else if (result.IsCompleted)
+                    {
+                        break;
+                    }
+                }
+                finally
+                {
+                    Output.Reader.Advance(consumed);
+                }
+            }
+
+            Output.Reader.Complete();
+        }
+
+        private unsafe IISAwaitable WriteAsync(ReadableBuffer buffer)
+        {
+            var fCompletionExpected = false;
+            var hr = 0;
+
+            if (!buffer.IsSingleSpan)
+            {
+                // TODO: Handle mutiple buffers (in a single write)
+                var copy = buffer.ToArray();
+                fixed (byte* pBuffer = &copy[0])
+                {
+                    hr = NativeMethods.http_write_response_bytes(_pHttpContext, pBuffer, buffer.Length, IISAwaitable.Callback, (IntPtr)_writeOperationGcHandle, out fCompletionExpected);
+                }
+            }
+            else
+            {
+                fixed (byte* pBuffer = &buffer.First.Span.DangerousGetPinnableReference())
+                {
+                    hr = NativeMethods.http_write_response_bytes(_pHttpContext, pBuffer, buffer.Length, IISAwaitable.Callback, (IntPtr)_writeOperationGcHandle, out fCompletionExpected);
+                }
+            }
+
+            if (!fCompletionExpected || hr != NativeMethods.S_OK)
+            {
+                _writeOperation.Complete(hr, cbBytes: 0);
+            }
+
+            return _writeOperation;
+        }
+
+        private unsafe IISAwaitable ReadAsync(int length)
+        {
+            var hr = NativeMethods.http_read_request_bytes(
+                                _pHttpContext,
+                                (byte*)_inputHandle.PinnedPointer,
+                                length,
+                                IISAwaitable.Callback,
+                                (IntPtr)_readOperationGcHandle,
+                                out var dwReceivedBytes,
+                                out bool fCompletionExpected);
+
+            if (!fCompletionExpected || hr != NativeMethods.S_OK)
+            {
+                _readOperation.Complete(hr, cbBytes: dwReceivedBytes);
+            }
+
+            return _readOperation;
         }
 
         public abstract Task ProcessRequestAsync();
