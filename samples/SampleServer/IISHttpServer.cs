@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace SampleServer
 {
-    public class IISHttpServer : IISContextFactory, IServer
+    public class IISHttpServer : IServer
     {
         private static NativeMethods.request_handler _requestHandler = HandleRequest;
 
@@ -32,6 +32,13 @@ namespace SampleServer
             return Task.CompletedTask;
         }
 
+        private async Task ProcessRequest(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
+        {
+            var context = _iisContextFactory.CreateHttpContext(pHttpContext, pfnCompletionCallback, pvCompletionContext);
+
+            await context.ProcessRequestAsync();
+        }
+
         public Task StopAsync(CancellationToken cancellationToken)
         {
             // TODO: Drain pending requests
@@ -46,21 +53,13 @@ namespace SampleServer
 
         }
 
-        // Async void is evil I know but it gets the job done
-        // We may want to allow for synchronous completions here
-        private static async void HandleRequest(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext, IntPtr pvRequestContext)
+        private static void HandleRequest(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext, IntPtr pvRequestContext)
         {
             // Unwrap the server so we can create an http context and process the request
             var server = (IISHttpServer)GCHandle.FromIntPtr(pvRequestContext).Target;
 
-            var context = server.CreateHttpContext(pHttpContext, pfnCompletionCallback, pvCompletionContext);
-
-            await context.ProcessRequestAsync();
-        }
-
-        public IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
-        {
-            return _iisContextFactory.CreateHttpContext(pHttpContext, pfnCompletionCallback, pvCompletionContext);
+            // Ignore the task here this should never fail
+            _ = server.ProcessRequest(pHttpContext, pfnCompletionCallback, pvCompletionContext);
         }
 
         private class IISContextFactory<T> : IISContextFactory
