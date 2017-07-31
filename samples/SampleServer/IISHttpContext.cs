@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Internal.System.Buffers;
 using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace SampleServer
 {
@@ -130,15 +131,33 @@ namespace SampleServer
         public IHeaderDictionary RequestHeaders { get; set; }
         public IHeaderDictionary ResponseHeaders { get; set; } = new HeaderDictionary();
 
-        public Task FlushAsync(CancellationToken cancellationToken)
+        public async Task FlushAsync(CancellationToken cancellationToken)
+        {
+            await InitializeResponse();
+
+            // TODO: Call FlushAsync
+        }
+
+        private Task InitializeResponse()
         {
             if (!HasResponseStarted)
             {
                 // First flush
                 unsafe
                 {
+                    // TODO: Don't allocate a string
+                    var reasonPhrase = ReasonPhrases.GetReasonPhrase(StatusCode);
+                    var reasonPhraseBytes = Encoding.UTF8.GetBytes(reasonPhrase);
+
+                    fixed (byte* pReasonPhrase = reasonPhraseBytes)
+                    {
+                        // This copies data into the underying buffer
+                        NativeMethods.http_set_response_status_code(_pHttpContext, (ushort)StatusCode, pReasonPhrase);
+                    }
+
                     HttpApi.HTTP_RESPONSE_V2* pHttpResponse = NativeMethods.http_get_raw_response(_pHttpContext);
-                    pHttpResponse->Response_V1.StatusCode = (ushort)StatusCode;
+
+                    // TODO: Copy headers here
                 }
 
                 HasResponseStarted = true;
@@ -230,6 +249,8 @@ namespace SampleServer
                     {
                         break;
                     }
+
+                    await InitializeResponse();
 
                     if (!buffer.IsEmpty)
                     {
