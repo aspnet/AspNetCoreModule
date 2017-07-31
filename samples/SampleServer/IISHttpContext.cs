@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,6 +37,10 @@ namespace SampleServer
                 {
                     Method = HttpApi.HttpVerbs[(int)verb];
                 }
+                else
+                {
+                    // TODO: Handle unknown verbs
+                }
 
                 var major = pHttpRequest->Request.Version.MajorVersion;
                 var minor = pHttpRequest->Request.Version.MinorVersion;
@@ -60,7 +65,11 @@ namespace SampleServer
                 // TODO: Also make this not slow
                 TraceIdentifier = guid.ToString();
 
-                var pHttpResponse = NativeMethods.http_get_raw_request(pHttpContext);
+                // TODO: Parse socket ADDR for local and remote end point
+                // var localAddress = GetSocketAddress(pHttpRequest->Request.Address.pLocalAddress);
+                // var remoteAddress = GetSocketAddress(pHttpRequest->Request.Address.pRemoteAddress);
+
+                RequestHeaders = new RequestHeaders(pHttpRequest);
             }
 
             RequestBody = new IISHttpRequestBody(pHttpContext);
@@ -93,8 +102,7 @@ namespace SampleServer
         public Stream RequestBody { get; set; }
         public Stream ResponseBody { get; set; }
 
-        // TODO: Optimize header
-        public IHeaderDictionary RequestHeaders { get; set; } = new HeaderDictionary();
+        public IHeaderDictionary RequestHeaders { get; set; }
         public IHeaderDictionary ResponseHeaders { get; set; } = new HeaderDictionary();
 
         public Task FlushAsync(CancellationToken cancellationToken)

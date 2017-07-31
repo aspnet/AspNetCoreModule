@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <None Include="IISHttpContext.FeatureCollection.cs" />
+    <None Include="RequestHeaders.Generated.cs" />
   </ItemGroup>
 
   <ItemGroup>
