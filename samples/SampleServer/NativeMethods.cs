@@ -14,12 +14,17 @@ namespace SampleServer
             RQ_NOTIFICATION_FINISH_REQUEST
         }
 
-        public delegate void request_handler_cb(int error, IntPtr pHttpContext, IntPtr state);
-        public delegate void request_handler(IntPtr pHttpContext, request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext, IntPtr pvRequestContext);
+        public delegate REQUEST_NOTIFICATION_STATUS PFN_REQUEST_HANDLER(IntPtr pHttpContext, IntPtr pvRequestContext);
         public delegate REQUEST_NOTIFICATION_STATUS PFN_ASYNC_COMPLETION(IntPtr pHttpContext, IntPtr completionInfo, IntPtr pvCompletionContext);
 
         [DllImport("aspnetcore.dll")]
-        public static extern void register_request_callback(request_handler callback, IntPtr pvRequestContext);
+        public static extern int http_post_completion(IntPtr pHttpContext, int cbBytes);
+
+        [DllImport("aspnetcore.dll")]
+        public static extern void http_indicate_completion(IntPtr pHttpContext, REQUEST_NOTIFICATION_STATUS notificationStatus);
+
+        [DllImport("aspnetcore.dll")]
+        public static extern void register_request_callback(PFN_REQUEST_HANDLER callback, IntPtr pvRequestContext);
 
         [DllImport("aspnetcore.dll")]
         public unsafe static extern int http_write_response_bytes(IntPtr pHttpContext, byte* pvBuffer, int cbBuffer, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext, out bool fCompletionExpected);

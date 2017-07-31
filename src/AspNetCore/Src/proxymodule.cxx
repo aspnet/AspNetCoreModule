@@ -114,8 +114,7 @@ CProxyModule::OnExecuteRequestHandler(
     ((IHttpResponse2*)pHttpContext->GetResponse())->DisableBuffering();
 
     // TODO: Optimize sync completions
-    pAspNetCoreApplication->ExecuteRequest(pHttpContext);
-    return RQ_NOTIFICATION_PENDING;
+    return pAspNetCoreApplication->ExecuteRequest(pHttpContext);
 
 Failed:
     pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);

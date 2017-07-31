@@ -4,7 +4,7 @@ typedef int(*hostfxr_main_fn) (const int argc, const wchar_t* argv[]);
 
 // Initialization export
 
-extern "C" __declspec(dllexport) void register_request_callback(request_handler requestHandler, void* pvRequstHandlerContext)
+extern "C" __declspec(dllexport) void register_request_callback(PFN_REQUEST_HANDLER requestHandler, void* pvRequstHandlerContext)
 {
     ASPNETCORE_APPLICATION::GetInstance()->SetRequestHandlerCallback(requestHandler, pvRequstHandlerContext);
 }
@@ -24,6 +24,16 @@ extern "C" __declspec(dllexport) HTTP_RESPONSE* http_get_raw_response(IHttpConte
 extern "C" __declspec(dllexport) void http_set_response_status_code(IHttpContext* pHttpContext, USHORT statusCode, PCSTR pszReason)
 {
     pHttpContext->GetResponse()->SetStatus(statusCode, pszReason);
+}
+
+extern "C" __declspec(dllexport) HRESULT http_post_completion(IHttpContext* pHttpContext)
+{
+    return pHttpContext->PostCompletion(0);
+}
+
+extern "C" __declspec(dllexport) void http_indicate_completion(IHttpContext* pHttpContext, REQUEST_NOTIFICATION_STATUS notificationStatus)
+{
+    pHttpContext->IndicateCompletion(notificationStatus);
 }
 
 extern "C" __declspec(dllexport) void http_get_completion_info(IHttpCompletionInfo2* info, DWORD* cbBytes, HRESULT* hr)
@@ -121,12 +131,6 @@ extern "C" __declspec(dllexport) HRESULT http_flush_response_bytes(
     return hr;
 }
 
-// Request callback
-static void OnRequestCompleted(int error, IHttpContext* pHttpContext, void* state)
-{
-    ((ASPNETCORE_APPLICATION*)state)->CompleteRequest(pHttpContext, error);
-}
-
 // Thread execution callback
 static void ExecuteAspNetCoreProcess(LPVOID pContext)
 {
@@ -138,7 +142,7 @@ static void ExecuteAspNetCoreProcess(LPVOID pContext)
 ASPNETCORE_APPLICATION* ASPNETCORE_APPLICATION::s_Application = NULL;
 
 
-void ASPNETCORE_APPLICATION::SetRequestHandlerCallback(request_handler requestHandler, void* pvRequstHandlerContext)
+void ASPNETCORE_APPLICATION::SetRequestHandlerCallback(PFN_REQUEST_HANDLER requestHandler, void* pvRequstHandlerContext)
 {
     m_RequestHandler = requestHandler;
     m_RequstHandlerContext = pvRequstHandlerContext;
@@ -232,19 +236,15 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
     m_ProcessExitCode = proc(2, argv);
 }
 
-void ASPNETCORE_APPLICATION::ExecuteRequest(IHttpContext* pHttpContext)
+REQUEST_NOTIFICATION_STATUS ASPNETCORE_APPLICATION::ExecuteRequest(IHttpContext* pHttpContext)
 {
-    if (m_RequestHandler != NULL)
+    if (m_RequestHandler != NULL) 
     {
-        m_RequestHandler(pHttpContext, OnRequestCompleted, this, m_RequstHandlerContext);
+        return m_RequestHandler(pHttpContext, m_RequstHandlerContext);
     }
-}
 
-void ASPNETCORE_APPLICATION::CompleteRequest(IHttpContext* pHttpContext, int error)
-{
-    // Post the completion of the http request
-    pHttpContext->PostCompletion(0);
-    // pHttpContext->IndicateCompletion(REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE);
+    pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
+    return RQ_NOTIFICATION_FINISH_REQUEST;
 }
 
 

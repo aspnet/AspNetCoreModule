@@ -415,5 +415,15 @@ namespace SampleServer
 
             // TODO: Log
         }
+
+        public void PostCompletion()
+        {
+            NativeMethods.http_post_completion(_pHttpContext, 0);
+        }
+
+        public void IndicateCompletion(NativeMethods.REQUEST_NOTIFICATION_STATUS notificationStatus)
+        {
+            NativeMethods.http_indicate_completion(_pHttpContext, notificationStatus);
+        }
     }
 }

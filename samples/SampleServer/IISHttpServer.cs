@@ -12,7 +12,7 @@ namespace SampleServer
 {
     public class IISHttpServer : IServer
     {
-        private static NativeMethods.request_handler _requestHandler = HandleRequest;
+        private static NativeMethods.PFN_REQUEST_HANDLER _requestHandler = HandleRequest;
 
         private IISContextFactory _iisContextFactory;
 
@@ -32,9 +32,9 @@ namespace SampleServer
             return Task.CompletedTask;
         }
 
-        private async Task ProcessRequest(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
+        private async Task ProcessRequest(IntPtr pHttpContext)
         {
-            var context = _iisContextFactory.CreateHttpContext(pHttpContext, pfnCompletionCallback, pvCompletionContext);
+            var context = _iisContextFactory.CreateHttpContext(pHttpContext);
 
             await context.ProcessRequestAsync();
         }
@@ -53,13 +53,16 @@ namespace SampleServer
 
         }
 
-        private static void HandleRequest(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext, IntPtr pvRequestContext)
+        private static NativeMethods.REQUEST_NOTIFICATION_STATUS HandleRequest(IntPtr pHttpContext, IntPtr pvRequestContext)
         {
             // Unwrap the server so we can create an http context and process the request
             var server = (IISHttpServer)GCHandle.FromIntPtr(pvRequestContext).Target;
 
             // Ignore the task here this should never fail
-            _ = server.ProcessRequest(pHttpContext, pfnCompletionCallback, pvCompletionContext);
+            _ = server.ProcessRequest(pHttpContext);
+
+            // TODO: Handle sync completion
+            return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_PENDING;
         }
 
         private class IISContextFactory<T> : IISContextFactory
@@ -73,9 +76,9 @@ namespace SampleServer
                 _pipeFactory = pipeFactory;
             }
 
-            public IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
+            public IISHttpContext CreateHttpContext(IntPtr pHttpContext)
             {
-                return new IISHttpContextOfT<T>(_pipeFactory, _application, pHttpContext, pfnCompletionCallback, pvCompletionContext);
+                return new IISHttpContextOfT<T>(_pipeFactory, _application, pHttpContext);
             }
         }
     }
@@ -83,7 +86,7 @@ namespace SampleServer
     // Over engineering to avoid allocations...
     public interface IISContextFactory
     {
-        IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext);
+        IISHttpContext CreateHttpContext(IntPtr pHttpContext);
     }
 
     public static class WebHostBuilderExtensions

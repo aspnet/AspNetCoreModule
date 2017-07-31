@@ -8,15 +8,11 @@ namespace SampleServer
     public class IISHttpContextOfT<T> : IISHttpContext
     {
         private readonly IHttpApplication<T> _application;
-        private readonly NativeMethods.request_handler_cb _pfnCompletionCallback;
-        private readonly IntPtr _pvCompletionContext;
 
-        public IISHttpContextOfT(PipeFactory pipeFactory, IHttpApplication<T> application, IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
+        public IISHttpContextOfT(PipeFactory pipeFactory, IHttpApplication<T> application, IntPtr pHttpContext)
             : base(pipeFactory, pHttpContext)
         {
             _application = application;
-            _pfnCompletionCallback = pfnCompletionCallback;
-            _pvCompletionContext = pvCompletionContext;
         }
 
         public override async Task ProcessRequestAsync()
@@ -71,7 +67,7 @@ namespace SampleServer
                     await _readingTask;
                 }
 
-                _pfnCompletionCallback(_applicationException?.HResult ?? 0, _pHttpContext, _pvCompletionContext);
+                PostCompletion();
             }
         }
     }

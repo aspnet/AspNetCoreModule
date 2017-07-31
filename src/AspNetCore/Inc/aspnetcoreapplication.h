@@ -1,7 +1,7 @@
 #pragma once
 
 typedef void(*request_handler_cb) (int error, IHttpContext* pHttpContext, void* pvCompletionContext);
-typedef void(*request_handler) (IHttpContext* pHttpContext, request_handler_cb pfnCompletionCallback, void* pvCompletionContext, void* pvRequstHandlerContext);
+typedef REQUEST_NOTIFICATION_STATUS(*PFN_REQUEST_HANDLER) (IHttpContext* pHttpContext, void* pvRequstHandlerContext);
 
 class ASPNETCORE_APPLICATION
 {
@@ -11,13 +11,12 @@ public:
     ~ASPNETCORE_APPLICATION() { }
 
     HRESULT Initialize(ASPNETCORE_CONFIG* pConfig);
-    void ExecuteRequest(IHttpContext* pHttpContext);
+    REQUEST_NOTIFICATION_STATUS ExecuteRequest(IHttpContext* pHttpContext);
     void Shutdown();
-    void SetRequestHandlerCallback(request_handler callback, void* pvRequstHandlerContext);
+    void SetRequestHandlerCallback(PFN_REQUEST_HANDLER callback, void* pvRequstHandlerContext);
 
     // Executes the .NET Core process
     void ExecuteApplication();
-    void CompleteRequest(IHttpContext* pHttpContext, int error);
 
     static ASPNETCORE_APPLICATION* GetInstance()
     {
@@ -32,7 +31,7 @@ private:
     ASPNETCORE_CONFIG* m_pConfiguration;
 
     // The request handler callback from managed code
-    request_handler m_RequestHandler;
+    PFN_REQUEST_HANDLER m_RequestHandler;
     void* m_RequstHandlerContext;
 
     // The event that gets triggered when managed initialization is complete
