@@ -594,39 +594,39 @@ namespace SampleServer
         {
             private static string[] _strings =
             {
-                    "Cache-Control",
-                    "Connection",
-                    "Date",
-                    "Keep-Alive",
-                    "Pragma",
-                    "Trailer",
-                    "Transfer-Encoding",
-                    "Upgrade",
-                    "Via",
-                    "Warning",
+                "Cache-Control",
+                "Connection",
+                "Date",
+                "Keep-Alive",
+                "Pragma",
+                "Trailer",
+                "Transfer-Encoding",
+                "Upgrade",
+                "Via",
+                "Warning",
 
-                    "Allow",
-                    "Content-Length",
-                    "Content-Type",
-                    "Content-Encoding",
-                    "Content-Language",
-                    "Content-Location",
-                    "Content-MD5",
-                    "Content-Range",
-                    "Expires",
-                    "Last-Modified",
+                "Allow",
+                "Content-Length",
+                "Content-Type",
+                "Content-Encoding",
+                "Content-Language",
+                "Content-Location",
+                "Content-MD5",
+                "Content-Range",
+                "Expires",
+                "Last-Modified",
 
-                    "Accept-Ranges",
-                    "Age",
-                    "ETag",
-                    "Location",
-                    "Proxy-Authenticate",
-                    "Retry-After",
-                    "Server",
-                    "Set-Cookie",
-                    "Vary",
-                    "WWW-Authenticate",
-                };
+                "Accept-Ranges",
+                "Age",
+                "ETag",
+                "Location",
+                "Proxy-Authenticate",
+                "Retry-After",
+                "Server",
+                "Set-Cookie",
+                "Vary",
+                "WWW-Authenticate",
+            };
 
             private static Dictionary<string, int> _lookupTable = CreateLookupTable();
 
@@ -642,8 +642,7 @@ namespace SampleServer
 
             public static int IndexOfKnownHeader(string HeaderName)
             {
-                int index;
-                return _lookupTable.TryGetValue(HeaderName, out index) ? index : -1;
+                return _lookupTable.TryGetValue(HeaderName, out var index) ? index : -1;
             }
 
             public enum Enum
