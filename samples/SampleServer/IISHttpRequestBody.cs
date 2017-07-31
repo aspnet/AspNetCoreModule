@@ -14,7 +14,7 @@ namespace SampleServer
         private TaskCompletionSource<int> _currentOperation;
         private IntPtr _thisPtr;
         private GCHandle _pinnedBuffer;
-        private static NativeMethods.completion_callback _readCallback = ReadCallback;
+        private static NativeMethods.PFN_ASYNC_COMPLETION _readCallback = ReadCallback;
         private object _lockObj = new object();
 
         public IISHttpRequestBody(IntPtr pHttpContext)

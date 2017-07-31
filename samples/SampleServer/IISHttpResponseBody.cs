@@ -13,7 +13,7 @@ namespace SampleServer
         private readonly IntPtr _pHttpContext;
         private TaskCompletionSource<object> _currentOperation;
         private IntPtr _thisPtr;
-        private static NativeMethods.completion_callback _writeCallback = WriteCb;
+        private static NativeMethods.PFN_ASYNC_COMPLETION _writeCallback = WriteCb;
         private object _lockObj = new object();
 
         public IISHttpResponseBody(IntPtr pHttpContext)

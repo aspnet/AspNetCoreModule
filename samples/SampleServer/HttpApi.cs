@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 namespace SampleServer
 {
@@ -72,7 +70,7 @@ namespace SampleServer
         public struct HTTP_KNOWN_HEADER
         {
             public ushort RawValueLength;
-            public sbyte* pRawValue;
+            public byte* pRawValue;
         }
 
         [StructLayout(LayoutKind.Explicit)]
@@ -118,10 +116,10 @@ namespace SampleServer
             public ushort HostLength;
             public ushort AbsPathLength;
             public ushort QueryStringLength;
-            public ushort* pFullUrl;
-            public ushort* pHost;
-            public ushort* pAbsPath;
-            public ushort* pQueryString;
+            public char* pFullUrl;
+            public char* pHost;
+            public char* pAbsPath;
+            public char* pQueryString;
         }
 
         // Only cache unauthorized GETs + HEADs.
@@ -203,8 +201,8 @@ namespace SampleServer
         {
             public ushort NameLength;
             public ushort RawValueLength;
-            public sbyte* pName;
-            public sbyte* pRawValue;
+            public byte* pName;
+            public byte* pRawValue;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -214,8 +212,8 @@ namespace SampleServer
             public ushort ConnectionKeySize;
             public uint ServerCertIssuerSize;
             public uint ServerCertSubjectSize;
-            public sbyte* pServerCertIssuer;
-            public sbyte* pServerCertSubject;
+            public byte* pServerCertIssuer;
+            public byte* pServerCertSubject;
             public HTTP_SSL_CLIENT_CERT_INFO* pClientCertInfo;
             public uint SslClientCertNegotiated;
         }
@@ -445,8 +443,8 @@ namespace SampleServer
             public HTTP_VERB Verb;
             public ushort UnknownVerbLength;
             public ushort RawUrlLength;
-            public sbyte* pUnknownVerb;
-            public sbyte* pRawUrl;
+            public byte* pUnknownVerb;
+            public byte* pRawUrl;
             public HTTP_COOKED_URL CookedUrl;
             public HTTP_TRANSPORT_ADDRESS Address;
             public HTTP_REQUEST_HEADERS Headers;
