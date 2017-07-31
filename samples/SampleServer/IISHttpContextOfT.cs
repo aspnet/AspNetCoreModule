@@ -25,7 +25,6 @@ namespace SampleServer
 
             try
             {
-                _ = StartWritingResponseBody();
                 await _application.ProcessRequestAsync(context);
             }
             catch (Exception ex)
@@ -56,11 +55,23 @@ namespace SampleServer
             }
             finally
             {
-                _pfnCompletionCallback(_applicationException?.HResult ?? 0, _pHttpContext, _pvCompletionContext);
-
-
-                Input.Reader.Complete();
+                // The app is finished and there should be nobody writing to the response pipe
                 Output.Writer.Complete();
+
+                if (_writingTask != null)
+                {
+                    await _writingTask;
+                }
+
+                // The app is finished and there should be nobody reading from the request pipe
+                Input.Reader.Complete();
+
+                if (_readingTask != null)
+                {
+                    await _readingTask;
+                }
+
+                _pfnCompletionCallback(_applicationException?.HResult ?? 0, _pHttpContext, _pvCompletionContext);
             }
         }
     }

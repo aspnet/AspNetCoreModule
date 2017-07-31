@@ -66,6 +66,8 @@ namespace SampleServer
             // Don't allow overlapping writes
             lock (_lockObj)
             {
+                _httpContext.StartWritingResponseBody();
+
                 writableBuffer = _httpContext.Output.Writer.Alloc(1);
                 var writer = new WritableBufferWriter(writableBuffer);
                 if (count > 0)

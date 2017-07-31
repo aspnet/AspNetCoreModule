@@ -39,7 +39,7 @@ namespace SampleServer
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            _ = _httpContext.StartReadingRequestBody();
+            _httpContext.StartReadingRequestBody();
 
             while (true)
             {

@@ -36,6 +36,9 @@ namespace SampleServer
         private readonly IISAwaitable _writeOperation = new IISAwaitable();
         private readonly GCHandle _writeOperationGcHandle;
 
+        protected Task _readingTask;
+        protected Task _writingTask;
+
         public IISHttpContext(PipeFactory pipeFactory, IntPtr pHttpContext)
         {
             _readOperationGcHandle = GCHandle.Alloc(_readOperation);
@@ -137,6 +140,8 @@ namespace SampleServer
                     HttpApi.HTTP_RESPONSE_V2* pHttpResponse = NativeMethods.http_get_raw_response(_pHttpContext);
                     pHttpResponse->Response_V1.StatusCode = (ushort)StatusCode;
                 }
+
+                HasResponseStarted = true;
             }
 
             return Task.CompletedTask;
@@ -147,7 +152,15 @@ namespace SampleServer
 
         }
 
-        public async Task StartReadingRequestBody()
+        public void StartReadingRequestBody()
+        {
+            if (_readingTask == null)
+            {
+                _readingTask = ProcessRequestBody();
+            }
+        }
+
+        private async Task ProcessRequestBody()
         {
             try
             {
@@ -184,7 +197,15 @@ namespace SampleServer
             }
         }
 
-        public async Task StartWritingResponseBody()
+        public void StartWritingResponseBody()
+        {
+            if (_writingTask == null)
+            {
+                _writingTask = ProcessResponseBody();
+            }
+        }
+
+        private async Task ProcessResponseBody()
         {
             while (true)
             {
@@ -212,7 +233,7 @@ namespace SampleServer
 
                     if (!buffer.IsEmpty)
                     {
-                        var writeResult = await WriteAsync(buffer);
+                        await WriteAsync(buffer);
                     }
                     else if (result.IsCompleted)
                     {
