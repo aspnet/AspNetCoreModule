@@ -418,7 +418,12 @@ namespace SampleServer
 
         public void PostCompletion()
         {
-            NativeMethods.http_post_completion(_pHttpContext, 0);
+            var hr = NativeMethods.http_post_completion(_pHttpContext, 0);
+
+            if (hr != NativeMethods.S_OK)
+            {
+                throw Marshal.GetExceptionForHR(hr);
+            }
         }
 
         public void IndicateCompletion(NativeMethods.REQUEST_NOTIFICATION_STATUS notificationStatus)
