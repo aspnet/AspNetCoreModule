@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
@@ -8,32 +9,22 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace SampleServer
 {
-    public class IISHttpServer : IServer
+    public class IISHttpServer : IISContextFactory, IServer
     {
+        private static NativeMethods.request_handler _requestHandler = HandleRequest;
+
+        private IISContextFactory _iisContextFactory;
+
         public IFeatureCollection Features { get; } = new FeatureCollection();
 
         public Task StartAsync<TContext>(IHttpApplication<TContext> application, CancellationToken cancellationToken)
         {
-            // Start the server by registering the callback (async void is evil but it gets the job done)
-            NativeMethods.register_request_callback(async (pHttpContext, cb, state) =>
-            {
-                var features = new IISHttpContext(pHttpContext);
+            var httpServerHandle = (IntPtr)GCHandle.Alloc(this);
 
-                // Create the hosting context
-                var context = application.CreateContext(features);
+            _iisContextFactory = new IISContextFactory<TContext>(application);
 
-                try
-                {
-                    await application.ProcessRequestAsync(context);
-                    application.DisposeContext(context, exception: null);
-                    cb(0, pHttpContext, state);
-                }
-                catch (Exception ex)
-                {
-                    application.DisposeContext(context, ex);
-                    cb(ex.HResult, pHttpContext, state);
-                }
-            });
+            // Start the server by registering the callback
+            NativeMethods.register_request_callback(_requestHandler, httpServerHandle);
 
             return Task.CompletedTask;
         }
@@ -43,7 +34,6 @@ namespace SampleServer
             // TODO: Drain pending requests
 
             // Stop all further calls back into managed code by unhooking the callback
-            // unregister_request_callback();
 
             return Task.CompletedTask;
         }
@@ -52,6 +42,44 @@ namespace SampleServer
         {
 
         }
+
+        // Async void is evil I know but it gets the job done
+        // We may want to allow for synchronous completions here
+        private static async void HandleRequest(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext, IntPtr pvRequestContext)
+        {
+            // Unwrap the server so we can create an http context and process the request
+            var server = (IISHttpServer)GCHandle.FromIntPtr(pvRequestContext).Target;
+
+            var context = server.CreateHttpContext(pHttpContext, pfnCompletionCallback, pvCompletionContext);
+
+            await context.ProcessRequestAsync();
+        }
+
+        public override IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
+        {
+            return _iisContextFactory.CreateHttpContext(pHttpContext, pfnCompletionCallback, pvCompletionContext);
+        }
+
+        private class IISContextFactory<T> : IISContextFactory
+        {
+            private readonly IHttpApplication<T> _application;
+
+            public IISContextFactory(IHttpApplication<T> application)
+            {
+                _application = application;
+            }
+
+            public override IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
+            {
+                return new IISHttpContextOfT<T>(_application, pHttpContext, pfnCompletionCallback, pvCompletionContext);
+            }
+        }
+    }
+
+    // Over engineering to avoid allocations...
+    public abstract class IISContextFactory
+    {
+        public abstract IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext);
     }
 
     public static class WebHostBuilderExtensions

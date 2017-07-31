@@ -1,7 +1,7 @@
 #pragma once
 
-typedef void(*request_handler_cb) (int error, IHttpContext* pHttpContext, void* state);
-typedef void(*request_handler) (IHttpContext* pHttpContext, request_handler_cb callback, void* state);
+typedef void(*request_handler_cb) (int error, IHttpContext* pHttpContext, void* pvCompletionContext);
+typedef void(*request_handler) (IHttpContext* pHttpContext, request_handler_cb pfnCompletionCallback, void* pvCompletionContext, void* pvRequstHandlerContext);
 
 class ASPNETCORE_APPLICATION
 {
@@ -13,7 +13,7 @@ public:
     HRESULT Initialize(ASPNETCORE_CONFIG* pConfig);
     void ExecuteRequest(IHttpContext* pHttpContext);
     void Shutdown();
-    void SetRequestHandlerCallback(request_handler callback);
+    void SetRequestHandlerCallback(request_handler callback, void* pvRequstHandlerContext);
 
     // Executes the .NET Core process
     void ExecuteApplication();
@@ -33,6 +33,7 @@ private:
 
     // The request handler callback from managed code
     request_handler m_RequestHandler;
+    void* m_RequstHandlerContext;
 
     // The event that gets triggered when managed initialization is complete
     HANDLE m_InitalizeEvent;

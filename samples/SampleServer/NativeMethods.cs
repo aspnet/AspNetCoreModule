@@ -15,11 +15,11 @@ namespace SampleServer
         }
 
         public delegate void request_handler_cb(int error, IntPtr pHttpContext, IntPtr state);
-        public delegate void request_handler(IntPtr pHttpContext, request_handler_cb callback, IntPtr state);
+        public delegate void request_handler(IntPtr pHttpContext, request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext, IntPtr pvRequestContext);
         public delegate REQUEST_NOTIFICATION_STATUS PFN_ASYNC_COMPLETION(IntPtr pHttpContext, IntPtr completionInfo, IntPtr pvCompletionContext);
 
         [DllImport("aspnetcore.dll")]
-        public static extern void register_request_callback(request_handler callback);
+        public static extern void register_request_callback(request_handler callback, IntPtr pvRequestContext);
 
         [DllImport("aspnetcore.dll")]
         public unsafe static extern bool http_write_response_bytes(IntPtr pHttpContext, byte* pvBuffer, int cbBuffer, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext);

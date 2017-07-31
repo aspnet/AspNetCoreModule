@@ -4,9 +4,9 @@ typedef int(*hostfxr_main_fn) (const int argc, const wchar_t* argv[]);
 
 // Initialization export
 
-extern "C" __declspec(dllexport) void register_request_callback(request_handler requestHandler)
+extern "C" __declspec(dllexport) void register_request_callback(request_handler requestHandler, void* pvRequstHandlerContext)
 {
-    ASPNETCORE_APPLICATION::GetInstance()->SetRequestHandlerCallback(requestHandler);
+    ASPNETCORE_APPLICATION::GetInstance()->SetRequestHandlerCallback(requestHandler, pvRequstHandlerContext);
 }
 
 // HTTP exports
@@ -152,9 +152,10 @@ static void ExecuteAspNetCoreProcess(LPVOID pContext)
 ASPNETCORE_APPLICATION* ASPNETCORE_APPLICATION::s_Application = NULL;
 
 
-void ASPNETCORE_APPLICATION::SetRequestHandlerCallback(request_handler requestHandler)
+void ASPNETCORE_APPLICATION::SetRequestHandlerCallback(request_handler requestHandler, void* pvRequstHandlerContext)
 {
     m_RequestHandler = requestHandler;
+    m_RequstHandlerContext = pvRequstHandlerContext;
 
     // Initialization complete
     SetEvent(m_InitalizeEvent);
@@ -249,7 +250,7 @@ void ASPNETCORE_APPLICATION::ExecuteRequest(IHttpContext* pHttpContext)
 {
     if (m_RequestHandler != NULL)
     {
-        m_RequestHandler(pHttpContext, OnRequestCompleted, this);
+        m_RequestHandler(pHttpContext, OnRequestCompleted, this, m_RequstHandlerContext);
     }
 }
 

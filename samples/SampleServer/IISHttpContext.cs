@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,9 +10,9 @@ using Microsoft.AspNetCore.Http;
 
 namespace SampleServer
 {
-    public partial class IISHttpContext
+    public abstract partial class IISHttpContext
     {
-        private readonly IntPtr _pHttpContext;
+        protected readonly IntPtr _pHttpContext;
         private bool _upgradeAvailable;
         private bool _wasUpgraded;
 
@@ -115,6 +113,8 @@ namespace SampleServer
 
         }
 
+        public abstract Task ProcessRequestAsync();
+
         public void OnStarting(Func<object, Task> callback, object state)
         {
             lock (_onStartingSync)
@@ -144,7 +144,7 @@ namespace SampleServer
             }
         }
 
-        public async Task FireOnStarting()
+        protected async Task FireOnStarting()
         {
             Stack<KeyValuePair<Func<object, Task>, object>> onStarting = null;
             lock (_onStartingSync)
@@ -168,7 +168,7 @@ namespace SampleServer
             }
         }
 
-        public async Task FireOnCompleted()
+        protected async Task FireOnCompleted()
         {
             Stack<KeyValuePair<Func<object, Task>, object>> onCompleted = null;
             lock (_onCompletedSync)
