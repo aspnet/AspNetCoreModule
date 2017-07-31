@@ -58,7 +58,7 @@ namespace SampleServer
             await context.ProcessRequestAsync();
         }
 
-        public override IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
+        public IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
         {
             return _iisContextFactory.CreateHttpContext(pHttpContext, pfnCompletionCallback, pvCompletionContext);
         }
@@ -74,7 +74,7 @@ namespace SampleServer
                 _pipeFactory = pipeFactory;
             }
 
-            public override IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
+            public IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext)
             {
                 return new IISHttpContextOfT<T>(_pipeFactory, _application, pHttpContext, pfnCompletionCallback, pvCompletionContext);
             }
@@ -82,9 +82,9 @@ namespace SampleServer
     }
 
     // Over engineering to avoid allocations...
-    public abstract class IISContextFactory
+    public interface IISContextFactory
     {
-        public abstract IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext);
+        IISHttpContext CreateHttpContext(IntPtr pHttpContext, NativeMethods.request_handler_cb pfnCompletionCallback, IntPtr pvCompletionContext);
     }
 
     public static class WebHostBuilderExtensions
