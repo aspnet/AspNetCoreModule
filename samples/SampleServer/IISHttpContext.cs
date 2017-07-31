@@ -21,6 +21,7 @@ namespace SampleServer
 
         protected Stack<KeyValuePair<Func<object, Task>, object>> _onStarting;
         protected Stack<KeyValuePair<Func<object, Task>, object>> _onCompleted;
+        protected Exception _applicationException;
 
         public IISHttpContext(IntPtr pHttpContext)
         {
@@ -192,8 +193,22 @@ namespace SampleServer
             }
         }
 
-        private void ReportApplicationError(Exception ex)
+        protected void ReportApplicationError(Exception ex)
         {
+            if (_applicationException == null)
+            {
+                _applicationException = ex;
+            }
+            else if (_applicationException is AggregateException)
+            {
+                _applicationException = new AggregateException(_applicationException, ex).Flatten();
+            }
+            else
+            {
+                _applicationException = new AggregateException(_applicationException, ex);
+            }
+
+            // TODO: Log
         }
     }
 }

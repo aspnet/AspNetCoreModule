@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting.Server;
 
@@ -27,13 +25,36 @@ namespace SampleServer
             try
             {
                 await _application.ProcessRequestAsync(context);
-                _application.DisposeContext(context, exception: null);
-                _pfnCompletionCallback(0, _pHttpContext, _pvCompletionContext);
             }
             catch (Exception ex)
             {
-                _application.DisposeContext(context, ex);
-                _pfnCompletionCallback(ex.HResult, _pHttpContext, _pvCompletionContext);
+                ReportApplicationError(ex);
+            }
+            finally
+            {
+                if (!HasResponseStarted && _applicationException == null && _onStarting != null)
+                {
+                    await FireOnStarting();
+                }
+
+                if (_onCompleted != null)
+                {
+                    await FireOnCompleted();
+                }
+            }
+            
+            try
+            {
+                _application.DisposeContext(context, _applicationException);
+            }
+            catch (Exception ex)
+            {
+                // Log this
+                _applicationException = _applicationException ?? ex;
+            }
+            finally
+            {
+                _pfnCompletionCallback(_applicationException?.HResult ?? 0, _pHttpContext, _pvCompletionContext);
             }
         }
     }
