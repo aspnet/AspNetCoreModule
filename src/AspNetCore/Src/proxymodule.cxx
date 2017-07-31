@@ -110,6 +110,9 @@ CProxyModule::OnExecuteRequestHandler(
     // Allow reading and writing to simultaneously
     ((IHttpContext3*)pHttpContext)->EnableFullDuplex();
 
+    // Disable response buffering by default, we'll do a write behind buffering in managed code
+    ((IHttpResponse2*)pHttpContext->GetResponse())->DisableBuffering();
+
     // TODO: Optimize sync completions
     pAspNetCoreApplication->ExecuteRequest(pHttpContext);
     return RQ_NOTIFICATION_PENDING;

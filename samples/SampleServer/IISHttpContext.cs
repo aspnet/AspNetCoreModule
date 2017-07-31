@@ -129,6 +129,16 @@ namespace SampleServer
 
         public Task FlushAsync(CancellationToken cancellationToken)
         {
+            if (!HasResponseStarted)
+            {
+                // First flush
+                unsafe
+                {
+                    HttpApi.HTTP_RESPONSE_V2* pHttpResponse = NativeMethods.http_get_raw_response(_pHttpContext);
+                    pHttpResponse->Response_V1.StatusCode = (ushort)StatusCode;
+                }
+            }
+
             return Task.CompletedTask;
         }
 

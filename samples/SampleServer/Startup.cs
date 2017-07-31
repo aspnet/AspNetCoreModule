@@ -38,6 +38,8 @@ namespace SampleServer
                     Console.WriteLine($"Request body: {body}");
                 }
 
+                context.Response.Headers["X-Foo"] = "This is a test";
+
                 await context.Response.WriteAsync("Hello World!");
             });
         }

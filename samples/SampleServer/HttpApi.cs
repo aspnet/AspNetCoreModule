@@ -379,7 +379,7 @@ namespace SampleServer
             public HTTP_VERSION Version;
             public ushort StatusCode;
             public ushort ReasonLength;
-            public sbyte* pReason;
+            public byte* pReason;
             public HTTP_RESPONSE_HEADERS Headers;
             public ushort EntityChunkCount;
             public HTTP_DATA_CHUNK* pEntityChunks;
