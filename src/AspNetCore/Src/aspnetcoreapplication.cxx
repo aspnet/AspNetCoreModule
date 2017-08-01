@@ -1,5 +1,6 @@
 #include "precomp.hxx"
-
+#include "fx_ver.h"
+#include <algorithm>
 typedef int(*hostfxr_main_fn) (const int argc, const wchar_t* argv[]);
 
 // Initialization export
@@ -204,11 +205,48 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
     // TODO: Implement steps to properly find the version:
     // 1. Look at the PATH and find the muxer location (split PATH on ; and find location with dotnet.exe)
     // 2. Look at the application path to figure out which version of hostfxr.dll to pick.
-    // This data is in the runtimeconfig.json file
     // Ideally this would be an export from a library in an unversioned folder
-    // See https://github.com/dotnet/core-setup/blob/4e075b0c2abfbdaa564977ae2daba5b2b2f5c481/src/corehost/corehost.cpp#L83
+	std::wstring path;
+	GetEnv(TEXT("PATH"), &path);
 
-    auto module = LoadLibraryW(L"C:\\Program Files\\dotnet\\host\\fxr\\2.0.0-preview2-25407-01\\hostfxr.dll");
+	size_t start = 0;
+	size_t next = 0;
+	std::wstring dotnetLocation;
+	std::wstring name(TEXT("\\dotnet\\"));
+	size_t test = path.find(L";", start);
+	while ((next = path.find(L";", start)) != std::wstring::npos) {
+		dotnetLocation = path.substr(start, next - start);
+		if (dotnetLocation.find(name, dotnetLocation.size() - name.size()) != std::wstring::npos) {
+			break;
+		}
+		start = next + 1;
+	}
+
+	// Verify that this directory exists
+	if (!DirectoryExists(dotnetLocation)) {
+		return;
+	}
+
+	// Add host\\fxr to the path (MUST NOT HAVE TRAILING SLASH)
+	std::wstring hostFxr(TEXT("host\\fxr"));
+	std::wstring hostFxrFolder = dotnetLocation + hostFxr;
+
+	if (!DirectoryExists(hostFxrFolder)) {
+		return;
+	}
+
+	std::wstring searchExpression = hostFxrFolder + std::wstring(TEXT("\\*"));
+	std::vector<std::wstring> folders;
+	FindDotNetFolders(searchExpression, &folders);
+
+	if (folders.size() == 0) {
+		return;
+	}
+
+	std::wstring version = FindHighestDotNetVersion(folders);
+	std::wstring hostFxrLocation = hostFxrFolder + TEXT("\\") + version + TEXT("\\hostfxr.dll");
+
+	auto module = LoadLibraryW(hostFxrLocation.c_str());
 
     if (module == nullptr)
     {
@@ -221,13 +259,13 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
     const wchar_t* argv[2];
 
     // The first argument is mostly ignored
-    argv[0] = L"C:\\Program Files\\dotnet\\dotnet.exe";
+	argv[0] = dotnetLocation.c_str(); // TODO we may need to add .exe here
     argv[1] = m_pConfiguration->QueryArguments()->QueryStr();
 
     // Hack from hell, there can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
     // first place. This is happening in an execute request handler and everyone waits
-    // until this initialization is done. 
+    // until this initialization is done.
 
     // We set a static so that managed code can call back into this instance and
     // set the callbacks
@@ -236,9 +274,73 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
     m_ProcessExitCode = proc(2, argv);
 }
 
+BOOL ASPNETCORE_APPLICATION::GetEnv(const wchar_t* name, std::wstring *recv) {
+	recv->clear();
+
+	auto length = ::GetEnvironmentVariableW(name, nullptr, 0);
+	if (length == 0)
+	{
+		auto err = GetLastError();
+		if (err != ERROR_ENVVAR_NOT_FOUND)
+		{
+		}
+		return false;
+	}
+	auto buf = new wchar_t[length];
+	if (::GetEnvironmentVariableW(name, buf, length) == 0)
+	{
+		return false;
+	}
+
+	recv->assign(buf);
+	delete[] buf;
+
+	return true;
+}
+
+void ASPNETCORE_APPLICATION::FindDotNetFolders(const std::wstring path, std::vector<std::wstring> *folders) {
+	WIN32_FIND_DATAW data = { 0 };
+	// TODO Need to copy data.cFileName rather than pushing the pointer
+	auto handle = ::FindFirstFileExW(path.c_str(), FindExInfoStandard, &data, FindExSearchNameMatch, NULL, 0);
+	if (handle == INVALID_HANDLE_VALUE) {
+		return;
+	}
+	do {
+		std::wstring folder(data.cFileName);
+		folders->push_back(folder);
+	} while (::FindNextFileW(handle, &data));
+	::FindClose(handle);
+}
+
+std::wstring ASPNETCORE_APPLICATION::FindHighestDotNetVersion(std::vector<std::wstring> folders) {
+	fx_ver_t max_ver(-1, -1, -1);
+	for (const auto& dir : folders)
+	{
+		fx_ver_t fx_ver(-1, -1, -1);
+		if (fx_ver_t::parse(dir, &fx_ver, false))
+		{
+			max_ver = std::max(max_ver, fx_ver);
+		}
+	}
+	return max_ver.as_str();
+}
+
+BOOL ASPNETCORE_APPLICATION::DirectoryExists(const std::wstring path) {
+	if (path.size() == 0) {
+		return false;
+	}
+	WIN32_FILE_ATTRIBUTE_DATA data;
+
+
+	if (GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &data)) {
+		return true;
+	}
+	return false;
+}
+
 REQUEST_NOTIFICATION_STATUS ASPNETCORE_APPLICATION::ExecuteRequest(IHttpContext* pHttpContext)
 {
-    if (m_RequestHandler != NULL) 
+    if (m_RequestHandler != NULL)
     {
         return m_RequestHandler(pHttpContext, m_RequstHandlerContext);
     }

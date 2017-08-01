@@ -53,6 +53,7 @@ namespace SampleServer
                 var pHttpRequest = NativeMethods.http_get_raw_request(pHttpContext);
 
                 var verb = pHttpRequest->Request.Verb;
+                // Make this include Invalid?
                 if (verb > HttpApi.HTTP_VERB.HttpVerbUnknown && verb < HttpApi.HTTP_VERB.HttpVerbMaximum)
                 {
                     Method = HttpApi.HttpVerbs[(int)verb];
@@ -157,7 +158,7 @@ namespace SampleServer
 
                     HttpApi.HTTP_RESPONSE_V2* pHttpResponse = NativeMethods.http_get_raw_response(_pHttpContext);
 
-                    // TODO: Copy headers here
+                    // TODO: Copy headers here for response
                 }
 
                 HasResponseStarted = true;

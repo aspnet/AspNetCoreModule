@@ -14,7 +14,7 @@ namespace SampleServer
     {
         private static NativeMethods.PFN_REQUEST_HANDLER _requestHandler = HandleRequest;
 
-        private IISContextFactory _iisContextFactory;
+        public IISContextFactory _iisContextFactory { get; private set; }
 
         private PipeFactory _pipeFactory = new PipeFactory();
 
@@ -32,10 +32,8 @@ namespace SampleServer
             return Task.CompletedTask;
         }
 
-        private async Task ProcessRequest(IntPtr pHttpContext)
+        private async Task ProcessRequest(IISHttpContext context)
         {
-            var context = _iisContextFactory.CreateHttpContext(pHttpContext);
-
             await context.ProcessRequestAsync();
         }
 
@@ -50,7 +48,7 @@ namespace SampleServer
 
         public void Dispose()
         {
-
+            // TODO
         }
 
         private static NativeMethods.REQUEST_NOTIFICATION_STATUS HandleRequest(IntPtr pHttpContext, IntPtr pvRequestContext)
@@ -58,10 +56,10 @@ namespace SampleServer
             // Unwrap the server so we can create an http context and process the request
             var server = (IISHttpServer)GCHandle.FromIntPtr(pvRequestContext).Target;
 
+            var context = server._iisContextFactory.CreateHttpContext(pHttpContext);
             // Ignore the task here this should never fail
-            _ = server.ProcessRequest(pHttpContext);
+            var _ = server.ProcessRequest(context);
 
-            // TODO: Handle sync completion
             return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_PENDING;
         }
 

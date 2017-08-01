@@ -154,6 +154,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="fx_ver.h" />
     <ClInclude Include="Inc\aspnetcoreapplication.h" />
     <ClInclude Include="Inc\resource.h" />
     <ClInclude Include="Inc\application.h" />
@@ -173,9 +174,11 @@
     <ClInclude Include="Inc\sttimer.h" />
     <ClInclude Include="Inc\websockethandler.h" />
     <ClInclude Include="Inc\winhttphelper.h" />
+    <ClInclude Include="Inc\fx_ver.h" />
     <ClInclude Include="Src\precomp.hxx" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="fx_ver.cxx" />
     <ClCompile Include="Src\aspnetcoreapplication.cxx" />
     <ClCompile Include="Src\application.cxx" />
     <ClCompile Include="Src\applicationmanager.cxx" />
@@ -184,6 +187,7 @@
     <ClCompile Include="Src\filewatcher.cxx" />
     <ClCompile Include="Src\forwarderconnection.cxx" />
     <ClCompile Include="Src\forwardinghandler.cxx" />
+    <ClCompile Include="Src\fx_ver.cxx" />
     <ClCompile Include="Src\path.cxx" />
     <ClCompile Include="Src\processmanager.cxx" />
     <ClCompile Include="Src\protocolconfig.cxx" />
