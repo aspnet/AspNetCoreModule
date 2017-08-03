@@ -44,7 +44,7 @@ namespace SampleServer
 
             NativeMethods.http_get_completion_info(pCompletionInfo, out int cbBytes, out int hr);
 
-            context.CompleteFlush(hr, cbBytes, context.PinnedHeaders);
+            context.CompleteFlush(hr, cbBytes);
 
             return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_CONTINUE;
         };

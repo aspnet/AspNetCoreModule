@@ -32,6 +32,8 @@ namespace SampleServer
         protected Exception _applicationException;
         private PipeFactory _pipeFactory;
 
+        private List<GCHandle> _pinnedHeaders;
+
         private GCHandle _thisHandle;
         private BufferHandle _inputHandle;
         private IISAwaitable _readOperation = new IISAwaitable();
@@ -132,10 +134,9 @@ namespace SampleServer
 
         public IHeaderDictionary RequestHeaders { get; set; }
         public IHeaderDictionary ResponseHeaders { get; set; } = new HeaderDictionary();
-        public List<GCHandle> PinnedHeaders { get; set; }
+
         public IISAwaitable FlushAsync(CancellationToken cancellationToken)
         {
-            PinnedHeaders = null;
             if (!HasResponseStarted)
             {
                 unsafe
@@ -152,7 +153,7 @@ namespace SampleServer
 
                     HttpApi.HTTP_RESPONSE_V2* pHttpResponse = NativeMethods.http_get_raw_response(_pHttpContext);
 
-                    PinnedHeaders = SetHttpResponseHeaders(pHttpResponse);
+                    _pinnedHeaders = SetHttpResponseHeaders(pHttpResponse);
                 }
                 HasResponseStarted = true;
             }
@@ -166,7 +167,7 @@ namespace SampleServer
 
                 if (!fCompletionExpected || hr != NativeMethods.S_OK)
                 {
-                    CompleteFlush(hr, 0, PinnedHeaders);
+                    CompleteFlush(hr, 0);
                 }
             }
             return _flushOperation;
@@ -564,9 +565,11 @@ namespace SampleServer
 
         internal void CompleteRead(int hr, int cbBytes) => _readOperation.Complete(hr, cbBytes);
 
-        internal void CompleteFlush(int hr, int cbBytes, List<GCHandle> pinnedHeaders)
+        internal void CompleteFlush(int hr, int cbBytes)
         {
-            FreePinnedHeaders(pinnedHeaders);
+            FreePinnedHeaders(_pinnedHeaders);
+            _pinnedHeaders = null;
+
             _flushOperation.Complete(hr, cbBytes);
         }
 
