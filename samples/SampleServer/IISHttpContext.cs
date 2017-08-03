@@ -103,7 +103,7 @@ namespace SampleServer
             Output = _pipeFactory.Create(new PipeOptions { ReaderScheduler = TaskRunScheduler.Default });
 
             // TODO: Only upgradable on Win8 or higher
-            _upgradeAvailable = true;
+            _upgradeAvailable = true; // TODO
 
             ResetFeatureCollection();
         }
@@ -147,7 +147,7 @@ namespace SampleServer
 
                     fixed (byte* pReasonPhrase = reasonPhraseBytes)
                     {
-                        // This copies data into the underying buffer
+                        // This copies data into the underlying buffer
                         NativeMethods.http_set_response_status_code(_pHttpContext, (ushort)StatusCode, pReasonPhrase);
                     }
 

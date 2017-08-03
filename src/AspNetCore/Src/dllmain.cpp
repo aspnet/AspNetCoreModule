@@ -208,14 +208,14 @@ HRESULT
 
     hr = pModuleInfo->SetRequestNotifications(
         pFactory,
-        RQ_EXECUTE_REQUEST_HANDLER,
+        RQ_EXECUTE_REQUEST_HANDLER | RQ_SEND_RESPONSE,
         0);
     if (FAILED(hr))
     {
         goto Finished;
     }
 
-    pFactory = NULL;	
+    pFactory = NULL;
     g_pResponseHeaderHash = new RESPONSE_HEADER_HASH;
     if (g_pResponseHeaderHash == NULL)
     {

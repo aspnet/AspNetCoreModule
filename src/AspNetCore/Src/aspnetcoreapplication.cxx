@@ -82,7 +82,7 @@ extern "C" __declspec(dllexport) HRESULT http_write_response_bytes(
     void* pvCompletionContext,
     BOOL* pfCompletionExpected)
 {
-    auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
+    auto pHttpResponse = (IHttpResponse3*)pHttpContext->GetResponse();
 
     HTTP_DATA_CHUNK chunk;
     chunk.DataChunkType = HttpDataChunkFromMemory;
@@ -112,7 +112,7 @@ extern "C" __declspec(dllexport) HRESULT http_flush_response_bytes(
     void* pvCompletionContext,
     BOOL* pfCompletionExpected)
 {
-    auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
+    auto pHttpResponse = (IHttpResponse3*)pHttpContext->GetResponse();
 
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;

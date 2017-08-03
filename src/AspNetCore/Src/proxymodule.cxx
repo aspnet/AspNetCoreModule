@@ -74,6 +74,28 @@ CProxyModule::~CProxyModule()
 
 __override
 REQUEST_NOTIFICATION_STATUS
+CProxyModule::OnSendResponse(
+	IHttpContext* pHttpContext,
+	ISendResponseProvider* pProvider
+)
+{
+	if (NULL != pHttpContext && NULL != pProvider)
+	{
+		DWORD flags = pProvider->GetFlags();
+		USHORT statusCode;
+		pHttpContext->GetResponse()->GetStatus(OUT &statusCode);
+		PCSTR upgradeHeader = pHttpContext->GetResponse()->GetHeader("Upgrade");
+		if (statusCode == 101 && strcmp(upgradeHeader, "websocket") == 0)
+		{
+			pProvider->SetFlags(flags | HTTP_SEND_RESPONSE_FLAG_OPAQUE);
+		}
+	}
+
+	return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
+}
+
+__override
+REQUEST_NOTIFICATION_STATUS
 CProxyModule::OnExecuteRequestHandler(
     IHttpContext *          pHttpContext,
     IHttpEventProvider *

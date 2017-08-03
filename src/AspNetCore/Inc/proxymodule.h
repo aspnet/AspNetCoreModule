@@ -42,6 +42,14 @@ class CProxyModule : public CHttpModule
         IHttpCompletionInfo *   pCompletionInfo
     );
 
+	__override
+	REQUEST_NOTIFICATION_STATUS
+	OnSendResponse(
+		IHttpContext* pHttpContext,
+		ISendResponseProvider* pProvider
+	);
+
+
  private:
 
     FORWARDING_HANDLER * m_pHandler;
