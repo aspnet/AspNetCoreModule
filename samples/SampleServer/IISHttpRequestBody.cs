@@ -49,11 +49,10 @@ namespace SampleServer
                 {
                     if (!readableBuffer.IsEmpty)
                     {
-                        // buffer.Count is int
-                        var actual = (int)Math.Min(readableBuffer.Length, count);
-                        readableBuffer = readableBuffer.Slice(0, count);
+                        var actual = Math.Min(readableBuffer.Length, count);
+                        readableBuffer = readableBuffer.Slice(0, actual);
                         readableBuffer.CopyTo(buffer);
-                        return count;
+                        return actual;
                     }
                     else if (result.IsCompleted)
                     {

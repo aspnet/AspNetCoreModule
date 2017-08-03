@@ -16,19 +16,32 @@ namespace SampleServer
 
         private int _cbBytes;
 
-        public static readonly NativeMethods.PFN_ASYNC_COMPLETION Callback = (IntPtr pHttpContext, IntPtr pCompletionInfo, IntPtr pvCompletionContext) =>
+        public static readonly NativeMethods.PFN_ASYNC_COMPLETION ReadCallback = (IntPtr pHttpContext, IntPtr pCompletionInfo, IntPtr pvCompletionContext) =>
         {
-            var awaitable = (IISAwaitable)GCHandle.FromIntPtr(pvCompletionContext).Target;
+            var context = (IISHttpContext)GCHandle.FromIntPtr(pvCompletionContext).Target;
 
             NativeMethods.http_get_completion_info(pCompletionInfo, out int cbBytes, out int hr);
 
-            awaitable.Complete(hr, cbBytes);
+            context.CompleteRead(hr, cbBytes);
 
             return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_CONTINUE;
         };
-        
+
+        public static readonly NativeMethods.PFN_ASYNC_COMPLETION WriteCallback = (IntPtr pHttpContext, IntPtr pCompletionInfo, IntPtr pvCompletionContext) =>
+        {
+            var context = (IISHttpContext)GCHandle.FromIntPtr(pvCompletionContext).Target;
+
+            NativeMethods.http_get_completion_info(pCompletionInfo, out int cbBytes, out int hr);
+
+            context.CompleteWrite(hr, cbBytes);
+
+            return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_CONTINUE;
+        };
+
         public IISAwaitable GetAwaiter() => this;
         public bool IsCompleted => _callback == _callbackCompleted;
+
+        public bool HasContinuation => _callback != null && !IsCompleted;
 
         public int GetResult()
         {

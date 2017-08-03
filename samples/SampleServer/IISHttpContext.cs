@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -14,7 +15,7 @@ using Microsoft.AspNetCore.WebUtilities;
 
 namespace SampleServer
 {
-    public abstract partial class IISHttpContext
+    public abstract partial class IISHttpContext : IDisposable
     {
         private const int MinAllocBufferSize = 2048;
 
@@ -22,29 +23,25 @@ namespace SampleServer
         private bool _upgradeAvailable;
         private bool _wasUpgraded;
 
-        private readonly object _onStartingSync = new Object();
-        private readonly object _onCompletedSync = new Object();
+        private readonly object _onStartingSync = new object();
+        private readonly object _onCompletedSync = new object();
 
         protected Stack<KeyValuePair<Func<object, Task>, object>> _onStarting;
         protected Stack<KeyValuePair<Func<object, Task>, object>> _onCompleted;
         protected Exception _applicationException;
         private PipeFactory _pipeFactory;
 
-        private readonly GCHandle _readOperationGcHandle;
-        private readonly IISAwaitable _readOperation = new IISAwaitable();
+        private GCHandle _thisHandle;
         private BufferHandle _inputHandle;
-
-        private readonly IISAwaitable _writeOperation = new IISAwaitable();
-        private readonly GCHandle _writeOperationGcHandle;
+        private IISAwaitable _readOperation = new IISAwaitable();
+        private IISAwaitable _writeOperation = new IISAwaitable();
 
         protected Task _readingTask;
         protected Task _writingTask;
 
         public IISHttpContext(PipeFactory pipeFactory, IntPtr pHttpContext)
         {
-            _readOperationGcHandle = GCHandle.Alloc(_readOperation);
-            _writeOperationGcHandle = GCHandle.Alloc(_writeOperation);
-
+            _thisHandle = GCHandle.Alloc(this);
             _pipeFactory = pipeFactory;
             _pHttpContext = pHttpContext;
 
@@ -188,32 +185,38 @@ namespace SampleServer
                 {
                     // These buffers are pinned
                     var wb = Input.Writer.Alloc(MinAllocBufferSize);
-                    var handle = wb.Buffer.Pin();
+                    _inputHandle = wb.Buffer.Pin();
 
                     try
                     {
                         int read = await ReadAsync(wb.Buffer.Length);
-                        wb.Advance(read);
-                        var result = await wb.FlushAsync();
 
-                        if (result.IsCompleted || result.IsCancelled)
+                        if (read == 0)
                         {
                             break;
                         }
+
+                        wb.Advance(read);
                     }
                     finally
                     {
-                        handle.Free();
+                        wb.Commit();
+                        _inputHandle.Free();
+                    }
+
+                    var result = await wb.FlushAsync();
+
+                    if (result.IsCompleted || result.IsCancelled)
+                    {
+                        break;
                     }
                 }
+
+                Input.Writer.Complete();
             }
             catch (Exception ex)
             {
                 Input.Writer.Complete(ex);
-            }
-            finally
-            {
-                Input.Writer.Complete();
             }
         }
 
@@ -282,20 +285,20 @@ namespace SampleServer
                 var copy = buffer.ToArray();
                 fixed (byte* pBuffer = &copy[0])
                 {
-                    hr = NativeMethods.http_write_response_bytes(_pHttpContext, pBuffer, buffer.Length, IISAwaitable.Callback, (IntPtr)_writeOperationGcHandle, out fCompletionExpected);
+                    hr = NativeMethods.http_write_response_bytes(_pHttpContext, pBuffer, buffer.Length, IISAwaitable.WriteCallback, (IntPtr)_thisHandle, out fCompletionExpected);
                 }
             }
             else
             {
                 fixed (byte* pBuffer = &buffer.First.Span.DangerousGetPinnableReference())
                 {
-                    hr = NativeMethods.http_write_response_bytes(_pHttpContext, pBuffer, buffer.Length, IISAwaitable.Callback, (IntPtr)_writeOperationGcHandle, out fCompletionExpected);
+                    hr = NativeMethods.http_write_response_bytes(_pHttpContext, pBuffer, buffer.Length, IISAwaitable.WriteCallback, (IntPtr)_thisHandle, out fCompletionExpected);
                 }
             }
 
             if (!fCompletionExpected || hr != NativeMethods.S_OK)
             {
-                _writeOperation.Complete(hr, cbBytes: 0);
+                CompleteWrite(hr, cbBytes: 0);
             }
 
             return _writeOperation;
@@ -307,14 +310,14 @@ namespace SampleServer
                                 _pHttpContext,
                                 (byte*)_inputHandle.PinnedPointer,
                                 length,
-                                IISAwaitable.Callback,
-                                (IntPtr)_readOperationGcHandle,
+                                IISAwaitable.ReadCallback,
+                                (IntPtr)_thisHandle,
                                 out var dwReceivedBytes,
                                 out bool fCompletionExpected);
 
             if (!fCompletionExpected || hr != NativeMethods.S_OK)
             {
-                _readOperation.Complete(hr, cbBytes: dwReceivedBytes);
+                CompleteRead(hr, dwReceivedBytes);
             }
 
             return _readOperation;
@@ -419,6 +422,9 @@ namespace SampleServer
 
         public void PostCompletion()
         {
+            Debug.Assert(!_readOperation.HasContinuation, "Pending read async operation!");
+            Debug.Assert(!_writeOperation.HasContinuation, "Pending write async operation!");
+
             var hr = NativeMethods.http_post_completion(_pHttpContext, 0);
 
             if (hr != NativeMethods.S_OK)
@@ -430,6 +436,33 @@ namespace SampleServer
         public void IndicateCompletion(NativeMethods.REQUEST_NOTIFICATION_STATUS notificationStatus)
         {
             NativeMethods.http_indicate_completion(_pHttpContext, notificationStatus);
+        }
+
+        internal void CompleteWrite(int hr, int cbBytes) => _writeOperation.Complete(hr, cbBytes);
+
+        internal void CompleteRead(int hr, int cbBytes) => _readOperation.Complete(hr, cbBytes);
+
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects).
+                    _thisHandle.Free();
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
         }
     }
 }

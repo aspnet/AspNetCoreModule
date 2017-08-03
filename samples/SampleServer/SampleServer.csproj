@@ -11,12 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="IISHttpContext.FeatureCollection.cs" />
-    <None Include="RequestHeaders.Generated.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore" Version="2.0.0-preview2-final" />
   </ItemGroup>
-
 </Project>
