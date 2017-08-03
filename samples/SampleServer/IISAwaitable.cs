@@ -38,6 +38,17 @@ namespace SampleServer
             return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_CONTINUE;
         };
 
+        public static readonly NativeMethods.PFN_ASYNC_COMPLETION FlushCallback = (IntPtr pHttpContext, IntPtr pCompletionInfo, IntPtr pvCompletionContext) =>
+        {
+            var context = (IISHttpContext)GCHandle.FromIntPtr(pvCompletionContext).Target;
+
+            NativeMethods.http_get_completion_info(pCompletionInfo, out int cbBytes, out int hr);
+
+            context.CompleteFlush(hr, cbBytes, context.PinnedHeaders);
+
+            return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_CONTINUE;
+        };
+
         public IISAwaitable GetAwaiter() => this;
         public bool IsCompleted => _callback == _callbackCompleted;
 

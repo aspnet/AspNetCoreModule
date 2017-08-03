@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Internal.System.Buffers;
 using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Primitives;
 
 namespace SampleServer
 {
@@ -35,13 +36,16 @@ namespace SampleServer
         private BufferHandle _inputHandle;
         private IISAwaitable _readOperation = new IISAwaitable();
         private IISAwaitable _writeOperation = new IISAwaitable();
+        private IISAwaitable _flushOperation = new IISAwaitable();
 
         protected Task _readingTask;
         protected Task _writingTask;
+        protected Task _flushTask;
 
         public IISHttpContext(PipeFactory pipeFactory, IntPtr pHttpContext)
         {
             _thisHandle = GCHandle.Alloc(this);
+
             _pipeFactory = pipeFactory;
             _pHttpContext = pHttpContext;
 
@@ -63,7 +67,7 @@ namespace SampleServer
                 var major = pHttpRequest->Request.Version.MajorVersion;
                 var minor = pHttpRequest->Request.Version.MinorVersion;
 
-                HttpVersion = "HTTP/" + minor + "." + major;
+                HttpVersion = "HTTP/" + major + "." + minor; // Is this correct?
                 Scheme = pHttpRequest->Request.pSslInfo == null ? "http" : "https";
 
                 // TODO: Read this from IIS config
@@ -128,19 +132,12 @@ namespace SampleServer
 
         public IHeaderDictionary RequestHeaders { get; set; }
         public IHeaderDictionary ResponseHeaders { get; set; } = new HeaderDictionary();
-
-        public async Task FlushAsync(CancellationToken cancellationToken)
+        public List<GCHandle> PinnedHeaders { get; set; }
+        public IISAwaitable FlushAsync(CancellationToken cancellationToken)
         {
-            await InitializeResponse();
-
-            // TODO: Call FlushAsync
-        }
-
-        private Task InitializeResponse()
-        {
+            PinnedHeaders = null;
             if (!HasResponseStarted)
             {
-                // First flush
                 unsafe
                 {
                     // TODO: Don't allocate a string
@@ -155,13 +152,137 @@ namespace SampleServer
 
                     HttpApi.HTTP_RESPONSE_V2* pHttpResponse = NativeMethods.http_get_raw_response(_pHttpContext);
 
-                    // TODO: Copy headers here for response
+                    PinnedHeaders = SetHttpResponseHeaders(pHttpResponse);
                 }
-
                 HasResponseStarted = true;
             }
 
-            return Task.CompletedTask;
+            unsafe
+            {
+                var fCompletionExpected = false;
+                var hr = 0;
+
+                hr = NativeMethods.http_flush_response_bytes(_pHttpContext, IISAwaitable.FlushCallback, (IntPtr)_thisHandle, out fCompletionExpected);
+
+                if (!fCompletionExpected || hr != NativeMethods.S_OK)
+                {
+                    CompleteFlush(hr, 0, PinnedHeaders);
+                }
+            }
+            return _flushOperation;
+            // TODO: Implement this, make new IISAwaitable
+        }
+        
+        public unsafe List<GCHandle> SetHttpResponseHeaders(HttpApi.HTTP_RESPONSE_V2* pHttpResponse)
+        {
+            HttpApi.HTTP_UNKNOWN_HEADER[] unknownHeaders = null;
+            //HttpApi.HTTP_RESPONSE_INFO[] knownHeaderInfo = null;
+            var pinnedHeaders = new List<GCHandle>();
+            GCHandle gcHandle;
+
+            if (ResponseHeaders.Count == 0)
+            {
+                return null;
+            }
+            string headerName;
+            string headerValue;
+            int lookup;
+            var numUnknownHeaders = 0;
+            var numKnownMultiHeader = 0;
+            byte[] bytes = null;
+
+            foreach (var headerPair in ResponseHeaders)
+            {
+                if (headerPair.Value.Count == 0)
+                {
+                    continue;
+                }
+                lookup = HttpApi.HTTP_RESPONSE_HEADER_ID.IndexOfKnownHeader(headerPair.Key);
+                if (lookup == -1) // TODO handle opaque stream upgrade?
+                {
+                    numUnknownHeaders++;
+                }
+                else if (headerPair.Value.Count > 1)
+                {
+                    numKnownMultiHeader++;
+                }
+            }
+
+            try
+            {
+                var pKnownHeaders = &pHttpResponse->Response_V1.Headers.KnownHeaders;
+                foreach (var headerPair in ResponseHeaders)
+                {
+                    if (headerPair.Value.Count == 0)
+                    {
+                        continue;
+                    }
+                    headerName = headerPair.Key;
+                    StringValues headerValues = headerPair.Value;
+                    lookup = HttpApi.HTTP_RESPONSE_HEADER_ID.IndexOfKnownHeader(headerName);
+                    if (lookup == -1)
+                    {
+                        if (unknownHeaders == null)
+                        {
+                            unknownHeaders = new HttpApi.HTTP_UNKNOWN_HEADER[numUnknownHeaders];
+                            gcHandle = GCHandle.Alloc(unknownHeaders, GCHandleType.Pinned);
+                            pinnedHeaders.Add(gcHandle);
+                            pHttpResponse->Response_V1.Headers.pUnknownHeaders = (HttpApi.HTTP_UNKNOWN_HEADER *)gcHandle.AddrOfPinnedObject();
+                            pHttpResponse->Response_V1.Headers.UnknownHeaderCount = 0; // to remove the iis header for server=...
+                        }
+
+                        for (var index = 0; index < headerValues.Count; index++)
+                        {
+                            bytes = HeaderEncoding.GetBytes(headerName);
+                            unknownHeaders[pHttpResponse->Response_V1.Headers.UnknownHeaderCount].NameLength = (ushort)bytes.Length;
+                            gcHandle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+                            pinnedHeaders.Add(gcHandle);
+                            unknownHeaders[pHttpResponse->Response_V1.Headers.UnknownHeaderCount].pName = (byte*)gcHandle.AddrOfPinnedObject();
+
+                            headerValue = headerValues[index] ?? string.Empty;
+                            bytes = HeaderEncoding.GetBytes(headerValue);
+                            unknownHeaders[pHttpResponse->Response_V1.Headers.UnknownHeaderCount].RawValueLength = (ushort)bytes.Length;
+                            gcHandle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+                            pinnedHeaders.Add(gcHandle);
+                            unknownHeaders[pHttpResponse->Response_V1.Headers.UnknownHeaderCount].pRawValue = (byte*)gcHandle.AddrOfPinnedObject();
+                            pHttpResponse->Response_V1.Headers.UnknownHeaderCount++;
+                        }
+                    }
+                    else if (headerPair.Value.Count == 1)
+                    {
+                        headerValue = headerValues[0] ?? string.Empty;
+                        bytes = HeaderEncoding.GetBytes(headerValue);
+                        pKnownHeaders[lookup].RawValueLength = (ushort)bytes.Length;
+                        gcHandle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+                        pinnedHeaders.Add(gcHandle);
+                        pKnownHeaders[lookup].pRawValue = (byte*)gcHandle.AddrOfPinnedObject();
+                    }
+                    else
+                    {
+                        // TODO multivalue headers
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                FreePinnedHeaders(pinnedHeaders);
+                throw;
+            }
+            return pinnedHeaders;
+        }
+
+        private static void FreePinnedHeaders(List<GCHandle> pinnedHeaders)
+        {
+            if (pinnedHeaders != null)
+            {
+                foreach (GCHandle gcHandle in pinnedHeaders)
+                {
+                    if (gcHandle.IsAllocated)
+                    {
+                        gcHandle.Free();
+                    }
+                }
+            }
         }
 
         public void Abort()
@@ -230,6 +351,7 @@ namespace SampleServer
 
         private async Task ProcessResponseBody()
         {
+            var firstWrite = true;
             while (true)
             {
                 ReadResult result;
@@ -253,8 +375,11 @@ namespace SampleServer
                     {
                         break;
                     }
-
-                    await InitializeResponse();
+                    if (firstWrite)
+                    {
+                        firstWrite = false;
+                        await FlushAsync(CancellationToken.None);
+                    }
 
                     if (!buffer.IsEmpty)
                     {
@@ -270,7 +395,6 @@ namespace SampleServer
                     Output.Reader.Advance(consumed);
                 }
             }
-
             Output.Reader.Complete();
         }
 
@@ -416,8 +540,6 @@ namespace SampleServer
             {
                 _applicationException = new AggregateException(_applicationException, ex);
             }
-
-            // TODO: Log
         }
 
         public void PostCompletion()
@@ -441,6 +563,12 @@ namespace SampleServer
         internal void CompleteWrite(int hr, int cbBytes) => _writeOperation.Complete(hr, cbBytes);
 
         internal void CompleteRead(int hr, int cbBytes) => _readOperation.Complete(hr, cbBytes);
+
+        internal void CompleteFlush(int hr, int cbBytes, List<GCHandle> pinnedHeaders)
+        {
+            FreePinnedHeaders(pinnedHeaders);
+            _flushOperation.Complete(hr, cbBytes);
+        }
 
         private bool disposedValue = false; // To detect redundant calls
 
