@@ -55,7 +55,6 @@ extern "C" __declspec(dllexport) HRESULT http_read_request_bytes(
     auto pHttpRequest = (IHttpRequest3*)pHttpContext->GetRequest();
 
     BOOL fAsync = TRUE;
-    BOOL fCompletionPending;
 
     HRESULT hr = pHttpRequest->ReadEntityBody(
         pvBuffer,
@@ -70,8 +69,6 @@ extern "C" __declspec(dllexport) HRESULT http_read_request_bytes(
     {
         // We reached the end of the data
         hr = S_OK;
-        fCompletionPending = FALSE;
-        *pDwBytesReceived = 0;
     }
 
     return hr;

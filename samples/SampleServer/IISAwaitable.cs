@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace SampleServer
 {
@@ -24,7 +25,7 @@ namespace SampleServer
 
             context.CompleteRead(hr, cbBytes);
 
-            return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_CONTINUE;
+            return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_PENDING;
         };
 
         public static readonly NativeMethods.PFN_ASYNC_COMPLETION WriteCallback = (IntPtr pHttpContext, IntPtr pCompletionInfo, IntPtr pvCompletionContext) =>
@@ -35,7 +36,7 @@ namespace SampleServer
 
             context.CompleteWrite(hr, cbBytes);
 
-            return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_CONTINUE;
+            return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_PENDING;
         };
 
         public static readonly NativeMethods.PFN_ASYNC_COMPLETION FlushCallback = (IntPtr pHttpContext, IntPtr pCompletionInfo, IntPtr pvCompletionContext) =>
@@ -46,7 +47,7 @@ namespace SampleServer
 
             context.CompleteFlush(hr, cbBytes);
 
-            return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_CONTINUE;
+            return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_PENDING;
         };
 
         public IISAwaitable GetAwaiter() => this;
@@ -80,10 +81,8 @@ namespace SampleServer
             if (_callback == _callbackCompleted ||
                 Interlocked.CompareExchange(ref _callback, continuation, null) == _callbackCompleted)
             {
-                Debug.Fail($"{typeof(IISAwaitable)}.{nameof(OnCompleted)} raced with {nameof(IsCompleted)}, running callback inline.");
-
                 // Just run it inline
-                continuation();
+                Task.Run(continuation);
             }
         }
 

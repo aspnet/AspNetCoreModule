@@ -21,6 +21,10 @@ namespace SampleServer
 
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
+                .ConfigureLogging(l =>
+                {
+                    l.SetMinimumLevel(LogLevel.Critical);
+                })
                 .UseNativeIIS()
                 .UseStartup<Startup>()
                 .Build();

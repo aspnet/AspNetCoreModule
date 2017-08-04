@@ -99,8 +99,8 @@ namespace SampleServer
             RequestBody = new IISHttpRequestBody(this);
             ResponseBody = new IISHttpResponseBody(this);
 
-            Input = _pipeFactory.Create();
-            Output = _pipeFactory.Create();
+            Input = _pipeFactory.Create(new PipeOptions { ReaderScheduler = TaskRunScheduler.Default });
+            Output = _pipeFactory.Create(new PipeOptions { ReaderScheduler = TaskRunScheduler.Default });
 
             // TODO: Only upgradable on Win8 or higher
             _upgradeAvailable = true;
@@ -165,15 +165,14 @@ namespace SampleServer
 
                 hr = NativeMethods.http_flush_response_bytes(_pHttpContext, IISAwaitable.FlushCallback, (IntPtr)_thisHandle, out fCompletionExpected);
 
-                if (!fCompletionExpected || hr != NativeMethods.S_OK)
+                if (!fCompletionExpected)
                 {
                     CompleteFlush(hr, 0);
                 }
             }
             return _flushOperation;
-            // TODO: Implement this, make new IISAwaitable
         }
-        
+
         public unsafe List<GCHandle> SetHttpResponseHeaders(HttpApi.HTTP_RESPONSE_V2* pHttpResponse)
         {
             HttpApi.HTTP_UNKNOWN_HEADER[] unknownHeaders = null;
@@ -228,7 +227,7 @@ namespace SampleServer
                             unknownHeaders = new HttpApi.HTTP_UNKNOWN_HEADER[numUnknownHeaders];
                             gcHandle = GCHandle.Alloc(unknownHeaders, GCHandleType.Pinned);
                             pinnedHeaders.Add(gcHandle);
-                            pHttpResponse->Response_V1.Headers.pUnknownHeaders = (HttpApi.HTTP_UNKNOWN_HEADER *)gcHandle.AddrOfPinnedObject();
+                            pHttpResponse->Response_V1.Headers.pUnknownHeaders = (HttpApi.HTTP_UNKNOWN_HEADER*)gcHandle.AddrOfPinnedObject();
                             pHttpResponse->Response_V1.Headers.UnknownHeaderCount = 0; // to remove the iis header for server=...
                         }
 
@@ -352,7 +351,6 @@ namespace SampleServer
 
         private async Task ProcessResponseBody()
         {
-            var firstWrite = true;
             while (true)
             {
                 ReadResult result;
@@ -376,9 +374,9 @@ namespace SampleServer
                     {
                         break;
                     }
-                    if (firstWrite)
+
+                    if (!HasResponseStarted)
                     {
-                        firstWrite = false;
                         await FlushAsync(CancellationToken.None);
                     }
 
@@ -421,7 +419,7 @@ namespace SampleServer
                 }
             }
 
-            if (!fCompletionExpected || hr != NativeMethods.S_OK)
+            if (!fCompletionExpected)
             {
                 CompleteWrite(hr, cbBytes: 0);
             }
@@ -438,9 +436,9 @@ namespace SampleServer
                                 IISAwaitable.ReadCallback,
                                 (IntPtr)_thisHandle,
                                 out var dwReceivedBytes,
-                                out bool fCompletionExpected);
+                                out var fCompletionExpected);
 
-            if (!fCompletionExpected || hr != NativeMethods.S_OK)
+            if (!fCompletionExpected)
             {
                 CompleteRead(hr, dwReceivedBytes);
             }
@@ -561,9 +559,15 @@ namespace SampleServer
             NativeMethods.http_indicate_completion(_pHttpContext, notificationStatus);
         }
 
-        internal void CompleteWrite(int hr, int cbBytes) => _writeOperation.Complete(hr, cbBytes);
+        internal void CompleteWrite(int hr, int cbBytes)
+        {
+            _writeOperation.Complete(hr, cbBytes);
+        }
 
-        internal void CompleteRead(int hr, int cbBytes) => _readOperation.Complete(hr, cbBytes);
+        internal void CompleteRead(int hr, int cbBytes)
+        {
+            _readOperation.Complete(hr, cbBytes);
+        }
 
         internal void CompleteFlush(int hr, int cbBytes)
         {
