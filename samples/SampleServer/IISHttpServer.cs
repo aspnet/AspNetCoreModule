@@ -93,7 +93,16 @@ namespace SampleServer
         {
             return builder.ConfigureServices(services =>
             {
-                services.AddSingleton<IServer, IISHttpServer>();
+                // TODO: We should have a more explicit way to detec this. Ideally
+                // we'd handle the case where you were trying to use the manage in proc code
+                // without ANCM installed, that should be a failure case instead of 
+                // a noop case.
+                // We could probably detect the process name for that one (w3wp.exe or iisexpress.exe)
+                // to determine if we should fail or noop
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && NativeMethods.is_ancm_loaded())
+                {
+                    services.AddSingleton<IServer, IISHttpServer>();
+                }
             });
         }
     }
