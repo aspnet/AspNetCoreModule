@@ -23,17 +23,18 @@ namespace SampleServer
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
-            // Console.ReadLine();
-
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
+
+            app.UseStaticFiles();
+
             app.UseWebSockets();
 
             app.Use(async (context, next) =>
             {
-                    if (context.WebSockets.IsWebSocketRequest)
+                if (context.WebSockets.IsWebSocketRequest)
                 {
                     var webSocket = await context.WebSockets.AcceptWebSocketAsync();
                     await Echo(context, webSocket, loggerFactory.CreateLogger("Echo"));
@@ -57,6 +58,7 @@ namespace SampleServer
                 await context.Response.WriteAsync("Hello World!");
             });
         }
+
         private async Task Echo(HttpContext context, WebSocket webSocket, ILogger logger)
         {
             var buffer = new byte[1024 * 4];

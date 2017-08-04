@@ -85,7 +85,11 @@ CProxyModule::OnSendResponse(
 		USHORT statusCode;
 		pHttpContext->GetResponse()->GetStatus(OUT &statusCode);
 		PCSTR upgradeHeader = pHttpContext->GetResponse()->GetHeader("Upgrade");
-		if (statusCode == 101 && strcmp(upgradeHeader, "websocket") == 0)
+
+		// Go opaque if we're doing websockets
+		if (statusCode == 101 && 
+			_strnicmp(upgradeHeader, "websocket", 9) == 0 && 
+			(flags & HTTP_SEND_RESPONSE_FLAG_OPAQUE) == 0)
 		{
 			pProvider->SetFlags(flags | HTTP_SEND_RESPONSE_FLAG_OPAQUE);
 		}
