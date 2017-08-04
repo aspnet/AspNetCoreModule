@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
+using System.Threading;
 
 namespace SampleServer
 {
@@ -29,11 +30,14 @@ namespace SampleServer
             }
             finally
             {
-                if (!HasResponseStarted && _applicationException == null && _onStarting != null)
+                if (!HasResponseStarted && _applicationException == null)
                 {
-                    await FireOnStarting();
+                    if (_onStarting != null)
+                    {
+                        await FireOnStarting();
+                    }
+                    await FlushAsync(CancellationToken.None);
                 }
-
                 if (_onCompleted != null)
                 {
                     await FireOnCompleted();
