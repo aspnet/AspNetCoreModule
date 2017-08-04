@@ -44,6 +44,8 @@ namespace SampleServer
         protected Task _writingTask;
         protected Task _flushTask;
 
+        protected int _requestAborted;
+
         public IISHttpContext(PipeFactory pipeFactory, IntPtr pHttpContext)
         {
             _thisHandle = GCHandle.Alloc(this);
@@ -68,7 +70,7 @@ namespace SampleServer
                 var major = pHttpRequest->Request.Version.MajorVersion;
                 var minor = pHttpRequest->Request.Version.MinorVersion;
 
-                HttpVersion = "HTTP/" + major + "." + minor; 
+                HttpVersion = "HTTP/" + major + "." + minor;
                 Scheme = pHttpRequest->Request.pSslInfo == null ? "http" : "https";
 
                 // TODO: Read this from IIS config
@@ -134,33 +136,11 @@ namespace SampleServer
         public IHeaderDictionary RequestHeaders { get; set; }
         public IHeaderDictionary ResponseHeaders { get; set; } = new HeaderDictionary();
 
-        public IISAwaitable FlushAsync(CancellationToken cancellationToken)
+        public IISAwaitable DoFlushAsync()
         {
-            if (!HasResponseStarted)
-            {
-                unsafe
-                {
-                    // TODO: Don't allocate a string
-                    var reasonPhrase = ReasonPhrases.GetReasonPhrase(StatusCode);
-                    var reasonPhraseBytes = Encoding.UTF8.GetBytes(reasonPhrase);
-
-                    fixed (byte* pReasonPhrase = reasonPhraseBytes)
-                    {
-                        // This copies data into the underlying buffer
-                        NativeMethods.http_set_response_status_code(_pHttpContext, (ushort)StatusCode, pReasonPhrase);
-                    }
-
-                    HttpApi.HTTP_RESPONSE_V2* pHttpResponse = NativeMethods.http_get_raw_response(_pHttpContext);
-
-                    _pinnedHeaders = SetHttpResponseHeaders(pHttpResponse);
-                }
-                HasResponseStarted = true;
-            }
-
             unsafe
             {
                 var hr = 0;
-
                 hr = NativeMethods.http_flush_response_bytes(_pHttpContext, IISAwaitable.FlushCallback, (IntPtr)_thisHandle, out var fCompletionExpected);
 
                 if (!fCompletionExpected)
@@ -169,6 +149,123 @@ namespace SampleServer
                 }
             }
             return _flushOperation;
+        }
+
+        public async Task FlushAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            await InitializeResponse(0);
+            await DoFlushAsync();
+        }
+
+        public Task InitializeResponse(int firstWriteByteCount)
+        {
+            if (HasResponseStarted)
+            {
+                return Task.CompletedTask;
+            }
+
+            if (_onStarting != null)
+            {
+                return InitializeResponseAwaited(firstWriteByteCount);
+            }
+
+            if (_applicationException != null)
+            {
+                ThrowResponseAbortedException();
+            }
+
+            ProduceStart(appCompleted: false);
+
+            return Task.CompletedTask;
+        }
+
+        private async Task InitializeResponseAwaited(int firstWriteByteCount)
+        {
+            await FireOnStarting();
+
+            if (_applicationException != null)
+            {
+                ThrowResponseAbortedException();
+            }
+
+            ProduceStart(appCompleted: false);
+        }
+
+        private void ThrowResponseAbortedException()
+        {
+            throw new ObjectDisposedException("Unhandled application exception", _applicationException);
+        }
+
+        private void ProduceStart(bool appCompleted)
+        {
+            if (HasResponseStarted)
+            {
+                return;
+            }
+            HasResponseStarted = true;
+
+            CreateResponseHeader(appCompleted);
+        }
+
+
+        protected Task ProduceEnd()
+        {
+            if (_applicationException != null)
+            {
+                if (HasResponseStarted)
+                {
+                    // We can no longer change the response, so we simply close the connection.
+                    return Task.CompletedTask;
+                }
+
+                // If the request was rejected, the error state has already been set by SetBadRequestState and
+                // that should take precedence.
+                else
+                {
+                    // 500 Internal Server Error
+                    SetErrorResponseHeaders(statusCode: StatusCodes.Status500InternalServerError);
+                }
+            }
+
+            if (!HasResponseStarted)
+            {
+                return ProduceEndAwaited();
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private void SetErrorResponseHeaders(int statusCode)
+        {
+            StatusCode = statusCode;
+        }
+
+        private async Task ProduceEndAwaited()
+        {
+            ProduceStart(appCompleted: true);
+
+            // Force flush
+            await DoFlushAsync();
+        }
+
+        public void CreateResponseHeader(bool appCompleted)
+        {
+            unsafe
+            {
+                // TODO: Don't allocate a string
+                var reasonPhrase = ReasonPhrases.GetReasonPhrase(StatusCode);
+                var reasonPhraseBytes = Encoding.UTF8.GetBytes(reasonPhrase);
+
+                fixed (byte* pReasonPhrase = reasonPhraseBytes)
+                {
+                    // This copies data into the underlying buffer
+                    NativeMethods.http_set_response_status_code(_pHttpContext, (ushort)StatusCode, pReasonPhrase);
+                }
+
+                HttpApi.HTTP_RESPONSE_V2* pHttpResponse = NativeMethods.http_get_raw_response(_pHttpContext);
+
+                _pinnedHeaders = SetHttpResponseHeaders(pHttpResponse);
+            }
         }
 
         public unsafe List<GCHandle> SetHttpResponseHeaders(HttpApi.HTTP_RESPONSE_V2* pHttpResponse)

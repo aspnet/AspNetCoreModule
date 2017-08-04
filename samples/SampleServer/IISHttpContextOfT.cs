@@ -23,6 +23,10 @@ namespace SampleServer
             try
             {
                 await _application.ProcessRequestAsync(context);
+                //if (Volatile.Read(ref _requestAborted) == 0)
+                //{
+                //    VerifyResponseContentLength();
+                //}
             }
             catch (Exception ex)
             {
@@ -30,18 +34,53 @@ namespace SampleServer
             }
             finally
             {
-                if (!HasResponseStarted && _applicationException == null)
+                if (!HasResponseStarted && _applicationException == null && _onStarting != null)
                 {
-                    if (_onStarting != null)
-                    {
-                        await FireOnStarting();
-                    }
-                    await FlushAsync(CancellationToken.None);
+                    await FireOnStarting();
+                    // Dispose
                 }
+
                 if (_onCompleted != null)
                 {
                     await FireOnCompleted();
                 }
+            }
+
+            if (Volatile.Read(ref _requestAborted) == 0)
+            {
+                if (HasResponseStarted)
+                {
+                    // If the response has already started, call ProduceEnd() before
+                    // consuming the rest of the request body to prevent
+                    // delaying clients waiting for the chunk terminator:
+                    //
+                    // https://github.com/dotnet/corefx/issues/17330#issuecomment-288248663
+                    //
+                    // ProduceEnd() must be called before _application.DisposeContext(), to ensure
+                    // HttpContext.Response.StatusCode is correctly set when
+                    // IHttpContextFactory.Dispose(HttpContext) is called.
+                    await ProduceEnd();
+                }
+
+                //// ForZeroContentLength does not complete the reader nor the writer
+                //if (!messageBody.IsEmpty && _keepAlive)
+                //{
+                //    // Finish reading the request body in case the app did not.
+                //    TimeoutControl.SetTimeout(Constants.RequestBodyDrainTimeout.Ticks, TimeoutAction.SendTimeoutResponse);
+                //    await messageBody.ConsumeAsync();
+                //    TimeoutControl.CancelTimeout();
+                //}
+
+                if (!HasResponseStarted)
+                {
+                    await ProduceEnd();
+                }
+            }
+            else if (!HasResponseStarted)
+            {
+                // If the request was aborted and no response was sent, there's no
+                // meaningful status code to log.
+                StatusCode = 0;
             }
 
             try

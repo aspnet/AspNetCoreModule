@@ -208,7 +208,7 @@ HRESULT
 
     hr = pModuleInfo->SetRequestNotifications(
         pFactory,
-        RQ_EXECUTE_REQUEST_HANDLER | RQ_SEND_RESPONSE,
+        RQ_EXECUTE_REQUEST_HANDLER,
         0);
     if (FAILED(hr))
     {

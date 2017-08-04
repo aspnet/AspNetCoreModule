@@ -82,7 +82,7 @@ extern "C" __declspec(dllexport) HRESULT http_write_response_bytes(
     void* pvCompletionContext,
     BOOL* pfCompletionExpected)
 {
-    auto pHttpResponse = (IHttpResponse3*)pHttpContext->GetResponse();
+    auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
 
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
@@ -107,7 +107,7 @@ extern "C" __declspec(dllexport) HRESULT http_flush_response_bytes(
     void* pvCompletionContext,
     BOOL* pfCompletionExpected)
 {
-    auto pHttpResponse = (IHttpResponse3*)pHttpContext->GetResponse();
+    auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
 
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
@@ -120,7 +120,6 @@ extern "C" __declspec(dllexport) HRESULT http_flush_response_bytes(
         pvCompletionContext,
         &dwBytesSent,
         pfCompletionExpected);
-
     return hr;
 }
 
@@ -201,11 +200,13 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
 	std::wstring path;
 	GetEnv(TEXT("PATH"), &path);
 
+	// TODO reduce allocations
 	size_t start = 0;
 	size_t next = 0;
 	std::wstring dotnetLocation;
 	std::wstring name(TEXT("dotnet.exe"));
 	size_t test = path.find(L";", start);
+
 	while ((next = path.find(L";", start)) != std::wstring::npos) {
 		dotnetLocation = path.substr(start, next - start);
         size_t length = dotnetLocation.length();

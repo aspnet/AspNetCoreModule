@@ -56,8 +56,6 @@ namespace SampleServer
                 context.Response.Headers["X-Foo"] = "This is a test";
                 context.Response.Headers["Server"] = "Justin's server";
                 await context.Response.WriteAsync("Hello World!");
-                await Task.Delay(5000);
-                await context.Response.WriteAsync("Hello Chris jr!");
 
             });
         }

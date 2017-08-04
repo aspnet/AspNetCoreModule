@@ -49,6 +49,13 @@ class CProxyModule : public CHttpModule
 		ISendResponseProvider* pProvider
 	);
 
+	__override
+	REQUEST_NOTIFICATION_STATUS
+	OnEndRequest(
+		IHttpContext* pHttpContext,
+		IHttpEventProvider* pProvider
+	);
+
 
  private:
 
