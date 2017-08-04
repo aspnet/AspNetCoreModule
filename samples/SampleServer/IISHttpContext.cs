@@ -56,7 +56,6 @@ namespace SampleServer
                 var pHttpRequest = NativeMethods.http_get_raw_request(pHttpContext);
 
                 var verb = pHttpRequest->Request.Verb;
-                // Make this include Invalid?
                 if (verb > HttpApi.HTTP_VERB.HttpVerbUnknown && verb < HttpApi.HTTP_VERB.HttpVerbMaximum)
                 {
                     Method = HttpApi.HttpVerbs[(int)verb];
@@ -69,7 +68,7 @@ namespace SampleServer
                 var major = pHttpRequest->Request.Version.MajorVersion;
                 var minor = pHttpRequest->Request.Version.MinorVersion;
 
-                HttpVersion = "HTTP/" + major + "." + minor; // Is this correct?
+                HttpVersion = "HTTP/" + major + "." + minor; 
                 Scheme = pHttpRequest->Request.pSslInfo == null ? "http" : "https";
 
                 // TODO: Read this from IIS config

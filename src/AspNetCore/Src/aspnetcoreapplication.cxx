@@ -194,7 +194,6 @@ HRESULT ASPNETCORE_APPLICATION::Initialize(ASPNETCORE_CONFIG * pConfig)
 
 void ASPNETCORE_APPLICATION::ExecuteApplication()
 {
-    // TODO: Implement steps to properly find the version:
     // 1. Look at the PATH and find the muxer location (split PATH on ; and find location with dotnet.exe)
     // 2. Look at the application path to figure out which version of hostfxr.dll to pick.
     // Ideally this would be an export from a library in an unversioned folder
@@ -204,19 +203,15 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
 	size_t start = 0;
 	size_t next = 0;
 	std::wstring dotnetLocation;
-	std::wstring name(TEXT("\\dotnet\\"));
+	std::wstring name(TEXT("dotnet.exe"));
 	size_t test = path.find(L";", start);
 	while ((next = path.find(L";", start)) != std::wstring::npos) {
 		dotnetLocation = path.substr(start, next - start);
-		if (dotnetLocation.find(name, dotnetLocation.size() - name.size()) != std::wstring::npos) {
+		std::wstring dotnetExe = dotnetLocation + name;
+		if (PathFileExists(dotnetExe.c_str())) {
 			break;
 		}
 		start = next + 1;
-	}
-
-	// Verify that this directory exists
-	if (!DirectoryExists(dotnetLocation)) {
-		return;
 	}
 
 	// Add host\\fxr to the path (MUST NOT HAVE TRAILING SLASH)
