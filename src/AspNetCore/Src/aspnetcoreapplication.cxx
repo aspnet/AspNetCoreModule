@@ -203,7 +203,7 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
 	size_t start = 0;
 	size_t next = 0;
 	std::wstring dotnetLocation;
-	std::wstring name(TEXT("dotnet.exe"));
+	std::wstring name(TEXT("\\dotnet.exe"));
 	size_t test = path.find(L";", start);
 	while ((next = path.find(L";", start)) != std::wstring::npos) {
 		dotnetLocation = path.substr(start, next - start);
