@@ -27,7 +27,7 @@ namespace SampleServer
         public static extern void register_request_callback(PFN_REQUEST_HANDLER callback, IntPtr pvRequestContext);
 
         [DllImport("aspnetcore.dll")]
-        public unsafe static extern int http_write_response_bytes(IntPtr pHttpContext, byte* pvBuffer, int cbBuffer, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext, out bool fCompletionExpected);
+        public unsafe static extern int http_write_response_bytes(IntPtr pHttpContext, HttpApi.HTTP_DATA_CHUNK* pDataChunks, int nChunks, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext, out bool fCompletionExpected);
 
         [DllImport("aspnetcore.dll")]
         public unsafe static extern int http_flush_response_bytes(IntPtr pHttpContext, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext, out bool fCompletionExpected);

@@ -160,10 +160,9 @@ namespace SampleServer
 
             unsafe
             {
-                var fCompletionExpected = false;
                 var hr = 0;
 
-                hr = NativeMethods.http_flush_response_bytes(_pHttpContext, IISAwaitable.FlushCallback, (IntPtr)_thisHandle, out fCompletionExpected);
+                hr = NativeMethods.http_flush_response_bytes(_pHttpContext, IISAwaitable.FlushCallback, (IntPtr)_thisHandle, out var fCompletionExpected);
 
                 if (!fCompletionExpected)
                 {
@@ -401,21 +400,65 @@ namespace SampleServer
         {
             var fCompletionExpected = false;
             var hr = 0;
+            var nChunks = 0;
 
-            if (!buffer.IsSingleSpan)
+            if (buffer.IsSingleSpan)
             {
-                // TODO: Handle mutiple buffers (in a single write)
-                var copy = buffer.ToArray();
-                fixed (byte* pBuffer = &copy[0])
+                nChunks = 1;
+            }
+            else
+            {
+                foreach (var memory in buffer)
                 {
-                    hr = NativeMethods.http_write_response_bytes(_pHttpContext, pBuffer, buffer.Length, IISAwaitable.WriteCallback, (IntPtr)_thisHandle, out fCompletionExpected);
+                    nChunks++;
+                }
+            }
+
+            if (buffer.IsSingleSpan)
+            {
+                var pDataChunks = stackalloc HttpApi.HTTP_DATA_CHUNK[1];
+
+                fixed (byte* pBuffer = &buffer.First.Span.DangerousGetPinnableReference())
+                {
+                    ref var chunk = ref pDataChunks[0];
+
+                    chunk.DataChunkType = HttpApi.HTTP_DATA_CHUNK_TYPE.HttpDataChunkFromMemory;
+                    chunk.fromMemory.pBuffer = (IntPtr)pBuffer;
+                    chunk.fromMemory.BufferLength = (uint)buffer.Length;
+
+                    hr = NativeMethods.http_write_response_bytes(_pHttpContext, pDataChunks, nChunks, IISAwaitable.WriteCallback, (IntPtr)_thisHandle, out fCompletionExpected);
                 }
             }
             else
             {
-                fixed (byte* pBuffer = &buffer.First.Span.DangerousGetPinnableReference())
+                // REVIEW: Do we need to guard against this getting too big? It seems unlikely that we'd have more than say 10 chunks in real life
+                var pDataChunks = stackalloc HttpApi.HTTP_DATA_CHUNK[nChunks];
+                var currentChunk = 0;
+
+                // REVIEW: We don't really need this list since the memory is already pinned with the default pool,
+                // but shouldn't assume the pool implementation right now. Unfortunately, this causes a heap allocation...
+                var handles = new BufferHandle[nChunks];
+
+                foreach (var b in buffer)
                 {
-                    hr = NativeMethods.http_write_response_bytes(_pHttpContext, pBuffer, buffer.Length, IISAwaitable.WriteCallback, (IntPtr)_thisHandle, out fCompletionExpected);
+                    ref var handle = ref handles[currentChunk];
+                    ref var chunk = ref pDataChunks[currentChunk];
+
+                    handle = b.Pin();
+
+                    chunk.DataChunkType = HttpApi.HTTP_DATA_CHUNK_TYPE.HttpDataChunkFromMemory;
+                    chunk.fromMemory.BufferLength = (uint)b.Length;
+                    chunk.fromMemory.pBuffer = (IntPtr)handle.PinnedPointer;
+
+                    currentChunk++;
+                }
+
+                hr = NativeMethods.http_write_response_bytes(_pHttpContext, pDataChunks, nChunks, IISAwaitable.WriteCallback, (IntPtr)_thisHandle, out fCompletionExpected);
+
+                // Free the handles
+                foreach (var handle in handles)
+                {
+                    handle.Free();
                 }
             }
 

@@ -76,26 +76,21 @@ extern "C" __declspec(dllexport) HRESULT http_read_request_bytes(
 
 extern "C" __declspec(dllexport) HRESULT http_write_response_bytes(
     IHttpContext* pHttpContext,
-    CHAR* pvBuffer,
-    DWORD cbBuffer,
+    HTTP_DATA_CHUNK* pDataChunks,
+    DWORD nChunks,
     PFN_ASYNC_COMPLETION pfnCompletionCallback,
     void* pvCompletionContext,
     BOOL* pfCompletionExpected)
 {
     auto pHttpResponse = (IHttpResponse3*)pHttpContext->GetResponse();
 
-    HTTP_DATA_CHUNK chunk;
-    chunk.DataChunkType = HttpDataChunkFromMemory;
-    chunk.FromMemory.pBuffer = pvBuffer;
-    chunk.FromMemory.BufferLength = cbBuffer;
-
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
     DWORD dwBytesSent;
 
     HRESULT hr = pHttpResponse->WriteEntityChunks(
-        &chunk,
-        1,
+        pDataChunks,
+        nChunks,
         fAsync,
         fMoreData,
         pfnCompletionCallback,
