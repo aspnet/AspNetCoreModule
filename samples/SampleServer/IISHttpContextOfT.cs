@@ -95,7 +95,7 @@ namespace SampleServer
             finally
             {
                 // The app is finished and there should be nobody writing to the response pipe
-                Output.Writer.Complete();
+                Output.Dispose();
 
                 if (_writingTask != null)
                 {

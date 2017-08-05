@@ -30,7 +30,7 @@ namespace SampleServer
         protected Stack<KeyValuePair<Func<object, Task>, object>> _onStarting;
         protected Stack<KeyValuePair<Func<object, Task>, object>> _onCompleted;
         protected Exception _applicationException;
-        private PipeFactory _pipeFactory;
+        private readonly PipeFactory _pipeFactory;
 
         private List<GCHandle> _pinnedHeaders;
 
@@ -101,7 +101,8 @@ namespace SampleServer
             ResponseBody = new IISHttpResponseBody(this);
 
             Input = _pipeFactory.Create(new PipeOptions { ReaderScheduler = TaskRunScheduler.Default });
-            Output = _pipeFactory.Create(new PipeOptions { ReaderScheduler = TaskRunScheduler.Default });
+            var pipe = _pipeFactory.Create(new PipeOptions { ReaderScheduler = TaskRunScheduler.Default });
+            Output = new OutputProducer(pipe);
 
             // TODO: Only upgradable on Win8 or higher
             _upgradeAvailable = true; // TODO
@@ -131,7 +132,7 @@ namespace SampleServer
         public Stream ResponseBody { get; set; }
 
         public IPipe Input { get; set; }
-        public IPipe Output { get; set; }
+        public OutputProducer Output { get; set; }
 
         public IHeaderDictionary RequestHeaders { get; set; }
         public IHeaderDictionary ResponseHeaders { get; set; } = new HeaderDictionary();
@@ -154,7 +155,27 @@ namespace SampleServer
         public async Task FlushAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             await InitializeResponse(0);
-            await DoFlushAsync();
+            await Output.FlushAsync(cancellationToken);
+        }
+
+        public Task WriteAsync(ArraySegment<byte> data, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!HasResponseStarted)
+            {
+                return WriteAsyncAwaited(data, cancellationToken);
+            }
+
+            // VerifyAndUpdateWrite(data.Count);
+            return Output.WriteAsync(data, cancellationToken: cancellationToken);
+        }
+
+        public async Task WriteAsyncAwaited(ArraySegment<byte> data, CancellationToken cancellationToken)
+        {
+            await InitializeResponseAwaited(data.Count);
+
+            // WriteAsyncAwaited is only called for the first write to the body.
+            // Ensure headers are flushed if Write(Chunked)Async isn't called.
+            await Output.WriteAsync(data, cancellationToken: cancellationToken);
         }
 
         public Task InitializeResponse(int firstWriteByteCount)
@@ -202,9 +223,12 @@ namespace SampleServer
             {
                 return;
             }
+
             HasResponseStarted = true;
 
             CreateResponseHeader(appCompleted);
+
+            StartWritingResponseBody();
         }
 
 
@@ -245,27 +269,24 @@ namespace SampleServer
             ProduceStart(appCompleted: true);
 
             // Force flush
-            await DoFlushAsync();
+            await Output.FlushAsync();
         }
 
-        public void CreateResponseHeader(bool appCompleted)
+        public unsafe void CreateResponseHeader(bool appCompleted)
         {
-            unsafe
+            // TODO: Don't allocate a string
+            var reasonPhrase = ReasonPhrases.GetReasonPhrase(StatusCode);
+            var reasonPhraseBytes = Encoding.UTF8.GetBytes(reasonPhrase);
+
+            fixed (byte* pReasonPhrase = reasonPhraseBytes)
             {
-                // TODO: Don't allocate a string
-                var reasonPhrase = ReasonPhrases.GetReasonPhrase(StatusCode);
-                var reasonPhraseBytes = Encoding.UTF8.GetBytes(reasonPhrase);
-
-                fixed (byte* pReasonPhrase = reasonPhraseBytes)
-                {
-                    // This copies data into the underlying buffer
-                    NativeMethods.http_set_response_status_code(_pHttpContext, (ushort)StatusCode, pReasonPhrase);
-                }
-
-                HttpApi.HTTP_RESPONSE_V2* pHttpResponse = NativeMethods.http_get_raw_response(_pHttpContext);
-
-                _pinnedHeaders = SetHttpResponseHeaders(pHttpResponse);
+                // This copies data into the underlying buffer
+                NativeMethods.http_set_response_status_code(_pHttpContext, (ushort)StatusCode, pReasonPhrase);
             }
+
+            HttpApi.HTTP_RESPONSE_V2* pHttpResponse = NativeMethods.http_get_raw_response(_pHttpContext);
+
+            _pinnedHeaders = SetHttpResponseHeaders(pHttpResponse);
         }
 
         public unsafe List<GCHandle> SetHttpResponseHeaders(HttpApi.HTTP_RESPONSE_V2* pHttpResponse)
@@ -470,11 +491,6 @@ namespace SampleServer
                         break;
                     }
 
-                    if (!HasResponseStarted)
-                    {
-                        await FlushAsync(CancellationToken.None);
-                    }
-
                     if (!buffer.IsEmpty)
                     {
                         await WriteAsync(buffer);
@@ -482,6 +498,10 @@ namespace SampleServer
                     else if (result.IsCompleted)
                     {
                         break;
+                    }
+                    else
+                    {
+                        await DoFlushAsync();
                     }
                 }
                 finally
