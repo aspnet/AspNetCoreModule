@@ -18,6 +18,7 @@ namespace SampleServer
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddMvc();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -29,31 +30,11 @@ namespace SampleServer
 
             app.UseWebSockets();
 
-            app.Use(async (context, next) =>
+            app.UseMvc(routes =>
             {
-                if (context.WebSockets.IsWebSocketRequest)
-                {
-                    var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                    await Echo(context, webSocket, loggerFactory.CreateLogger("Echo"));
-                }
-                else
-                {
-                    await next();
-                }
-            });
-
-            app.Run(async (context) =>
-            {
-                if (HttpMethods.IsPost(context.Request.Method))
-                {
-                    var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
-                    Console.WriteLine($"Request body: {body}");
-                }
-
-                context.Response.Headers["X-Foo"] = "This is a test";
-                context.Response.Headers["Server"] = "Justin's server";
-                await context.Response.WriteAsync("Hello World!");
-
+                routes.MapRoute(
+                    name: "default",
+                    template: "{controller=Home}/{action=Index}/{id?}");
             });
         }
 
