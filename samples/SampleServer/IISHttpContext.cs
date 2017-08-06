@@ -40,9 +40,10 @@ namespace SampleServer
         private IISAwaitable _writeOperation = new IISAwaitable();
         private IISAwaitable _flushOperation = new IISAwaitable();
 
+        private TaskCompletionSource<object> _upgradeTcs;
+
         protected Task _readingTask;
         protected Task _writingTask;
-        protected Task _flushTask;
 
         protected int _requestAborted;
 
@@ -137,7 +138,7 @@ namespace SampleServer
         public IHeaderDictionary RequestHeaders { get; set; }
         public IHeaderDictionary ResponseHeaders { get; set; } = new HeaderDictionary();
 
-        public IISAwaitable DoFlushAsync()
+        private IISAwaitable DoFlushAsync()
         {
             unsafe
             {
@@ -156,6 +157,16 @@ namespace SampleServer
         {
             await InitializeResponse(0);
             await Output.FlushAsync(cancellationToken);
+        }
+
+        public async Task UpgradeAsync()
+        {
+            if (_upgradeTcs == null)
+            {
+                _upgradeTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+                await FlushAsync();
+                await _upgradeTcs.Task;
+            }
         }
 
         public Task WriteAsync(ArraySegment<byte> data, CancellationToken cancellationToken = default(CancellationToken))
@@ -503,6 +514,8 @@ namespace SampleServer
                     {
                         await DoFlushAsync();
                     }
+
+                    _upgradeTcs?.TrySetResult(null);
                 }
                 finally
                 {

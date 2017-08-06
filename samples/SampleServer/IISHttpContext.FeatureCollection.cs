@@ -250,7 +250,7 @@ namespace SampleServer
                 }
             }
 
-            await FlushAsync(default(CancellationToken));
+            await UpgradeAsync();
 
             return new DuplexStream(RequestBody, ResponseBody);
         }

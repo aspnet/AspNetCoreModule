@@ -74,44 +74,6 @@ CProxyModule::~CProxyModule()
 
 __override
 REQUEST_NOTIFICATION_STATUS
-CProxyModule::OnSendResponse(
-	IHttpContext* pHttpContext,
-	ISendResponseProvider* pProvider
-)
-{
-	if (NULL != pHttpContext && NULL != pProvider)
-	{
-		DWORD flags = pProvider->GetFlags();
-		USHORT statusCode;
-		pHttpContext->GetResponse()->GetStatus(OUT &statusCode);
-
-		PCSTR upgradeHeader = pHttpContext->GetResponse()->GetHeader("Upgrade");
-
-		// Go opaque if we're doing websockets
-		if (statusCode == 101 &&
-			_strnicmp(upgradeHeader, "websocket", 9) == 0 &&
-			(flags & HTTP_SEND_RESPONSE_FLAG_OPAQUE) == 0)
-		{
-			pProvider->SetFlags(flags | HTTP_SEND_RESPONSE_FLAG_OPAQUE);
-		}
-	}
-	// I think we need to selectively choose to either send request continue or pending
-	return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
-}
-
-__override
-REQUEST_NOTIFICATION_STATUS
-CProxyModule::OnEndRequest(
-	IHttpContext* pHttpContext,
-	IHttpEventProvider* pProvider
-)
-{
-	// I think we need to selectively choose to either send request continue or pending
-	return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
-}
-
-__override
-REQUEST_NOTIFICATION_STATUS
 CProxyModule::OnExecuteRequestHandler(
     IHttpContext *          pHttpContext,
     IHttpEventProvider *

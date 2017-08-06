@@ -32,11 +32,6 @@ namespace SampleServer
             return Task.CompletedTask;
         }
 
-        private async Task ProcessRequest(IISHttpContext context)
-        {
-            await context.ProcessRequestAsync();
-        }
-
         public Task StopAsync(CancellationToken cancellationToken)
         {
             // TODO: Drain pending requests
@@ -58,7 +53,7 @@ namespace SampleServer
 
             var context = server._iisContextFactory.CreateHttpContext(pHttpContext);
             // Ignore the task here this should never fail
-            var _ = server.ProcessRequest(context);
+            _ = context.ProcessRequestAsync();
 
             return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_PENDING;
         }

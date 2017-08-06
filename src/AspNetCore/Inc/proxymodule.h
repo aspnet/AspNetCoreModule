@@ -42,20 +42,6 @@ class CProxyModule : public CHttpModule
         IHttpCompletionInfo *   pCompletionInfo
     );
 
-	__override
-	REQUEST_NOTIFICATION_STATUS
-	OnSendResponse(
-		IHttpContext* pHttpContext,
-		ISendResponseProvider* pProvider
-	);
-
-	__override
-	REQUEST_NOTIFICATION_STATUS
-	OnEndRequest(
-		IHttpContext* pHttpContext,
-		IHttpEventProvider* pProvider
-	);
-
 
  private:
 
