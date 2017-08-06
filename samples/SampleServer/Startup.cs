@@ -36,6 +36,19 @@ namespace SampleServer
                     name: "default",
                     template: "{controller=Home}/{action=Index}/{id?}");
             });
+
+            app.Use(async (context, next) =>
+            {
+                if (context.WebSockets.IsWebSocketRequest)
+                {
+                    var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                    await Echo(context, webSocket, loggerFactory.CreateLogger("Echo"));
+                }
+                else
+                {
+                    await next();
+                }
+            });
         }
 
         private async Task Echo(HttpContext context, WebSocket webSocket, ILogger logger)
