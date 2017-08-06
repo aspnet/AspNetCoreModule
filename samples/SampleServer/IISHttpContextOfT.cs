@@ -6,11 +6,11 @@ using System.Threading;
 
 namespace SampleServer
 {
-    public class IISHttpContextOfT<T> : IISHttpContext
+    public class IISHttpContextOfT<TContext> : IISHttpContext
     {
-        private readonly IHttpApplication<T> _application;
+        private readonly IHttpApplication<TContext> _application;
 
-        public IISHttpContextOfT(PipeFactory pipeFactory, IHttpApplication<T> application, IntPtr pHttpContext)
+        public IISHttpContextOfT(PipeFactory pipeFactory, IHttpApplication<TContext> application, IntPtr pHttpContext)
             : base(pipeFactory, pHttpContext)
         {
             _application = application;
@@ -18,10 +18,12 @@ namespace SampleServer
 
         public override async Task ProcessRequestAsync()
         {
-            var context = _application.CreateContext(this);
+            var context = default(TContext);
 
             try
             {
+                context = _application.CreateContext(this);
+
                 await _application.ProcessRequestAsync(context);
                 //if (Volatile.Read(ref _requestAborted) == 0)
                 //{
@@ -109,8 +111,6 @@ namespace SampleServer
                 {
                     await _readingTask;
                 }
-
-                PostCompletion();
             }
         }
     }

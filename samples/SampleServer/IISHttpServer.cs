@@ -52,10 +52,28 @@ namespace SampleServer
             var server = (IISHttpServer)GCHandle.FromIntPtr(pvRequestContext).Target;
 
             var context = server._iisContextFactory.CreateHttpContext(pHttpContext);
-            // Ignore the task here this should never fail
-            _ = context.ProcessRequestAsync();
+
+            var task = context.ProcessRequestAsync();
+
+            // This should never fail
+            if (task.IsCompleted)
+            {
+                context.Dispose();
+                return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_CONTINUE;
+            }
+
+            task.ContinueWith((t, state) => CompleteRequest((IISHttpContext)state), context);
 
             return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_PENDING;
+        }
+
+        private static void CompleteRequest(IISHttpContext context)
+        {
+            // Post completion after completing the request to resume the state machine
+            context.PostCompletion();
+
+            // Dispose the context
+            context.Dispose();
         }
 
         private class IISContextFactory<T> : IISContextFactory
