@@ -14,20 +14,21 @@ namespace SampleServer
     {
         private static NativeMethods.PFN_REQUEST_HANDLER _requestHandler = HandleRequest;
 
-        public IISContextFactory _iisContextFactory { get; private set; }
+        private IISContextFactory _iisContextFactory;
 
         private PipeFactory _pipeFactory = new PipeFactory();
+        private GCHandle _httpServerHandle;
 
         public IFeatureCollection Features { get; } = new FeatureCollection();
 
         public Task StartAsync<TContext>(IHttpApplication<TContext> application, CancellationToken cancellationToken)
         {
-            var httpServerHandle = (IntPtr)GCHandle.Alloc(this);
+            _httpServerHandle = GCHandle.Alloc(this);
 
             _iisContextFactory = new IISContextFactory<TContext>(_pipeFactory, application);
 
             // Start the server by registering the callback
-            NativeMethods.register_request_callback(_requestHandler, httpServerHandle);
+            NativeMethods.register_request_callback(_requestHandler, (IntPtr)_httpServerHandle);
 
             return Task.CompletedTask;
         }
@@ -43,7 +44,12 @@ namespace SampleServer
 
         public void Dispose()
         {
-            // TODO
+            if (_httpServerHandle.IsAllocated)
+            {
+                _httpServerHandle.Free();
+            }
+
+            _pipeFactory.Dispose();
         }
 
         private static NativeMethods.REQUEST_NOTIFICATION_STATUS HandleRequest(IntPtr pHttpContext, IntPtr pvRequestContext)
