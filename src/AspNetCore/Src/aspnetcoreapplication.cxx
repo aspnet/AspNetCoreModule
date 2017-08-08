@@ -206,11 +206,10 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
 	std::wstring dotnetLocation;
 	std::wstring name(TEXT("dotnet.exe"));
 	size_t test = path.find(L";", start);
-
 	while ((next = path.find(L";", start)) != std::wstring::npos) {
 		dotnetLocation = path.substr(start, next - start);
         size_t length = dotnetLocation.length();
-        if (length > 0 && dotnetLocation[length - 1] == '\\') {
+        if (length > 0 && dotnetLocation[length - 1] != L'\\') {
             dotnetLocation += '\\';
         }
 		std::wstring dotnetExe = dotnetLocation + name;
@@ -253,7 +252,7 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
 
     // The first argument is mostly ignored
 	argv[0] = (dotnetLocation + name).c_str(); // TODO we may need to add .exe here
-    argv[1] = m_pConfiguration->QueryArguments()->QueryStr();
+    argv[1] = m_pConfiguration->QueryArguments()->QueryStr(); // This needs to be a full physical path
 
     // Hack from hell, there can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
