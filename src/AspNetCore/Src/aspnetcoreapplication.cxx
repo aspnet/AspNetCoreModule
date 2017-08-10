@@ -10,6 +10,10 @@ extern "C" __declspec(dllexport) void register_request_callback(PFN_REQUEST_HAND
     ASPNETCORE_APPLICATION::GetInstance()->SetRequestHandlerCallback(requestHandler, pvRequstHandlerContext);
 }
 
+//extern "C" __declspec(dllexport) PCWSTR get_application_path(IHttpContext* pHttpContext)
+//{
+//	return m_applicationPhysicalPath;
+//}
 // HTTP exports
 
 extern "C" __declspec(dllexport) HTTP_REQUEST* http_get_raw_request(IHttpContext* pHttpContext)
@@ -252,7 +256,7 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
 
     // The first argument is mostly ignored
 	argv[0] = (dotnetLocation + name).c_str(); // TODO we may need to add .exe here
-    argv[1] = m_pConfiguration->QueryArguments()->QueryStr(); // This needs to be a full physical path
+    argv[1] = L"C:\\Users\\jukotali\\code\\aspnetcoremodule\\samples\\SampleServer\\bin\\Debug\\netcoreapp2.0\\SampleServer.dll"; // This needs to be a full physical path
 
     // Hack from hell, there can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the

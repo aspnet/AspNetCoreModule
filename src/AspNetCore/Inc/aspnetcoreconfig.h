@@ -171,6 +171,7 @@ public:
     {
         return &m_struStdoutLogFile;
     }
+	
 
 private:
 
@@ -204,4 +205,5 @@ private:
     BOOL                   m_fBasicAuthEnabled;
     BOOL                   m_fAnonymousAuthEnabled;
     ENVIRONMENT_VAR_HASH*  m_pEnvironmentVariables;
+	//PCWSTR				   m_pApplicationPath;
 };

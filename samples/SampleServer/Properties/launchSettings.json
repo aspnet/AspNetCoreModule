@@ -1,4 +1,12 @@
 {
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iis": {
+      "applicationUrl": "http://localhost/SampleServer",
+      "sslPort": 0
+    }
+  },
   "profiles": {
     "Local ANCM": {
       "commandName": "Executable",
@@ -11,6 +19,9 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "LAUNCHER_PATH": "dotnet.exe"
       }
+    },
+    "IIS": {
+      "commandName": "IIS"
     }
   }
 }

@@ -25,6 +25,8 @@ namespace SampleServer
                 {
                     l.SetMinimumLevel(LogLevel.Critical);
                 })
+                .UseEnvironment("Development")
+                .UseContentRoot("C:\\Users\\jukotali\\code\\aspnetcoremodule\\samples\\SampleServer")
                 .UseNativeIIS()
                 .UseStartup<Startup>()
                 .Build();

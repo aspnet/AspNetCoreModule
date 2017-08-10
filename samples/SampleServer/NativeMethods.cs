@@ -21,6 +21,9 @@ namespace SampleServer
         [DllImport(AspNetCoreModuleDll)]
         public static extern int http_post_completion(IntPtr pHttpContext, int cbBytes);
 
+        //[DllImport(AspNetCoreModuleDll)]
+        //public static extern int http_post_completion(IntPtr pHttpContext, int cbBytes);
+
         [DllImport(AspNetCoreModuleDll)]
         public static extern void http_indicate_completion(IntPtr pHttpContext, REQUEST_NOTIFICATION_STATUS notificationStatus);
 
