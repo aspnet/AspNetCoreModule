@@ -260,7 +260,9 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
     // The first argument is mostly ignored
 	std::wstring location = dotnetLocation + name;
 	argv[0] = location.c_str(); // TODO we may need to add .exe here
-	argv[1] = m_pConfiguration->QueryArguments()->QueryStr();
+	STRU fullPath;
+	PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(), m_pConfiguration->QueryApplicationFullPath()->QueryStr(), &fullPath);
+	argv[1] = fullPath.QueryStr();
 
     // Hack from hell, there can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
