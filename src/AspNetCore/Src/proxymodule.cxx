@@ -99,7 +99,6 @@ CProxyModule::OnExecuteRequestHandler(
 
     ASPNETCORE_CONFIG* config;
     ASPNETCORE_CONFIG::GetConfig(pHttpContext, &config);
-	//pHttpContext->GetApplication()->GetApplicationPhysicalPath();
     ASPNETCORE_APPLICATION* pAspNetCoreApplication;
     hr = pApplication->GetAspNetCoreApplication(config, &pAspNetCoreApplication);
     if (FAILED(hr))

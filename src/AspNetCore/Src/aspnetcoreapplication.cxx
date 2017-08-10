@@ -150,7 +150,6 @@ void ASPNETCORE_APPLICATION::SetRequestHandlerCallback(PFN_REQUEST_HANDLER reque
 HRESULT ASPNETCORE_APPLICATION::Initialize(ASPNETCORE_CONFIG * pConfig)
 {
     m_pConfiguration = pConfig;
-
     m_InitalizeEvent = CreateEvent(
         NULL,   // default security attributes
         TRUE,   // manual reset event
@@ -253,10 +252,12 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
     // Get the entry point for main
     auto proc = (hostfxr_main_fn)GetProcAddress(module, "hostfxr_main");
     const wchar_t* argv[2];
-
     // The first argument is mostly ignored
 	argv[0] = (dotnetLocation + name).c_str(); // TODO we may need to add .exe here
-    argv[1] = L"C:\\Users\\jukotali\\code\\aspnetcoremodule\\samples\\SampleServer\\bin\\Debug\\netcoreapp2.0\\SampleServer.dll"; // This needs to be a full physical path
+	argv[1] = m_pConfiguration->QueryApplicationFullPath()->QueryStr();
+	//m_pConfiguration->QueryApplicationFullPath()->QueryStr();
+
+	// L"C:\\Users\\jukotali\\code\\aspnetcoremodule\\samples\\SampleServer\\bin\\Debug\\netcoreapp2.0\\SampleServer.dll"; // This needs to be a full physical path
 
     // Hack from hell, there can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the

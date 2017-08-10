@@ -92,6 +92,12 @@ ASPNETCORE_CONFIG::GetConfig(
         {
             goto Finished;
         }
+
+		hr = pAspNetCoreConfig->QueryApplicationFullPath()->Copy(pHttpApplication->GetApplicationPhysicalPath());
+		if (FAILED(hr))
+		{
+			goto Finished;
+		}
     }
 
     *ppAspNetCoreConfig = pAspNetCoreConfig;
@@ -114,7 +120,7 @@ ASPNETCORE_CONFIG::Populate(
 )
 {
     HRESULT                         hr = S_OK;
-    STACK_STRU(strSiteConfigPath, 256);
+    STACK_STRU(strSiteConfigPath, 256); // Should this be 260?
     STRU                            strEnvName;
     STRU                            strEnvValue;
     STRU                            strExpandedEnvValue;
@@ -144,7 +150,6 @@ ASPNETCORE_CONFIG::Populate(
     }
 
     pAdminManager = g_pHttpServer->GetAdminManager();
-
     hr = strSiteConfigPath.Copy(pHttpContext->GetApplication()->GetAppConfigPath());
     if (FAILED(hr))
     {
@@ -314,14 +319,13 @@ ASPNETCORE_CONFIG::Populate(
     {
         goto Finished;
     }
-
-    hr = GetElementStringProperty(pAspNetCoreElement,
-        CS_ASPNETCORE_STDOUT_LOG_FILE,
-        &m_struStdoutLogFile);
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
+	hr = GetElementStringProperty(pAspNetCoreElement,
+		CS_ASPNETCORE_STDOUT_LOG_FILE,
+		&m_struStdoutLogFile);
+	if (FAILED(hr))
+	{
+		goto Finished;
+	}
 
     hr = GetElementChildByName(pAspNetCoreElement,
         CS_ASPNETCORE_ENVIRONMENT_VARIABLES,
