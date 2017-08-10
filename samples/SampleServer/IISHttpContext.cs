@@ -56,7 +56,6 @@ namespace SampleServer
 
             unsafe
             {
-                //var appPath = NativeMethods.
                 var pHttpRequest = NativeMethods.http_get_raw_request(pHttpContext);
 
                 var verb = pHttpRequest->Request.Verb;

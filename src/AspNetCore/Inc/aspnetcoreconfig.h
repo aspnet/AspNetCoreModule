@@ -178,7 +178,6 @@ public:
     {
         return &m_struStdoutLogFile;
     }
-	
 
 private:
 
@@ -205,7 +204,7 @@ private:
     STRU                   m_struArguments;
     STRU                   m_struProcessPath;
     STRU                   m_struStdoutLogFile;
-	STRU				   m_struApplicationFullPath;
+    STRU				   m_struApplicationFullPath;
     BOOL                   m_fStdoutLogEnabled;
     BOOL                   m_fForwardWindowsAuthToken;
     BOOL                   m_fDisableStartUpErrorPage;
