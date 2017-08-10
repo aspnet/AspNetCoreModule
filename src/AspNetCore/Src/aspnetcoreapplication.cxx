@@ -47,6 +47,11 @@ extern "C" __declspec(dllexport) void http_get_completion_info(IHttpCompletionIn
     *hr = info->GetCompletionStatus();
 }
 
+extern "C" __declspec(dllexport) void http_get_application_full_path(wchar_t ** path)
+{
+	*path = ASPNETCORE_APPLICATION::GetInstance()->GetConfig()->QueryApplicationFullPath()->QueryStr();
+}
+
 extern "C" __declspec(dllexport) HRESULT http_read_request_bytes(
     IHttpContext* pHttpContext,
     CHAR* pvBuffer,
@@ -254,8 +259,8 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
     const wchar_t* argv[2];
     // The first argument is mostly ignored
 	argv[0] = (dotnetLocation + name).c_str(); // TODO we may need to add .exe here
-	argv[1] = m_pConfiguration->QueryApplicationFullPath()->QueryStr();
-	//m_pConfiguration->QueryApplicationFullPath()->QueryStr();
+	argv[1] = L"C:\\Users\\jukotali\\code\\aspnetcoremodule\\samples\\SampleServer\\bin\\Debug\\netcoreapp2.0\\SampleServer.dll";
+	//m_pConfiguration->QueryApplicationFullPath()->QueryStr() + other stuff;
 
 	// L"C:\\Users\\jukotali\\code\\aspnetcoremodule\\samples\\SampleServer\\bin\\Debug\\netcoreapp2.0\\SampleServer.dll"; // This needs to be a full physical path
 

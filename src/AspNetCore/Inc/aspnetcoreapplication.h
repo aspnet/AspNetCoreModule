@@ -21,9 +21,10 @@ public:
 	std::wstring FindHighestDotNetVersion(std::vector<std::wstring> folders);
 	BOOL DirectoryExists(const std::wstring path);
 	BOOL GetEnv(const wchar_t* name, std::wstring *recv);
-	std::wstring GetConfigAppPath() {
-		return m_pConfiguration->QueryApplicationPath()->QueryStr();
+	ASPNETCORE_CONFIG* GetConfig() {
+		return m_pConfiguration;
 	}
+
     static ASPNETCORE_APPLICATION* GetInstance()
     {
         return s_Application;

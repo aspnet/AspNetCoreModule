@@ -21,9 +21,6 @@ namespace SampleServer
         [DllImport(AspNetCoreModuleDll)]
         public static extern int http_post_completion(IntPtr pHttpContext, int cbBytes);
 
-        //[DllImport(AspNetCoreModuleDll)]
-        //public static extern int http_post_completion(IntPtr pHttpContext, int cbBytes);
-
         [DllImport(AspNetCoreModuleDll)]
         public static extern void http_indicate_completion(IntPtr pHttpContext, REQUEST_NOTIFICATION_STATUS notificationStatus);
 
@@ -50,6 +47,9 @@ namespace SampleServer
 
         [DllImport(AspNetCoreModuleDll)]
         public unsafe static extern bool http_get_completion_info(IntPtr pCompletionInfo, out int cbBytes, out int hr);
+
+        [DllImport(AspNetCoreModuleDll)]
+        public unsafe static extern void http_get_application_full_path([MarshalAs(UnmanagedType.LPWStr)]out string path);
 
         [DllImport("kernel32.dll")]
         public static extern IntPtr GetModuleHandle(string lpModuleName);
