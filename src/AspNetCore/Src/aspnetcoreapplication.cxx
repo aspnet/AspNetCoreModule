@@ -10,12 +10,6 @@ extern "C" __declspec(dllexport) void register_request_callback(PFN_REQUEST_HAND
     ASPNETCORE_APPLICATION::GetInstance()->SetRequestHandlerCallback(requestHandler, pvRequstHandlerContext);
 }
 
-//extern "C" __declspec(dllexport) PCWSTR get_application_path(IHttpContext* pHttpContext)
-//{
-//	return m_applicationPhysicalPath;
-//}
-// HTTP exports
-
 extern "C" __declspec(dllexport) HTTP_REQUEST* http_get_raw_request(IHttpContext* pHttpContext)
 {
     return pHttpContext->GetRequest()->GetRawHttpRequest();
