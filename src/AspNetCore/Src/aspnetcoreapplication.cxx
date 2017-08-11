@@ -10,8 +10,6 @@ extern "C" __declspec(dllexport) void register_request_callback(PFN_REQUEST_HAND
     ASPNETCORE_APPLICATION::GetInstance()->SetRequestHandlerCallback(requestHandler, pvRequstHandlerContext);
 }
 
-// HTTP exports
-
 extern "C" __declspec(dllexport) HTTP_REQUEST* http_get_raw_request(IHttpContext* pHttpContext)
 {
     return pHttpContext->GetRequest()->GetRawHttpRequest();
@@ -41,6 +39,11 @@ extern "C" __declspec(dllexport) void http_get_completion_info(IHttpCompletionIn
 {
     *cbBytes = info->GetCompletionBytes();
     *hr = info->GetCompletionStatus();
+}
+
+extern "C" __declspec(dllexport) void http_get_application_full_path(wchar_t ** path)
+{
+	*path = ASPNETCORE_APPLICATION::GetInstance()->GetConfig()->QueryApplicationFullPath()->QueryStr();
 }
 
 extern "C" __declspec(dllexport) HRESULT http_read_request_bytes(
@@ -146,7 +149,6 @@ void ASPNETCORE_APPLICATION::SetRequestHandlerCallback(PFN_REQUEST_HANDLER reque
 HRESULT ASPNETCORE_APPLICATION::Initialize(ASPNETCORE_CONFIG * pConfig)
 {
     m_pConfiguration = pConfig;
-
     m_InitalizeEvent = CreateEvent(
         NULL,   // default security attributes
         TRUE,   // manual reset event
@@ -249,10 +251,12 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
     // Get the entry point for main
     auto proc = (hostfxr_main_fn)GetProcAddress(module, "hostfxr_main");
     const wchar_t* argv[2];
-
     // The first argument is mostly ignored
-	argv[0] = (dotnetLocation + name).c_str(); // TODO we may need to add .exe here
-    argv[1] = m_pConfiguration->QueryArguments()->QueryStr(); // This needs to be a full physical path
+	std::wstring location = dotnetLocation + name;
+	argv[0] = location.c_str(); // TODO we may need to add .exe here
+	STRU fullPath;
+	PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(), m_pConfiguration->QueryApplicationFullPath()->QueryStr(), &fullPath);
+	argv[1] = fullPath.QueryStr();
 
     // Hack from hell, there can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the

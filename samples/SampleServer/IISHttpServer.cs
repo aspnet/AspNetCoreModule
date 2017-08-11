@@ -110,13 +110,20 @@ namespace SampleServer
     {
         public static IWebHostBuilder UseNativeIIS(this IWebHostBuilder builder)
         {
-            return builder.ConfigureServices(services =>
+            if (NativeMethods.is_ancm_loaded())
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && NativeMethods.is_ancm_loaded())
+                string path;
+                NativeMethods.http_get_application_full_path(out path);
+                builder.UseContentRoot(path);
+                return builder.ConfigureServices(services =>
                 {
-                    services.AddSingleton<IServer, IISHttpServer>();
-                }
-            });
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        services.AddSingleton<IServer, IISHttpServer>();
+                    }
+                });
+            }
+            return builder;
         }
     }
 }

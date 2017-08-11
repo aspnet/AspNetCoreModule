@@ -20,7 +20,10 @@ public:
 	void FindDotNetFolders(const std::wstring path, std::vector<std::wstring> *folders);
 	std::wstring FindHighestDotNetVersion(std::vector<std::wstring> folders);
 	BOOL DirectoryExists(const std::wstring path);
-	BOOL ASPNETCORE_APPLICATION::GetEnv(const wchar_t* name, std::wstring *recv);
+	BOOL GetEnv(const wchar_t* name, std::wstring *recv);
+	ASPNETCORE_CONFIG* GetConfig() {
+		return m_pConfiguration;
+	}
 
     static ASPNETCORE_APPLICATION* GetInstance()
     {

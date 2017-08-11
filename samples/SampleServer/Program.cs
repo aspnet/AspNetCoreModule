@@ -25,6 +25,7 @@ namespace SampleServer
                 {
                     l.SetMinimumLevel(LogLevel.Critical);
                 })
+                .UseEnvironment("Development")
                 .UseNativeIIS()
                 .UseStartup<Startup>()
                 .Build();

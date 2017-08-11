@@ -121,6 +121,13 @@ public:
     {
         return &m_struApplication;
     }
+	STRU*
+	QueryApplicationFullPath(
+		VOID
+		)
+	{
+		return &m_struApplicationFullPath;
+	}
 
     STRU*
     QueryProcessPath(
@@ -197,6 +204,7 @@ private:
     STRU                   m_struArguments;
     STRU                   m_struProcessPath;
     STRU                   m_struStdoutLogFile;
+    STRU				   m_struApplicationFullPath;
     BOOL                   m_fStdoutLogEnabled;
     BOOL                   m_fForwardWindowsAuthToken;
     BOOL                   m_fDisableStartUpErrorPage;
