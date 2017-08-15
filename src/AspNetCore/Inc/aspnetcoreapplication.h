@@ -2,6 +2,7 @@
 
 typedef void(*request_handler_cb) (int error, IHttpContext* pHttpContext, void* pvCompletionContext);
 typedef REQUEST_NOTIFICATION_STATUS(*PFN_REQUEST_HANDLER) (IHttpContext* pHttpContext, void* pvRequstHandlerContext);
+typedef BOOL(*PFN_SHUTDOWN_HANDLER) (void* pvShutdownHandlerContext);
 
 class ASPNETCORE_APPLICATION
 {
@@ -13,7 +14,7 @@ public:
     HRESULT Initialize(ASPNETCORE_CONFIG* pConfig);
     REQUEST_NOTIFICATION_STATUS ExecuteRequest(IHttpContext* pHttpContext);
     void Shutdown();
-    void SetRequestHandlerCallback(PFN_REQUEST_HANDLER callback, void* pvRequstHandlerContext);
+    void SetCallbackHandles(PFN_REQUEST_HANDLER request_callback, PFN_SHUTDOWN_HANDLER shutdown_callback, void* pvRequstHandlerContext, void* pvShutdownHandlerContext);
 
     // Executes the .NET Core process
     void ExecuteApplication();
@@ -41,6 +42,9 @@ private:
     PFN_REQUEST_HANDLER m_RequestHandler;
     void* m_RequstHandlerContext;
 
+    // The shutdown handler callback from managed code
+    PFN_SHUTDOWN_HANDLER m_ShutdownHandler;
+    void* m_ShutdownHandlerContext;
     // The event that gets triggered when managed initialization is complete
     HANDLE m_InitalizeEvent;
 

@@ -57,7 +57,7 @@ public:
         _In_  IHttpContext           *pHttpContext,
         _Out_ ASPNETCORE_CONFIG  **ppAspNetCoreConfig
     );
-    
+
     ENVIRONMENT_VAR_HASH*
     QueryEnvironmentVariables(
         VOID
