@@ -8,11 +8,16 @@ ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
     //
     // the destructor will be called once IIS decides to recycle the module context (i.e., application)
     //
+    // shutting down core application first
+    if (ASPNETCORE_APPLICATION::GetInstance() != NULL) {
+        ASPNETCORE_APPLICATION::GetInstance()->Shutdown();
+    }
+    m_struApplicationFullPath.Reset();
     if (!m_struApplication.IsEmpty())
     {
         APPLICATION_MANAGER::GetInstance()->RecycleApplication(m_struApplication.QueryStr());
     }
-    if(m_pEnvironmentVariables != NULL)
+    if (m_pEnvironmentVariables != NULL)
     {
         m_pEnvironmentVariables->Clear();
         delete m_pEnvironmentVariables;
@@ -92,12 +97,6 @@ ASPNETCORE_CONFIG::GetConfig(
         {
             goto Finished;
         }
-
-		hr = pAspNetCoreConfig->QueryApplicationFullPath()->Copy(pHttpApplication->GetApplicationPhysicalPath());
-		if (FAILED(hr))
-		{
-			goto Finished;
-		}
     }
 
     *ppAspNetCoreConfig = pAspNetCoreConfig;
@@ -124,6 +123,7 @@ ASPNETCORE_CONFIG::Populate(
     STRU                            strEnvName;
     STRU                            strEnvValue;
     STRU                            strExpandedEnvValue;
+    STRU                            applicationFullPath;
     IAppHostAdminManager           *pAdminManager = NULL;
     IAppHostElement                *pAspNetCoreElement = NULL;
     IAppHostElement                *pWindowsAuthenticationElement = NULL;
@@ -151,6 +151,13 @@ ASPNETCORE_CONFIG::Populate(
 
     pAdminManager = g_pHttpServer->GetAdminManager();
     hr = strSiteConfigPath.Copy(pHttpContext->GetApplication()->GetAppConfigPath());
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    BSTR test = SysAllocString(pHttpContext->GetApplication()->GetApplicationPhysicalPath());
+    hr = m_struApplicationFullPath.Copy(test);
     if (FAILED(hr))
     {
         goto Finished;

@@ -5,9 +5,9 @@ typedef int(*hostfxr_main_fn) (const int argc, const wchar_t* argv[]);
 
 // Initialization export
 
-extern "C" __declspec(dllexport) void register_request_callback(PFN_REQUEST_HANDLER requestHandler, void* pvRequstHandlerContext)
+extern "C" __declspec(dllexport) void register_callbacks(PFN_REQUEST_HANDLER request_handler, PFN_SHUTDOWN_HANDLER shutdown_handler, void* pvRequstHandlerContext, void* pvShutdownHandlerContext)
 {
-    ASPNETCORE_APPLICATION::GetInstance()->SetRequestHandlerCallback(requestHandler, pvRequstHandlerContext);
+    ASPNETCORE_APPLICATION::GetInstance()->SetCallbackHandles(request_handler, shutdown_handler, pvRequstHandlerContext, pvShutdownHandlerContext);
 }
 
 extern "C" __declspec(dllexport) HTTP_REQUEST* http_get_raw_request(IHttpContext* pHttpContext)
@@ -41,9 +41,9 @@ extern "C" __declspec(dllexport) void http_get_completion_info(IHttpCompletionIn
     *hr = info->GetCompletionStatus();
 }
 
-extern "C" __declspec(dllexport) void http_get_application_full_path(wchar_t ** path)
+extern "C" __declspec(dllexport) BSTR http_get_application_full_path()
 {
-	*path = ASPNETCORE_APPLICATION::GetInstance()->GetConfig()->QueryApplicationFullPath()->QueryStr();
+	return ::SysAllocString(ASPNETCORE_APPLICATION::GetInstance()->GetConfig()->QueryApplicationFullPath()->QueryStr());
 }
 
 extern "C" __declspec(dllexport) HRESULT http_read_request_bytes(
@@ -137,14 +137,18 @@ static void ExecuteAspNetCoreProcess(LPVOID pContext)
 ASPNETCORE_APPLICATION* ASPNETCORE_APPLICATION::s_Application = NULL;
 
 
-void ASPNETCORE_APPLICATION::SetRequestHandlerCallback(PFN_REQUEST_HANDLER requestHandler, void* pvRequstHandlerContext)
+void ASPNETCORE_APPLICATION::SetCallbackHandles(PFN_REQUEST_HANDLER request_handler, PFN_SHUTDOWN_HANDLER shutdown_handler, void* pvRequstHandlerContext, void* pvShutdownHandlerContext)
 {
-    m_RequestHandler = requestHandler;
+    m_RequestHandler = request_handler;
     m_RequstHandlerContext = pvRequstHandlerContext;
+    m_ShutdownHandler = shutdown_handler;
+    m_ShutdownHandlerContext = pvShutdownHandlerContext;
 
     // Initialization complete
     SetEvent(m_InitalizeEvent);
 }
+
+
 
 HRESULT ASPNETCORE_APPLICATION::Initialize(ASPNETCORE_CONFIG * pConfig)
 {
@@ -253,7 +257,7 @@ void ASPNETCORE_APPLICATION::ExecuteApplication()
     const wchar_t* argv[2];
     // The first argument is mostly ignored
 	std::wstring location = dotnetLocation + name;
-	argv[0] = location.c_str(); // TODO we may need to add .exe here
+	argv[0] = location.c_str();
 	STRU fullPath;
 	PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(), m_pConfiguration->QueryApplicationFullPath()->QueryStr(), &fullPath);
 	argv[1] = fullPath.QueryStr();
@@ -348,5 +352,8 @@ REQUEST_NOTIFICATION_STATUS ASPNETCORE_APPLICATION::ExecuteRequest(IHttpContext*
 
 void ASPNETCORE_APPLICATION::Shutdown()
 {
+    // First call into the managed server and shutdown
+    BOOL result = m_ShutdownHandler(m_ShutdownHandlerContext);
 
+    delete this;
 }

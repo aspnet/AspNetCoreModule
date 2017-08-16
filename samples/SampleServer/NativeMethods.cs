@@ -16,6 +16,7 @@ namespace SampleServer
         }
 
         public delegate REQUEST_NOTIFICATION_STATUS PFN_REQUEST_HANDLER(IntPtr pHttpContext, IntPtr pvRequestContext);
+        public delegate bool PFN_SHUTDOWN_HANDLER(IntPtr pvRequestContext);
         public delegate REQUEST_NOTIFICATION_STATUS PFN_ASYNC_COMPLETION(IntPtr pHttpContext, IntPtr completionInfo, IntPtr pvCompletionContext);
 
         [DllImport(AspNetCoreModuleDll)]
@@ -25,7 +26,7 @@ namespace SampleServer
         public static extern void http_indicate_completion(IntPtr pHttpContext, REQUEST_NOTIFICATION_STATUS notificationStatus);
 
         [DllImport(AspNetCoreModuleDll)]
-        public static extern void register_request_callback(PFN_REQUEST_HANDLER callback, IntPtr pvRequestContext);
+        public static extern void register_callbacks(PFN_REQUEST_HANDLER request_callback, PFN_SHUTDOWN_HANDLER shutdown_callback, IntPtr pvRequestContext, IntPtr pvShutdownContext);
 
         [DllImport(AspNetCoreModuleDll)]
         public unsafe static extern int http_write_response_bytes(IntPtr pHttpContext, HttpApi.HTTP_DATA_CHUNK* pDataChunks, int nChunks, PFN_ASYNC_COMPLETION pfnCompletionCallback, IntPtr pvCompletionContext, out bool fCompletionExpected);
@@ -49,7 +50,8 @@ namespace SampleServer
         public unsafe static extern bool http_get_completion_info(IntPtr pCompletionInfo, out int cbBytes, out int hr);
 
         [DllImport(AspNetCoreModuleDll)]
-        public unsafe static extern void http_get_application_full_path([MarshalAs(UnmanagedType.LPWStr)]out string path);
+        [return: MarshalAs(UnmanagedType.BStr)]
+        public unsafe static extern string http_get_application_full_path();
 
         [DllImport("kernel32.dll")]
         public static extern IntPtr GetModuleHandle(string lpModuleName);

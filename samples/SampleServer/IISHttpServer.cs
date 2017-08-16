@@ -13,13 +13,20 @@ namespace SampleServer
     public class IISHttpServer : IServer
     {
         private static NativeMethods.PFN_REQUEST_HANDLER _requestHandler = HandleRequest;
+        private static NativeMethods.PFN_SHUTDOWN_HANDLER _shutdownHandler = HandleShutdown;
+
 
         private IISContextFactory _iisContextFactory;
 
         private PipeFactory _pipeFactory = new PipeFactory();
         private GCHandle _httpServerHandle;
+        private IApplicationLifetime _applicationLifetime;
 
         public IFeatureCollection Features { get; } = new FeatureCollection();
+        public IISHttpServer(IApplicationLifetime applicationLifetime)
+        {
+            _applicationLifetime = applicationLifetime;
+        }
 
         public Task StartAsync<TContext>(IHttpApplication<TContext> application, CancellationToken cancellationToken)
         {
@@ -28,7 +35,8 @@ namespace SampleServer
             _iisContextFactory = new IISContextFactory<TContext>(_pipeFactory, application);
 
             // Start the server by registering the callback
-            NativeMethods.register_request_callback(_requestHandler, (IntPtr)_httpServerHandle);
+            // TODO the context may change here for shutdown.
+            NativeMethods.register_callbacks(_requestHandler, _shutdownHandler, (IntPtr)_httpServerHandle, (IntPtr)_httpServerHandle);
 
             return Task.CompletedTask;
         }
@@ -73,6 +81,14 @@ namespace SampleServer
             return NativeMethods.REQUEST_NOTIFICATION_STATUS.RQ_NOTIFICATION_PENDING;
         }
 
+        private static bool HandleShutdown(IntPtr pvRequestContext)
+        {
+            // TODO handle shutting do
+            var server = (IISHttpServer)GCHandle.FromIntPtr(pvRequestContext).Target;
+            server._applicationLifetime.StopApplication();
+            return true;
+        }
+
         private static void CompleteRequest(IISHttpContext context)
         {
             // Post completion after completing the request to resume the state machine
@@ -112,8 +128,7 @@ namespace SampleServer
         {
             if (NativeMethods.is_ancm_loaded())
             {
-                string path;
-                NativeMethods.http_get_application_full_path(out path);
+                var path = NativeMethods.http_get_application_full_path();
                 builder.UseContentRoot(path);
                 return builder.ConfigureServices(services =>
                 {
