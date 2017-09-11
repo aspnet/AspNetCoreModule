@@ -25,7 +25,7 @@
         <attribute name="processesPerApplication" type="uint" defaultValue="1" validationType="integerRange" validationParameter="1,100"/>
         <attribute name="forwardWindowsAuthToken" type="bool" defaultValue="true" />
         <attribute name="disableStartUpErrorPage" type="bool" defaultValue="false" />
-        <attribute name="hostingMode" type="string" defaultValue="outofprocess" />
+        <attribute name="hostingModel" type="string" defaultValue="outofprocess" />
         <element name="recycleOnFileChange">
             <collection addElement="file" clearElement="clear">
                 <attribute name="path" type="string" required="true" validationType="nonEmptyString" expanded="true"/>
