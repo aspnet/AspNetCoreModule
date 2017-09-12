@@ -443,7 +443,10 @@ SERVER_PROCESS::InitEnvironmentVariablesTable(
     if (dwResult == 0)
     {
         dwError = GetLastError();
-        if (dwError != ERROR_ENVVAR_NOT_FOUND)
+        // Windows API (e.g., CreateProcess) allows variable with empty string value
+        // in such case dwResult will be 0 and dwError will also be 0
+        // As UI and CMD does not allow empty value, ignore this environment var
+        if (dwError != ERROR_ENVVAR_NOT_FOUND && dwError != ERROR_SUCCESS)
         {
             hr = HRESULT_FROM_WIN32(dwError);
             goto Finished;
@@ -1201,15 +1204,15 @@ SERVER_PROCESS::SetupStdHandles(
         }
 
         GetSystemTime(&systemTime);
-        hr = struLogFileName.SafeSnwprintf(L"%s_%d_%d%d%d%d%d%d.log",
+        hr = struLogFileName.SafeSnwprintf(L"%s_%d%02d%02d%02d%02d%02d_%d.log",
                                            struAbsLogFilePath.QueryStr(),
-                                           GetCurrentProcessId(),
                                            systemTime.wYear,
                                            systemTime.wMonth,
                                            systemTime.wDay,
                                            systemTime.wHour,
                                            systemTime.wMinute,
-                                           systemTime.wSecond );
+                                           systemTime.wSecond,
+                                           GetCurrentProcessId() );
         if (FAILED(hr))
         {
             goto Finished;
@@ -1421,22 +1424,20 @@ SERVER_PROCESS::CheckIfServerIsUp(
             hr = HRESULT_FROM_WIN32(WSAGetLastError());
             goto Finished;
         }
-
-        //
-        // Connected successfully, close socket.
-        //
-        iResult = closesocket(socketCheck);
-        if (iResult == SOCKET_ERROR)
-        {
-            hr = HRESULT_FROM_WIN32(WSAGetLastError());
-            goto Finished;
-        }
-
-        socketCheck = INVALID_SOCKET;
         *pfReady = TRUE;
     }
 
 Finished:
+
+    if (socketCheck != INVALID_SOCKET)
+    {
+        iResult = closesocket(socketCheck);
+        if (iResult == SOCKET_ERROR)
+        {
+            hr = HRESULT_FROM_WIN32(WSAGetLastError());
+        }
+        socketCheck = INVALID_SOCKET;
+    }
 
     if (pTCPInfo != NULL)
     {
@@ -1650,6 +1651,12 @@ SERVER_PROCESS::IsDebuggerIsAttached(
                     dwPid);
 
             BOOL returnValue = CheckRemoteDebuggerPresent(hProcess, &fDebuggerPresent);
+            if (hProcess != NULL)
+            {
+                CloseHandle(hProcess);
+                hProcess = NULL;
+            }
+
             if (!returnValue)
             {
                 goto Finished;
@@ -2273,13 +2280,18 @@ SERVER_PROCESS::SendShutDownSignalInternal(
                 TerminateBackendProcess();
             }
             FreeConsole();
-        }
 
-        if (fFreeConsole)
+            if (fFreeConsole)
+            {
+                // IISExpress and hostedwebcore w3wp run as background process
+                // have to attach console back to ensure post app_offline scenario still works
+                AttachConsole(ATTACH_PARENT_PROCESS);
+            }
+        }
+        else
         {
-            // IISExpress and hostedwebcore w3wp run as background process
-            // have to attach console back to ensure post app_offline scenario still works
-            AttachConsole(ATTACH_PARENT_PROCESS);
+            // terminate the backend process immediately instead of waiting for timeout
+            TerminateBackendProcess();
         }
     }
 

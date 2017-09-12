@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <AspNetCoreVersion>1.2.0-*</AspNetCoreVersion>
+    <InternalAspNetCoreSdkVersion>2.1.1-*</InternalAspNetCoreSdkVersion>
+    <TestSdkVersion>15.3.0-*</TestSdkVersion>
+    <XunitVersion>2.3.0-beta2-*</XunitVersion>
+  </PropertyGroup>
+</Project>

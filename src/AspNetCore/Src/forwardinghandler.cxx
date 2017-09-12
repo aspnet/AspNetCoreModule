@@ -2,6 +2,8 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #include "precomp.hxx"
+#include <dbgutil.h>
+
 
 // Just to be aware of the FORWARDING_HANDLER object size.
 C_ASSERT(sizeof(FORWARDING_HANDLER) <= 632);
@@ -52,8 +54,14 @@ m_fErrorHandled(FALSE),
 m_fWebSocketUpgrade(FALSE),
 m_fFinishRequest(FALSE),
 m_fClientDisconnected(FALSE),
+m_fHasError(FALSE),
 m_pTraceGuid(NULL)
 {
+#ifdef DEBUG
+    DBGPRINTF((DBG_CONTEXT,
+        "FORWARDING_HANDLER::FORWARDING_HANDLER \n"));
+#endif // DEBUG
+
     InitializeSRWLock(&m_RequestLock);
 }
 
@@ -64,6 +72,11 @@ FORWARDING_HANDLER::~FORWARDING_HANDLER(
     //
     // Destructor has started.
     //
+#ifdef DEBUG
+    DBGPRINTF((DBG_CONTEXT,
+        "FORWARDING_HANDLER::~FORWARDING_HANDLER \n"));
+#endif // DEBUG
+
     m_Signature = FORWARDING_HANDLER_SIGNATURE_FREE;
 
     //
@@ -1160,6 +1173,7 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
             FALSE
         ); // no need to check return hresult
 
+        m_fHasError = TRUE;
         goto Finished;
     }
 
@@ -1383,6 +1397,7 @@ Failure:
     // Reset status for consistency.
     //
     m_RequestStatus = FORWARDER_DONE;
+    m_fHasError = TRUE;
 
     pResponse->DisableKernelCache();
     pResponse->GetRawHttpResponse()->EntityChunkCount = 0;
@@ -1607,7 +1622,10 @@ REQUEST_NOTIFICATION_STATUS
     {
         if (m_RequestStatus == FORWARDER_DONE && m_fFinishRequest)
         {
-            retVal = RQ_NOTIFICATION_FINISH_REQUEST;
+            if (m_fHasError)
+            {
+                retVal = RQ_NOTIFICATION_FINISH_REQUEST;
+            }
             goto Finished;
         }
 
@@ -1721,7 +1739,7 @@ Failure:
     // Reset status for consistency.
     //
     m_RequestStatus = FORWARDER_DONE;
-
+    m_fHasError = TRUE;
     //
     // Do the right thing based on where the error originated from.
     //
@@ -1794,8 +1812,17 @@ Failure:
 
     //
     // Finish the request on failure.
+    // Let IIS pipeline continue only after receiving handle close callback
+    // from WinHttp. This ensures no more callback from WinHttp
     //
-    retVal = RQ_NOTIFICATION_FINISH_REQUEST;
+    if (m_hRequest != NULL)
+    {
+        if (WinHttpCloseHandle(m_hRequest))
+        {
+            m_hRequest = NULL;
+        }
+    }
+    retVal = RQ_NOTIFICATION_PENDING;
 
 Finished:
 
@@ -2128,6 +2155,11 @@ None
         DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
     }
 
+#ifdef DEBUG
+    DBGPRINTF((DBG_CONTEXT,
+        "FORWARDING_HANDLER::OnWinHttpCompletionInternal %x -- %d --%p\n", dwInternetStatus, m_fWebSocketUpgrade, m_pW3Context));
+#endif // DEBUG
+
     fEndRequest = (dwInternetStatus == WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING);
     if (!fEndRequest) 
     {
@@ -2259,7 +2291,6 @@ None
             fDerefForwardingHandler = m_fClientDisconnected && !m_fWebSocketUpgrade;
         }
         m_hRequest = NULL;
-        m_pWebSocket = NULL;
         fAnotherCompletionExpected = FALSE;
         break;
     case WINHTTP_CALLBACK_STATUS_CONNECTION_CLOSED:
@@ -2401,10 +2432,13 @@ Finished:
                 m_hRequest = NULL;
             }
         }
+
+        //
+        // If the request is a websocket request, initiate cleanup.
+        //
         if (m_pWebSocket != NULL)
         {
             m_pWebSocket->TerminateRequest();
-            m_pWebSocket = NULL;
         }
 
         if(fEndRequest)
