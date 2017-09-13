@@ -183,13 +183,12 @@ public:
         return m_pProcessManager->GetProcess( context, pConfig, ppServerProcess );
     }
 
-    HRESULT 
+    HRESULT
     GetAspNetCoreApplication(
         _In_    ASPNETCORE_CONFIG       *pConfig,
         _Out_   ASPNETCORE_APPLICATION  **ppAspNetCoreApplication
     )
     {
-        
         HRESULT hr = S_OK;
         BOOL fLockTaken = FALSE;
         ASPNETCORE_APPLICATION *application;
@@ -203,6 +202,7 @@ public:
             {
                 application = new ASPNETCORE_APPLICATION();
                 if (application == NULL) {
+                    hr = E_OUTOFMEMORY;
                     goto Finished;
                 }
 
@@ -282,8 +282,7 @@ private:
     APP_OFFLINE_HTM        *m_pAppOfflineHtm;
     FILE_WATCHER_ENTRY     *m_pFileWatcherEntry;
     ASPNETCORE_APPLICATION *m_pAspNetCoreApplication;
-    SRWLOCK                m_srwLock;
-
+    SRWLOCK                 m_srwLock;
 };
 
 class APPLICATION_HASH :

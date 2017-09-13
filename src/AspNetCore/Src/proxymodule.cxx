@@ -86,7 +86,19 @@ CProxyModule::OnExecuteRequestHandler(
     ASPNETCORE_CONFIG::GetConfig(pHttpContext, &config);
 
     // TODO store whether we are inproc or outofproc so we don't need to check the config everytime?
-    if (config->QueryHostingModel()->Equals(L"inprocess", true)) {
+    if (config->QueryHostingModel()->IsEmpty() || config->QueryHostingModel()->Equals(L"outofprocess", TRUE))// case insensitive
+    {
+        m_pHandler = new FORWARDING_HANDLER(pHttpContext);
+        if (m_pHandler == NULL)
+        {
+            pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_OUTOFMEMORY);
+            return RQ_NOTIFICATION_FINISH_REQUEST;
+        }
+
+        return m_pHandler->OnExecuteRequestHandler();
+    }
+    else if (config->QueryHostingModel()->Equals(L"inprocess", true))
+    {
         pApplicationManager = APPLICATION_MANAGER::GetInstance();
         if (pApplicationManager == NULL)
         {
@@ -118,19 +130,9 @@ CProxyModule::OnExecuteRequestHandler(
         return pAspNetCoreApplication->ExecuteRequest(pHttpContext);
     Failed:
         pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
-        return RQ_NOTIFICATION_FINISH_REQUEST;
+        return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
     }
-    else
-    {
-        m_pHandler = new FORWARDING_HANDLER(pHttpContext);
-        if (m_pHandler == NULL)
-        {
-            pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_OUTOFMEMORY);
-            return RQ_NOTIFICATION_FINISH_REQUEST;
-        }
-
-        return m_pHandler->OnExecuteRequestHandler();
-    }
+    return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
 }
 
 __override
@@ -147,13 +149,16 @@ CProxyModule::OnAsyncCompletion(
     ASPNETCORE_CONFIG* config;
     ASPNETCORE_CONFIG::GetConfig(pHttpContext, &config);
 
-    if (config->QueryHostingModel()->Equals(L"inprocess", true)) {
-        return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
-    }
-    else
+    if (config->QueryHostingModel()->IsEmpty() || config->QueryHostingModel()->Equals(L"outofprocess", TRUE))// case insensitive
     {
         return m_pHandler->OnAsyncCompletion(
             pCompletionInfo->GetCompletionBytes(),
             pCompletionInfo->GetCompletionStatus());
     }
+    else if (config->QueryHostingModel()->Equals(L"inprocess", TRUE)) // case insensitive
+    {
+        return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
+    }
+
+    return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
 }
