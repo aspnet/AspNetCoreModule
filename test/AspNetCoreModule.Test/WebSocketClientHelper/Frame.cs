@@ -20,8 +20,9 @@ namespace AspNetCoreModule.Test.WebSocketClient
 
         public FrameType FrameType { get; set; }
         public byte[] Data { get; private set; }
-        
-        public string TextData {
+
+        public string TextData
+        {
             get
             {
                 if (DataLength == 0)
@@ -29,9 +30,9 @@ namespace AspNetCoreModule.Test.WebSocketClient
                     throw new System.Exception("DataLength is zero");
                 }
                 return Encoding.ASCII.GetString(Data, startingIndex, DataLength);
-            }
+            }            
         }
-
+        
         public string Content { get; private set; }
         public bool IsMasked { get; private set; }
 
