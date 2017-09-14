@@ -159,7 +159,6 @@ CProxyModule::OnAsyncCompletion(
         return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
     }
 
-Failed:
     pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
     return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
 }

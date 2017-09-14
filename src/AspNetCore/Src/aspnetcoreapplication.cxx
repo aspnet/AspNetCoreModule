@@ -279,19 +279,20 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
 {
     HRESULT     hr = S_OK;
 
-    STRU            strFullPath;
-    STRU            strDotnetExeLocation;
-    STRU            strHostFxrSearchExpression;
-    STRU            strDotnetFolderLocation;
-    STRU            strHighestDotnetVersion;
-    STRU            strApplicationFullPath;
-    PWSTR           strDelimeterContext = NULL;
-    PCWSTR          pszDotnetExeLocation = NULL;
-    PCWSTR          pszDotnetExeString(L"dotnet.exe");
-    DWORD           dwCopyLength;
-    HMODULE         hModule;
-    PCWSTR          argv[2];
-    hostfxr_main_fn pProc;
+    STRU                        strFullPath;
+    STRU                        strDotnetExeLocation;
+    STRU                        strHostFxrSearchExpression;
+    STRU                        strDotnetFolderLocation;
+    STRU                        strHighestDotnetVersion;
+    STRU                        strApplicationFullPath;
+    PWSTR                       strDelimeterContext = NULL;
+    PCWSTR                      pszDotnetExeLocation = NULL;
+    PCWSTR                      pszDotnetExeString(L"dotnet.exe");
+    DWORD                       dwCopyLength;
+    HMODULE                     hModule;
+    PCWSTR                      argv[2];
+    hostfxr_main_fn             pProc;
+    std::vector<std::wstring>   vVersionFolders;
 
     // Get the System PATH value.
     if (!GetEnv(L"PATH", &strFullPath))
@@ -381,7 +382,6 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
 
     // As we use the logic from core-setup, we are opting to use std here.
     // TODO remove all uses of std?
-    std::vector<std::wstring> vVersionFolders;
     FindDotNetFolders(&strHostFxrSearchExpression, &vVersionFolders);
 
     if (vVersionFolders.size() == 0)

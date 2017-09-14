@@ -42,7 +42,7 @@ public:
     );
 
     // Executes the .NET Core process
-    VOID
+    HRESULT
     ExecuteApplication(
         VOID
     );
