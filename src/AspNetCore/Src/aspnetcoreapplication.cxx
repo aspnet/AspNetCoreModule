@@ -15,7 +15,12 @@ register_callbacks(
     _In_ VOID* pvShutdownHandlerContext
 )
 {
-    ASPNETCORE_APPLICATION::GetInstance()->SetCallbackHandles(request_handler, shutdown_handler, pvRequstHandlerContext, pvShutdownHandlerContext);
+    ASPNETCORE_APPLICATION::GetInstance()->SetCallbackHandles(
+        request_handler,
+        shutdown_handler,
+        pvRequstHandlerContext,
+        pvShutdownHandlerContext
+    );
 }
 
 extern "C" __declspec(dllexport)
@@ -179,13 +184,18 @@ ExecuteAspNetCoreProcess(
     _In_ LPVOID pContext
 )
 {
+    HRESULT hr;
     ASPNETCORE_APPLICATION *pApplication = (ASPNETCORE_APPLICATION*)pContext;
 
-    pApplication->ExecuteApplication();
+    hr = pApplication->ExecuteApplication();
+    if (hr != S_OK)
+    {
+        // TODO log error
+    }
 }
 
-ASPNETCORE_APPLICATION* ASPNETCORE_APPLICATION::s_Application = NULL;
-
+ASPNETCORE_APPLICATION*
+ASPNETCORE_APPLICATION::s_Application = NULL;
 
 VOID
 ASPNETCORE_APPLICATION::SetCallbackHandles(
@@ -204,15 +214,16 @@ ASPNETCORE_APPLICATION::SetCallbackHandles(
     SetEvent(m_InitalizeEvent);
 }
 
-
-
 HRESULT
 ASPNETCORE_APPLICATION::Initialize(
     _In_ ASPNETCORE_CONFIG * pConfig
 )
 {
+    HRESULT hr = S_OK;
+
     DWORD dwTimeout;
     DWORD dwResult;
+    DBG_ASSERT(pConfig != NULL);
 
     m_pConfiguration = pConfig;
 
@@ -250,7 +261,6 @@ ASPNETCORE_APPLICATION::Initialize(
         dwTimeout = pConfig->QueryStartupTimeLimitInMS();
     }
 
-    // What should the timeout be? (This is sorta hacky)
     const HANDLE pHandles[2]{ m_hThread, m_InitalizeEvent };
 
     // Wait on either the thread to complete or the event to be set
