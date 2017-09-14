@@ -194,12 +194,6 @@ public:
         return &m_struStdoutLogFile;
     }
 
-    STRU*
-    QueryHostingModel()
-    {
-        return &m_struHostingModel;
-    }
-
 private:
 
     //
@@ -226,7 +220,6 @@ private:
     STRU                   m_struProcessPath;
     STRU                   m_struStdoutLogFile;
     STRU                   m_struApplicationFullPath;
-    STRU                   m_struHostingModel;
     BOOL                   m_fStdoutLogEnabled;
     BOOL                   m_fForwardWindowsAuthToken;
     BOOL                   m_fDisableStartUpErrorPage;
