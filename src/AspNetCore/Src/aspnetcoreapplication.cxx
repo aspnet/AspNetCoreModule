@@ -366,13 +366,11 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
     if (FAILED(hr))
     {
         goto Failed;
-
     }
 
     if (!DirectoryExists(&strDotnetFolderLocation))
     {
         goto Failed;
-
     }
 
     // Find all folders under host\\fxr\\ for version numbers.
@@ -380,14 +378,12 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
     if (FAILED(hr))
     {
         goto Failed;
-
     }
 
     hr = strHostFxrSearchExpression.Append(L"\\*");
     if (FAILED(hr))
     {
         goto Failed;
-
     }
 
     // As we use the logic from core-setup, we are opting to use std here.
@@ -397,7 +393,6 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
     if (vVersionFolders.size() == 0)
     {
         goto Failed;
-
     }
 
     FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
@@ -406,7 +401,6 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
     if (FAILED(hr))
     {
         goto Failed;
-
     }
 
     hr = strDotnetFolderLocation.Append(strHighestDotnetVersion.QueryStr());
@@ -420,7 +414,6 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
     if (FAILED(hr))
     {
         goto Failed;
-
     }
 
     hModule = LoadLibraryW(strDotnetFolderLocation.QueryStr());
