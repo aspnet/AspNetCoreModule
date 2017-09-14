@@ -95,7 +95,7 @@ http_read_request_bytes(
     _In_ BOOL* pfCompletionPending
 )
 {
-    auto pHttpRequest = (IHttpRequest3*)pHttpContext->GetRequest();
+    IHttpRequest3 *pHttpRequest = (IHttpRequest3*)pHttpContext->GetRequest();
 
     BOOL fAsync = TRUE;
 
@@ -128,7 +128,7 @@ http_write_response_bytes(
     _In_ BOOL* pfCompletionExpected
 )
 {
-    auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
+    IHttpResponse2 *pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
 
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
@@ -156,7 +156,7 @@ http_flush_response_bytes(
     _In_ BOOL* pfCompletionExpected
 )
 {
-    auto pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
+    IHttpResponse2 *pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
 
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
@@ -179,7 +179,7 @@ ExecuteAspNetCoreProcess(
     _In_ LPVOID pContext
 )
 {
-    auto pApplication = (ASPNETCORE_APPLICATION*)pContext;
+    ASPNETCORE_APPLICATION *pApplication = (ASPNETCORE_APPLICATION*)pContext;
 
     pApplication->ExecuteApplication();
 }
@@ -272,7 +272,7 @@ ASPNETCORE_APPLICATION::Initialize(
     return S_OK;
 }
 
-VOID
+HRESULT
 ASPNETCORE_APPLICATION::ExecuteApplication(
     VOID
 )
@@ -294,11 +294,9 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
     hostfxr_main_fn pProc;
 
     // Get the System PATH value.
-    hr = GetEnv(L"PATH", &strFullPath);
-    if (FAILED(hr))
+    if (!GetEnv(L"PATH", &strFullPath))
     {
-        // TODO log error?
-        return;
+        goto Failed;
     }
 
     // Split on ';', checking to see if dotnet.exe exists in any folders.
@@ -317,32 +315,69 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
         // TODO consider reducing allocations.
         strDotnetExeLocation.Reset();
         strDotnetFolderLocation.Reset();
-        strDotnetExeLocation.Copy(pszDotnetExeLocation, dwCopyLength);
-        strDotnetFolderLocation.Copy(pszDotnetExeLocation, dwCopyLength);
+        hr = strDotnetExeLocation.Copy(pszDotnetExeLocation, dwCopyLength);
+        if (FAILED(hr))
+        {
+            goto Failed;
+        }
+
+        hr = strDotnetFolderLocation.Copy(pszDotnetExeLocation, dwCopyLength);
+        if (FAILED(hr))
+        {
+            goto Failed;
+        }
 
         if (dwCopyLength > 0 && pszDotnetExeLocation[dwCopyLength - 1] != L'\\')
         {
-            strDotnetExeLocation.Append(L"\\");
+            hr = strDotnetExeLocation.Append(L"\\");
+            if (FAILED(hr))
+            {
+                goto Failed;
+
+            }
         }
 
-        strDotnetExeLocation.Append(pszDotnetExeString);
+        hr = strDotnetExeLocation.Append(pszDotnetExeString);
+        if (FAILED(hr))
+        {
+            goto Failed;
+        }
+
         if (PathFileExists(strDotnetExeLocation.QueryStr()))
         {
+            // means we found the folder with a dotnet.exe inside of it.
             break;
         }
         pszDotnetExeLocation = wcstok_s(NULL, L";", &strDelimeterContext);
     }
-    strDotnetFolderLocation.Append(L"\\host\\fxr");
+
+    hr = strDotnetFolderLocation.Append(L"\\host\\fxr");
+    if (FAILED(hr))
+    {
+        goto Failed;
+
+    }
 
     if (!DirectoryExists(&strDotnetFolderLocation))
     {
-        // TODO log error?
-        return;
+        goto Failed;
+
     }
 
     // Find all folders under host\\fxr\\ for version numbers.
-    strHostFxrSearchExpression.Copy(strDotnetFolderLocation);
-    strHostFxrSearchExpression.Append(L"\\*");
+    hr = strHostFxrSearchExpression.Copy(strDotnetFolderLocation);
+    if (FAILED(hr))
+    {
+        goto Failed;
+
+    }
+
+    hr = strHostFxrSearchExpression.Append(L"\\*");
+    if (FAILED(hr))
+    {
+        goto Failed;
+
+    }
 
     // As we use the logic from core-setup, we are opting to use std here.
     // TODO remove all uses of std?
@@ -351,28 +386,50 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
 
     if (vVersionFolders.size() == 0)
     {
-        // TODO log error?
-        return;
+        goto Failed;
+
     }
 
     FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
 
-    strDotnetFolderLocation.Append(L"\\");
-    strDotnetFolderLocation.Append(strHighestDotnetVersion.QueryStr());
-    strDotnetFolderLocation.Append(L"\\hostfxr.dll");
+    hr = strDotnetFolderLocation.Append(L"\\");
+    if (FAILED(hr))
+    {
+        goto Failed;
+
+    }
+
+    hr = strDotnetFolderLocation.Append(strHighestDotnetVersion.QueryStr());
+    if (FAILED(hr))
+    {
+        goto Failed;
+
+    }
+
+    hr = strDotnetFolderLocation.Append(L"\\hostfxr.dll");
+    if (FAILED(hr))
+    {
+        goto Failed;
+
+    }
 
     hModule = LoadLibraryW(strDotnetFolderLocation.QueryStr());
 
     if (hModule == nullptr)
     {
         // .NET Core not installed (we can log a more detailed error message here)
-        return;
+        goto Failed;
     }
 
     // Get the entry point for main
     pProc = (hostfxr_main_fn)GetProcAddress(hModule, "hostfxr_main");
     // The first argument is mostly ignored
-    strDotnetExeLocation.Append(pszDotnetExeString);
+    hr = strDotnetExeLocation.Append(pszDotnetExeString);
+    if (FAILED(hr))
+    {
+        goto Failed;
+    }
+
     argv[0] = strDotnetExeLocation.QueryStr();
     PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(), m_pConfiguration->QueryApplicationFullPath()->QueryStr(), &strApplicationFullPath);
     argv[1] = strApplicationFullPath.QueryStr();
@@ -387,8 +444,14 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
     s_Application = this;
 
     m_ProcessExitCode = pProc(2, argv);
+    if (m_ProcessExitCode != 0) {
+        // TODO error 
+    }
 
-    // TODO add a failed section here?
+    return hr;
+Failed:
+    // TODO log any errors
+    return hr;
 }
 
 BOOL
@@ -400,11 +463,12 @@ ASPNETCORE_APPLICATION::GetEnv(
     DWORD dwLength;
     PWSTR pszBuffer= NULL;
 
-    if (pszEnvironmentVariable == NULL) {
-        return false;
+    if (pszEnvironmentVariable == NULL)
+    {
+        return FALSE;
     }
     pstrResult->Reset();
-    dwLength = GetEnvironmentVariableW(pszEnvironmentVariable, nullptr, 0);
+    dwLength = GetEnvironmentVariableW(pszEnvironmentVariable, NULL, 0);
 
     if (dwLength == 0)
     {
@@ -422,13 +486,16 @@ ASPNETCORE_APPLICATION::GetEnv(
 
     pstrResult->Copy(pszBuffer);
 
-    return true;
+    if (pszBuffer != NULL) {
+        delete[] pszBuffer;
+    }
+    return TRUE;
 
 Failed:
     if (pszBuffer != NULL) {
         delete[] pszBuffer;
     }
-    return false;
+    return FALSE;
 }
 
 VOID

@@ -91,8 +91,8 @@ CProxyModule::OnExecuteRequestHandler(
         m_pHandler = new FORWARDING_HANDLER(pHttpContext);
         if (m_pHandler == NULL)
         {
-            pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_OUTOFMEMORY);
-            return RQ_NOTIFICATION_FINISH_REQUEST;
+            hr = E_OUTOFMEMORY;
+            goto Failed;
         }
 
         return m_pHandler->OnExecuteRequestHandler();
@@ -128,10 +128,9 @@ CProxyModule::OnExecuteRequestHandler(
 
         // TODO: Optimize sync completions
         return pAspNetCoreApplication->ExecuteRequest(pHttpContext);
-    Failed:
-        pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
-        return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
     }
+Failed:
+    pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
     return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
 }
 
@@ -160,5 +159,7 @@ CProxyModule::OnAsyncCompletion(
         return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
     }
 
+Failed:
+    pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
     return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
 }

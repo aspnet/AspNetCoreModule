@@ -156,8 +156,7 @@ ASPNETCORE_CONFIG::Populate(
         goto Finished;
     }
 
-    BSTR test = SysAllocString(pHttpContext->GetApplication()->GetApplicationPhysicalPath());
-    hr = m_struApplicationFullPath.Copy(test);
+    hr = m_struApplicationFullPath.Copy(pHttpContext->GetApplication()->GetApplicationPhysicalPath());
     if (FAILED(hr))
     {
         goto Finished;
