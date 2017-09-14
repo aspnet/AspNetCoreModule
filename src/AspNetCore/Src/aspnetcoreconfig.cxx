@@ -123,7 +123,8 @@ ASPNETCORE_CONFIG::Populate(
     STRU                            strEnvName;
     STRU                            strEnvValue;
     STRU                            strExpandedEnvValue;
-    STRU                            applicationFullPath;
+    STRU                            strApplicationFullPath;
+    STRU                            strHostingModel;
     IAppHostAdminManager           *pAdminManager = NULL;
     IAppHostElement                *pAspNetCoreElement = NULL;
     IAppHostElement                *pWindowsAuthenticationElement = NULL;
@@ -237,10 +238,19 @@ ASPNETCORE_CONFIG::Populate(
 
     hr = GetElementStringProperty(pAspNetCoreElement,
         CS_ASPNETCORE_HOSTING_MODEL,
-        &m_struHostingModel);
+        &strHostingModel);
     if (FAILED(hr))
     {
         goto Finished;
+    }
+
+    if (strHostingModel.IsEmpty() || strHostingModel.Equals(L"outofprocess", TRUE))
+    {
+        m_fIsOutOfProcess = TRUE;
+    }
+    else if (strHostingModel.Equals(L"inprocess", TRUE))
+    {
+        m_fIsInProcess = TRUE;
     }
 
     hr = GetElementStringProperty(pAspNetCoreElement,

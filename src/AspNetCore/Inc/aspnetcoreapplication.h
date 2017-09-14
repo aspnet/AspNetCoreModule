@@ -1,3 +1,6 @@
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
 #pragma once
 
 typedef void(*request_handler_cb) (int error, IHttpContext* pHttpContext, void* pvCompletionContext);

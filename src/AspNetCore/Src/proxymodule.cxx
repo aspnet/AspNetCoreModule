@@ -86,7 +86,7 @@ CProxyModule::OnExecuteRequestHandler(
     ASPNETCORE_CONFIG::GetConfig(pHttpContext, &config);
 
     // TODO store whether we are inproc or outofproc so we don't need to check the config everytime?
-    if (config->QueryHostingModel()->IsEmpty() || config->QueryHostingModel()->Equals(L"outofprocess", TRUE))// case insensitive
+    if (config->QueryIsOutOfProcess())// case insensitive
     {
         m_pHandler = new FORWARDING_HANDLER(pHttpContext);
         if (m_pHandler == NULL)
@@ -97,7 +97,7 @@ CProxyModule::OnExecuteRequestHandler(
 
         return m_pHandler->OnExecuteRequestHandler();
     }
-    else if (config->QueryHostingModel()->Equals(L"inprocess", true))
+    else if (config->QueryIsInProcess())
     {
         pApplicationManager = APPLICATION_MANAGER::GetInstance();
         if (pApplicationManager == NULL)
@@ -148,13 +148,13 @@ CProxyModule::OnAsyncCompletion(
     ASPNETCORE_CONFIG* config;
     ASPNETCORE_CONFIG::GetConfig(pHttpContext, &config);
 
-    if (config->QueryHostingModel()->IsEmpty() || config->QueryHostingModel()->Equals(L"outofprocess", TRUE))// case insensitive
+    if (config->QueryIsOutOfProcess())
     {
         return m_pHandler->OnAsyncCompletion(
             pCompletionInfo->GetCompletionBytes(),
             pCompletionInfo->GetCompletionStatus());
     }
-    else if (config->QueryHostingModel()->Equals(L"inprocess", TRUE)) // case insensitive
+    else if (config->QueryIsInProcess())
     {
         return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_CONTINUE;
     }

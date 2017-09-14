@@ -42,7 +42,6 @@ class CProxyModule : public CHttpModule
         IHttpCompletionInfo *   pCompletionInfo
     );
 
-
  private:
 
     FORWARDING_HANDLER * m_pHandler;

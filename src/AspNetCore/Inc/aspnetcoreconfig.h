@@ -118,14 +118,15 @@ public:
     STRU*
     QueryApplicationPath(
         VOID
-        )
+    )
     {
         return &m_struApplication;
     }
+
 	STRU*
 	QueryApplicationFullPath(
-		VOID
-		)
+        VOID
+	)
 	{
 		return &m_struApplicationFullPath;
 	}
@@ -174,6 +175,19 @@ public:
         return m_fDisableStartUpErrorPage;
     }
 
+    BOOL
+    QueryIsInProcess()
+    {
+        return m_fIsInProcess;
+    }
+
+    BOOL
+    QueryIsOutOfProcess()
+    {
+        return m_fIsOutOfProcess;
+    }
+
+
     STRU*
     QueryStdoutLogFile()
     {
@@ -211,7 +225,7 @@ private:
     STRU                   m_struArguments;
     STRU                   m_struProcessPath;
     STRU                   m_struStdoutLogFile;
-    STRU				   m_struApplicationFullPath;
+    STRU                   m_struApplicationFullPath;
     STRU                   m_struHostingModel;
     BOOL                   m_fStdoutLogEnabled;
     BOOL                   m_fForwardWindowsAuthToken;
@@ -219,5 +233,7 @@ private:
     BOOL                   m_fWindowsAuthEnabled;
     BOOL                   m_fBasicAuthEnabled;
     BOOL                   m_fAnonymousAuthEnabled;
+    BOOL                   m_fIsInProcess;
+    BOOL                   m_fIsOutOfProcess;
     ENVIRONMENT_VAR_HASH*  m_pEnvironmentVariables;
 };

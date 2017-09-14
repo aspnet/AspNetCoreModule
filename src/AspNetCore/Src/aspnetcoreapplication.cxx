@@ -2,11 +2,11 @@
 #include "fx_ver.h"
 #include <algorithm>
 
-typedef int(*hostfxr_main_fn) (const int argc, const wchar_t* argv[]);
+typedef DWORD(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
 
 // Initialization export
 
-extern "C" __declspec(dllexport)
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 VOID
 register_callbacks(
     _In_ PFN_REQUEST_HANDLER request_handler,
@@ -23,7 +23,7 @@ register_callbacks(
     );
 }
 
-extern "C" __declspec(dllexport)
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HTTP_REQUEST*
 http_get_raw_request(
     _In_ IHttpContext* pHttpContext
@@ -32,7 +32,7 @@ http_get_raw_request(
     return pHttpContext->GetRequest()->GetRawHttpRequest();
 }
 
-extern "C" __declspec(dllexport)
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HTTP_RESPONSE*
 http_get_raw_response(
     _In_ IHttpContext* pHttpContext
@@ -41,7 +41,7 @@ http_get_raw_response(
     return pHttpContext->GetResponse()->GetRawHttpResponse();
 }
 
-extern "C" __declspec(dllexport) VOID http_set_response_status_code(
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT VOID http_set_response_status_code(
     _In_ IHttpContext* pHttpContext,
     _In_ USHORT statusCode,
     _In_ PCSTR pszReason
@@ -50,7 +50,7 @@ extern "C" __declspec(dllexport) VOID http_set_response_status_code(
     pHttpContext->GetResponse()->SetStatus(statusCode, pszReason);
 }
 
-extern "C" __declspec(dllexport)
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_post_completion(
     _In_ IHttpContext* pHttpContext
@@ -59,7 +59,7 @@ http_post_completion(
     return pHttpContext->PostCompletion(0);
 }
 
-extern "C" __declspec(dllexport)
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 VOID
 http_indicate_completion(
     _In_ IHttpContext* pHttpContext,
@@ -69,7 +69,7 @@ http_indicate_completion(
     pHttpContext->IndicateCompletion(notificationStatus);
 }
 
-extern "C" __declspec(dllexport)
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 VOID
 http_get_completion_info(
     _In_ IHttpCompletionInfo2* info,
@@ -81,14 +81,14 @@ http_get_completion_info(
     *hr = info->GetCompletionStatus();
 }
 
-extern "C" __declspec(dllexport)
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 BSTR // TODO probably should make this a wide string
 http_get_application_full_path()
 {
     return SysAllocString(ASPNETCORE_APPLICATION::GetInstance()->GetConfig()->QueryApplicationFullPath()->QueryStr());
 }
 
-extern "C" __declspec(dllexport)
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_read_request_bytes(
     _In_ IHttpContext* pHttpContext,
@@ -122,7 +122,7 @@ http_read_request_bytes(
     return hr;
 }
 
-extern "C" __declspec(dllexport)
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_write_response_bytes(
     _In_ IHttpContext* pHttpContext,
@@ -152,7 +152,7 @@ http_write_response_bytes(
     return hr;
 }
 
-extern "C" __declspec(dllexport)
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_flush_response_bytes(
     _In_ IHttpContext* pHttpContext,
@@ -447,7 +447,8 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
     s_Application = this;
 
     m_ProcessExitCode = pProc(2, argv);
-    if (m_ProcessExitCode != 0) {
+    if (m_ProcessExitCode != 0)
+    {
         // TODO error 
     }
 
