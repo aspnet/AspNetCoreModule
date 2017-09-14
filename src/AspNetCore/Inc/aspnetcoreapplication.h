@@ -89,27 +89,29 @@ public:
     {
         return s_Application;
     }
+    static DWORD s_dwInProcessRetryCount;
 
 private:
     // Thread executing the .NET Core process
-    HANDLE m_hThread;
+    HANDLE                          m_hThread;
 
     // Configuration for this application
-    ASPNETCORE_CONFIG* m_pConfiguration;
+    ASPNETCORE_CONFIG*              m_pConfiguration;
 
     // The request handler callback from managed code
-    PFN_REQUEST_HANDLER m_RequestHandler;
-    void* m_RequstHandlerContext;
+    PFN_REQUEST_HANDLER             m_RequestHandler;
+    VOID*                           m_RequstHandlerContext;
 
     // The shutdown handler callback from managed code
-    PFN_SHUTDOWN_HANDLER m_ShutdownHandler;
-    void* m_ShutdownHandlerContext;
+    PFN_SHUTDOWN_HANDLER            m_ShutdownHandler;
+    VOID*                           m_ShutdownHandlerContext;
+
     // The event that gets triggered when managed initialization is complete
-    HANDLE m_InitalizeEvent;
+    HANDLE                          m_InitalizeEvent;
 
     // The exit code of the .NET Core process
-    int m_ProcessExitCode;
+    INT                             m_ProcessExitCode;
 
-    static ASPNETCORE_APPLICATION* s_Application;
+    static ASPNETCORE_APPLICATION*  s_Application;
 };
 

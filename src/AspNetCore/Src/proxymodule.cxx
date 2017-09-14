@@ -99,6 +99,11 @@ CProxyModule::OnExecuteRequestHandler(
     }
     else if (config->QueryIsInProcess())
     {
+        if (ASPNETCORE_APPLICATION::s_dwInProcessRetryCount >= 5) {
+            hr = E_ABORT;
+            goto Failed;
+        }
+        ASPNETCORE_APPLICATION::s_dwInProcessRetryCount += 1;
         pApplicationManager = APPLICATION_MANAGER::GetInstance();
         if (pApplicationManager == NULL)
         {
@@ -112,7 +117,6 @@ CProxyModule::OnExecuteRequestHandler(
         {
             goto Failed;
         }
-
 
         hr = pApplication->GetAspNetCoreApplication(config, &pAspNetCoreApplication);
         if (FAILED(hr))
@@ -130,7 +134,7 @@ CProxyModule::OnExecuteRequestHandler(
         return pAspNetCoreApplication->ExecuteRequest(pHttpContext);
     }
 Failed:
-    pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
+    pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, hr);
     return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
 }
 
