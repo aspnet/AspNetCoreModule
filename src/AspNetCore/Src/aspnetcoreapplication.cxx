@@ -271,12 +271,21 @@ ASPNETCORE_APPLICATION::Initialize(
     {
         return HRESULT_FROM_WIN32(dwResult);
     }
+    else if (dwResult == WAIT_FAILED)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
 
     dwResult = WaitForSingleObject(m_hThread, 0);
+
     // The thread ended it means that something failed
     if (dwResult == WAIT_OBJECT_0)
     {
         return HRESULT_FROM_WIN32(dwResult);
+    }
+    else if (dwResult == WAIT_FAILED)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
     }
 
     return S_OK;
