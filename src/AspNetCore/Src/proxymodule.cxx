@@ -99,11 +99,6 @@ CProxyModule::OnExecuteRequestHandler(
     }
     else if (config->QueryIsInProcess())
     {
-        if (ASPNETCORE_APPLICATION::s_dwInProcessRetryCount >= 5) {
-            hr = E_ABORT;
-            goto Failed;
-        }
-        ASPNETCORE_APPLICATION::s_dwInProcessRetryCount += 1;
         pApplicationManager = APPLICATION_MANAGER::GetInstance();
         if (pApplicationManager == NULL)
         {

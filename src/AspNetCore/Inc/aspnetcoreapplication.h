@@ -89,7 +89,6 @@ public:
     {
         return s_Application;
     }
-    static DWORD s_dwInProcessRetryCount;
 
 private:
     // Thread executing the .NET Core process
