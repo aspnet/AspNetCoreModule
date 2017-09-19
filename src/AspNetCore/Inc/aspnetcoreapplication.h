@@ -19,6 +19,17 @@ public:
 
     ~ASPNETCORE_APPLICATION()
     {
+        if (m_hThread != NULL)
+        {
+            CloseHandle(m_hThread);
+            m_hThread = NULL;
+        }
+
+        if (m_pInitalizeEvent != NULL)
+        {
+            CloseHandle(m_pInitalizeEvent);
+            m_pInitalizeEvent = NULL;
+        }
     }
 
     HRESULT
@@ -56,7 +67,7 @@ public:
         _Out_ std::vector<std::wstring> *pvFolders
     );
 
-    VOID
+    HRESULT
     FindHighestDotNetVersion(
         _In_ std::vector<std::wstring> vFolders,
         _Out_ STRU *pstrResult
@@ -106,7 +117,7 @@ private:
     VOID*                           m_ShutdownHandlerContext;
 
     // The event that gets triggered when managed initialization is complete
-    HANDLE                          m_InitalizeEvent;
+    HANDLE                          m_pInitalizeEvent;
 
     // The exit code of the .NET Core process
     INT                             m_ProcessExitCode;

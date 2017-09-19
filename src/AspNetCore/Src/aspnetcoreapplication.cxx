@@ -211,7 +211,7 @@ ASPNETCORE_APPLICATION::SetCallbackHandles(
     m_ShutdownHandlerContext = pvShutdownHandlerContext;
 
     // Initialization complete
-    SetEvent(m_InitalizeEvent);
+    SetEvent(m_pInitalizeEvent);
 }
 
 HRESULT
@@ -227,13 +227,13 @@ ASPNETCORE_APPLICATION::Initialize(
 
     m_pConfiguration = pConfig;
 
-    m_InitalizeEvent = CreateEvent(
+    m_pInitalizeEvent = CreateEvent(
         NULL,   // default security attributes
         TRUE,   // manual reset event
         FALSE,  // not set
         NULL);  // name
 
-    if (m_InitalizeEvent == NULL)
+    if (m_pInitalizeEvent == NULL)
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
@@ -261,7 +261,7 @@ ASPNETCORE_APPLICATION::Initialize(
         dwTimeout = pConfig->QueryStartupTimeLimitInMS();
     }
 
-    const HANDLE pHandles[2]{ m_hThread, m_InitalizeEvent };
+    const HANDLE pHandles[2]{ m_hThread, m_pInitalizeEvent };
 
     // Wait on either the thread to complete or the event to be set
     dwResult = WaitForMultipleObjects(2, pHandles, FALSE, dwTimeout);
@@ -404,8 +404,11 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
         goto Failed;
     }
 
-    FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
-
+    hr = FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
+    if (FAILED(hr))
+    {
+        goto Failed;
+    }
     hr = strDotnetFolderLocation.Append(L"\\");
     if (FAILED(hr))
     {
@@ -475,40 +478,35 @@ ASPNETCORE_APPLICATION::GetEnv(
 {
     DWORD dwLength;
     PWSTR pszBuffer= NULL;
+    BOOL fSucceeded = FALSE;
 
     if (pszEnvironmentVariable == NULL)
     {
-        return FALSE;
+        goto Finished;
     }
     pstrResult->Reset();
     dwLength = GetEnvironmentVariableW(pszEnvironmentVariable, NULL, 0);
 
     if (dwLength == 0)
     {
-        if (GetLastError() != ERROR_ENVVAR_NOT_FOUND)
-        {
-        }
-        goto Failed;
+        goto Finished;
     }
 
     pszBuffer = new WCHAR[dwLength];
     if (GetEnvironmentVariableW(pszEnvironmentVariable, pszBuffer, dwLength) == 0)
     {
-        goto Failed;
+        goto Finished;
     }
 
     pstrResult->Copy(pszBuffer);
 
-    if (pszBuffer != NULL) {
-        delete[] pszBuffer;
-    }
-    return TRUE;
+    fSucceeded = TRUE;
 
-Failed:
+Finished:
     if (pszBuffer != NULL) {
         delete[] pszBuffer;
     }
-    return FALSE;
+    return fSucceeded;
 }
 
 VOID
@@ -535,12 +533,13 @@ ASPNETCORE_APPLICATION::FindDotNetFolders(
     FindClose(handle);
 }
 
-VOID
+HRESULT
 ASPNETCORE_APPLICATION::FindHighestDotNetVersion(
     _In_ std::vector<std::wstring> vFolders,
     _Out_ STRU *pstrResult
 )
 {
+    HRESULT hr = S_OK;
     fx_ver_t max_ver(-1, -1, -1);
     for (const auto& dir : vFolders)
     {
@@ -550,9 +549,12 @@ ASPNETCORE_APPLICATION::FindHighestDotNetVersion(
             max_ver = std::max(max_ver, fx_ver);
         }
     }
-    pstrResult->Copy(max_ver.as_str().c_str());
-}
 
+    hr = pstrResult->Copy(max_ver.as_str().c_str());
+
+    // we check FAILED(hr) outside of function
+    return hr;
+}
 
 BOOL
 ASPNETCORE_APPLICATION::DirectoryExists(
@@ -561,7 +563,7 @@ ASPNETCORE_APPLICATION::DirectoryExists(
 {
     WIN32_FILE_ATTRIBUTE_DATA data;
 
-    if (pstrPath->QuerySizeCCH() == 0)
+    if (pstrPath->IsEmpty())
     {
         return false;
     }
@@ -591,6 +593,6 @@ ASPNETCORE_APPLICATION::Shutdown(
 {
     // First call into the managed server and shutdown
     BOOL result = m_ShutdownHandler(m_ShutdownHandlerContext);
-
+    s_Application = NULL;
     delete this;
 }
