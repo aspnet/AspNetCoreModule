@@ -113,7 +113,7 @@ CProxyModule::OnExecuteRequestHandler(
             goto Failed;
         }
 
-        hr = pApplication->GetAspNetCoreApplication(config, &pAspNetCoreApplication);
+        hr = pApplication->GetAspNetCoreApplication(config, pHttpContext, &pAspNetCoreApplication);
         if (FAILED(hr))
         {
             goto Failed;

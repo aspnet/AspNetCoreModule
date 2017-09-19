@@ -353,7 +353,6 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
             if (FAILED(hr))
             {
                 goto Failed;
-
             }
         }
 
@@ -430,7 +429,7 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
 
     hModule = LoadLibraryW(strDotnetFolderLocation.QueryStr());
 
-    if (hModule == nullptr)
+    if (hModule == NULL)
     {
         // .NET Core not installed (we can log a more detailed error message here)
         goto Failed;

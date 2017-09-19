@@ -186,12 +186,14 @@ public:
     HRESULT
     GetAspNetCoreApplication(
         _In_    ASPNETCORE_CONFIG       *pConfig,
+        _In_    IHttpContext            *context,
         _Out_   ASPNETCORE_APPLICATION  **ppAspNetCoreApplication
     )
     {
         HRESULT hr = S_OK;
         BOOL fLockTaken = FALSE;
         ASPNETCORE_APPLICATION *application;
+        IHttpApplication *pHttpApplication = context->GetApplication();
 
         if (m_pAspNetCoreApplication == NULL)
         {
@@ -215,6 +217,14 @@ public:
                 // Assign after initialization
                 m_pAspNetCoreApplication = application;
             }
+        }
+        else if (pHttpApplication->GetModuleContextContainer()->GetModuleContext(g_pModuleId) == NULL)
+        {
+            // This means that we are trying to load a second application
+            // TODO set a flag saying that the whole app pool is invalid '
+            // (including the running application) and return 500 every request.
+            hr = E_FAIL;
+            goto Finished;
         }
 
         *ppAspNetCoreApplication = m_pAspNetCoreApplication;

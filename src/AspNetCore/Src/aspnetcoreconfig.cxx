@@ -91,7 +91,7 @@ ASPNETCORE_CONFIG::GetConfig(
     else
     {
         // set appliction info here instead of inside Populate()
-        // as the destructor will delete the backend process 
+        // as the destructor will delete the backend process
         hr = pAspNetCoreConfig->QueryApplicationPath()->Copy(pHttpApplication->GetApplicationId());
         if (FAILED(hr))
         {
