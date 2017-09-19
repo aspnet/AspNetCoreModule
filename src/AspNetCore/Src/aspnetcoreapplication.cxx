@@ -438,6 +438,10 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
 
     // Get the entry point for main
     pProc = (hostfxr_main_fn)GetProcAddress(hModule, "hostfxr_main");
+    if (pProc == NULL) {
+        goto Failed;
+    }
+
     // The first argument is mostly ignored
     hr = strDotnetExeLocation.Append(pszDotnetExeString);
     if (FAILED(hr))
@@ -461,7 +465,7 @@ ASPNETCORE_APPLICATION::ExecuteApplication(
     m_ProcessExitCode = pProc(2, argv);
     if (m_ProcessExitCode != 0)
     {
-        // TODO error 
+        // TODO error
     }
 
     return hr;

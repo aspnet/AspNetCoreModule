@@ -61,29 +61,6 @@ public:
         VOID
     );
 
-    VOID
-    FindDotNetFolders(
-        _In_ STRU *pstrPath,
-        _Out_ std::vector<std::wstring> *pvFolders
-    );
-
-    HRESULT
-    FindHighestDotNetVersion(
-        _In_ std::vector<std::wstring> vFolders,
-        _Out_ STRU *pstrResult
-    );
-
-    BOOL
-    DirectoryExists(
-        _In_ STRU *pstrPath
-    );
-
-    BOOL
-    GetEnv(
-        _In_ PCWSTR pszEnvironmentVariable,
-        _Out_ STRU *pstrResult
-    );
-
     ASPNETCORE_CONFIG*
     GetConfig(
         VOID
@@ -123,5 +100,28 @@ private:
     INT                             m_ProcessExitCode;
 
     static ASPNETCORE_APPLICATION*  s_Application;
+
+    static VOID
+        FindDotNetFolders(
+            _In_ STRU *pstrPath,
+            _Out_ std::vector<std::wstring> *pvFolders
+        );
+
+    static HRESULT
+        FindHighestDotNetVersion(
+            _In_ std::vector<std::wstring> vFolders,
+            _Out_ STRU *pstrResult
+        );
+
+    static BOOL
+        DirectoryExists(
+            _In_ STRU *pstrPath
+        );
+
+    static BOOL
+        GetEnv(
+            _In_ PCWSTR pszEnvironmentVariable,
+            _Out_ STRU *pstrResult
+        );
 };
 
