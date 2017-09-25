@@ -1062,7 +1062,8 @@ Finished:
     {
         if (strEventMsg.IsEmpty())
         {
-            if (!fDonePrepareCommandLine) {
+            if (!fDonePrepareCommandLine)
+            {
 
                 strEventMsg.SafeSnwprintf(
                     m_struAppFullPath.QueryStr(),
@@ -1077,7 +1078,6 @@ Finished:
                 m_pszRootApplicationPath.QueryStr(),
                 struCommandLine.QueryStr(),
                 hr);
-
             }
         }
 
