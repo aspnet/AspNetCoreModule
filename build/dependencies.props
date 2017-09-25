@@ -4,6 +4,6 @@
     <InternalAspNetCoreSdkVersion>2.1.1-*</InternalAspNetCoreSdkVersion>
     <TestSdkVersion>15.3.0</TestSdkVersion>
     <XunitAnalyzersVersion>0.6.1</XunitAnalyzersVersion>
-    <XunitVersion>2.3.0-beta4-*</XunitVersion>
+    <XunitVersion>2.3.0-beta4-build3742</XunitVersion>
   </PropertyGroup>
 </Project>
