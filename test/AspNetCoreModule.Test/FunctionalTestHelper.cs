@@ -23,64 +23,48 @@ using Microsoft.AspNetCore.Testing.xunit;
 namespace AspNetCoreModule.Test
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public class ANCMTestSkipCondition : Attribute, ITestCondition
+    public class ANCMTestTestPriority : Attribute, ITestCondition
     {
-        private readonly string _environmentVariableName;
-        public ANCMTestSkipCondition(string environmentVariableName)
+        private readonly string _value;
+        public ANCMTestTestPriority(string value)
         {
-            _environmentVariableName = environmentVariableName;
+            _value = value;
         }
 
         public bool IsMet
         {
             get
             {
-                bool result = true;
-                if (_environmentVariableName == InitializeTestMachine.ANCMTestFlagsEnvironmentVariable)
+                bool result = false;
+                if (_value == ANCMTestFlags.P0 || _value == ANCMTestFlags.P1)
                 {
-                    var envValue = Environment.ExpandEnvironmentVariables(_environmentVariableName);
-                    if (string.IsNullOrEmpty(envValue))
-                    {
-                        envValue = InitializeTestMachine.ANCMTestFlagsDefaultContext;
-                    }
-                    else
-                    {
-                        envValue += ";" + InitializeTestMachine.ANCMTestFlagsDefaultContext;
-                    }
+                    var envValue = InitializeTestMachine.GlobalTestFlags;
 
                     // split tokens with ';'
                     var tokens = envValue.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                    bool testSkipFlagFound = false;
                     foreach (string token in tokens)
                     {
-                        if (token.Equals(InitializeTestMachine.ANCMTestFlagsDefaultContext, StringComparison.InvariantCultureIgnoreCase))
+                        if (token.Equals(_value, StringComparison.InvariantCultureIgnoreCase))
                         {
-                            try
-                            {
-                                if (Environment.Is64BitOperatingSystem && !Environment.Is64BitProcess)
-                                {
-                                    throw new System.InvalidOperationException("this should be started with x64 process mode on 64 bit machine");
-                                }
-
-                                bool isElevated;
-                                WindowsIdentity identity = WindowsIdentity.GetCurrent();
-                                WindowsPrincipal principal = new WindowsPrincipal(identity);
-                                isElevated = principal.IsInRole(WindowsBuiltInRole.Administrator);
-                                if (!isElevated)
-                                {
-                                    throw new System.ApplicationException("this should be started as an administrator");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                AdditionalInfo = ex.Message;
-
-                                result = false;
-                            }
+                            result = true;
                         }
-                        if (token.Equals(InitializeTestMachine.ANCMTestFlagsTestSkipContext, StringComparison.InvariantCultureIgnoreCase))
+                        if (token.Equals(ANCMTestFlags.TestSkipContext, StringComparison.InvariantCultureIgnoreCase))
                         {
-                            AdditionalInfo = InitializeTestMachine.ANCMTestFlagsTestSkipContext + " is set";
+                            testSkipFlagFound = true;
                             result = false;
+                            break;
+                        }
+                    }
+                    if (result == false)
+                    {
+                        if (testSkipFlagFound)
+                        {
+                            AdditionalInfo = ANCMTestFlags.TestSkipContext + " is set";
+                        }
+                        else
+                        {
+                            AdditionalInfo = _value + " is not belong to the given global test context(" + InitializeTestMachine.GlobalTestFlags + ")";
                         }
                     }
                 }
@@ -92,7 +76,7 @@ namespace AspNetCoreModule.Test
         {
             get
             {
-                return $"Skip condition: {_environmentVariableName}: this test case is skipped becauset {AdditionalInfo}.";
+                return $"Skip condition: ANCMTestFlags: this test case is skipped becauset {AdditionalInfo}.";
             }
         }
 
@@ -117,8 +101,10 @@ namespace AspNetCoreModule.Test
 
         public static async Task DoBasicTest(IISConfigUtility.AppPoolBitness appPoolBitness)
         {
+            TestUtility.LogInformation("Test Start");
             using (var testSite = new TestWebSite(appPoolBitness, "DoBasicTest"))
             {
+                TestUtility.LogInformation("Site created");
                 string backendProcessId_old = null;
 
                 DateTime startTime = DateTime.Now;
@@ -136,11 +122,12 @@ namespace AspNetCoreModule.Test
                 {
                     BaseAddress = testSite.AspNetCoreApp.GetUri(),
                     Timeout = TimeSpan.FromSeconds(5),
-                };
+                }; 
 
                 // Invoke given test scenario function
                 await CheckChunkedAsync(httpClient, testSite.AspNetCoreApp);
             }
+            TestUtility.LogInformation("Test End");
         }
 
         public static async Task DoRecycleApplicationAfterBackendProcessBeingKilled(IISConfigUtility.AppPoolBitness appPoolBitness)

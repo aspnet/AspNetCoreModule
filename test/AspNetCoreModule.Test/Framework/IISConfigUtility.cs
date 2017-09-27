@@ -291,7 +291,7 @@ namespace AspNetCoreModule.Test.Framework
             }
         }
 
-        public void CreateSite(string siteName, string physicalPath, int siteId, int tcpPort, string appPoolName = "DefaultAppPool")
+        public void CreateSite(string siteName, string hostname, string physicalPath, int siteId, int tcpPort, string appPoolName = "DefaultAppPool")
         {
             TestUtility.LogInformation("Creating web site : " + siteName);
 
@@ -312,7 +312,7 @@ namespace AspNetCoreModule.Test.Framework
 
                 ConfigurationElement bindingElement = bindingsCollection.CreateElement("binding");
                 bindingElement["protocol"] = @"http";
-                bindingElement["bindingInformation"] = "*:" + tcpPort + ":";
+                bindingElement["bindingInformation"] = "*:" + tcpPort + ":" + hostname;
                 bindingsCollection.Add(bindingElement);
 
                 ConfigurationElementCollection siteCollection = siteElement.GetCollection();

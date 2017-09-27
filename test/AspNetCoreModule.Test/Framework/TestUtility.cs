@@ -263,6 +263,7 @@ namespace AspNetCoreModule.Test.Framework
         {
             if (format != null)
             {
+                //Logger.LogInformation("[" + DateTime.Now.ToString() + "] " + format, parameters);
                 Logger.LogInformation(format, parameters);
             }
         }
