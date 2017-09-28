@@ -263,7 +263,6 @@ namespace AspNetCoreModule.Test.Framework
         {
             if (format != null)
             {
-                //Logger.LogInformation("[" + DateTime.Now.ToString() + "] " + format, parameters);
                 Logger.LogInformation(format, parameters);
             }
         }
@@ -288,7 +287,7 @@ namespace AspNetCoreModule.Test.Framework
             }
             if (File.Exists(from))
             {
-                if (File.Exists(to) && overWrite == false)
+                if (File.Exists(to) && !overWrite)
                 {
                     return;
                 }
@@ -327,7 +326,7 @@ namespace AspNetCoreModule.Test.Framework
 
             if (File.Exists(from))
             {
-                if (File.Exists(to) && overWrite == false)
+                if (File.Exists(to) && !overWrite)
                 {
                     return;                
                 }

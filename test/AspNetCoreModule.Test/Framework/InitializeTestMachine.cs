@@ -10,64 +10,29 @@ using System.Security.AccessControl;
 
 namespace AspNetCoreModule.Test.Framework
 {
-    public static class ANCMTestFlags
+    public static class TestFlags
     {
-        public const string TestSkipContext = "SkipTest";
+        public const string SkipTest = "SkipTest";
         public const string UsePrivateANCM = "UsePrivateANCM";
-        public const string UseIISExpressContext = "UseIISExpress";
-        public const string UseFullIISContext = "UseFullIIS";
-        public const string RunAsNonAdminUser = "RunAsNonAdminUser";
+        public const string UseIISExpress = "UseIISExpress";
+        public const string UseFullIIS = "UseFullIIS";
+        public const string RunAsAdministrator = "RunAsAdministrator";
         public const string MakeCertExeAvailable = "MakeCertExeAvailable";
         public const string X86Platform = "X86Platform";
         public const string Wow64BitMode = "Wow64BitMode";
-        public const string P0 = "P0";
-        public const string P1 = "P1";
+        public const string RequireRunAsAdministrator = "RequireRunAsAdministrator";
+        public const string Default = "Default";
+
+        public static bool Enabled(string flagValue)
+        {
+            return InitializeTestMachine.GlobalTestFlags.Contains(flagValue.ToLower());
+        }
     }
 
     public class InitializeTestMachine : IDisposable
     {
         public const string ANCMTestFlagsEnvironmentVariable = "%ANCMTestFlags%";
-
-        public const string ANCMTestFlags_DefaultContext_IISExpressP0Only = ANCMTestFlags.UsePrivateANCM
-                                                        + ";"
-                                                        + ANCMTestFlags.UseIISExpressContext
-                                                        + ";"
-                                                        + ANCMTestFlags.RunAsNonAdminUser
-                                                        + ";"
-                                                        + ANCMTestFlags.P0;
-
-        public const string ANCMTestFlags_DefaultContext_FullIIS = ANCMTestFlags.UsePrivateANCM
-                                                        + ";"
-                                                        + ANCMTestFlags.P0
-                                                        + ";"
-                                                        + ANCMTestFlags.P1;
-
-        private static bool? _usePrivateAspNetCoreFile = null;
-        public static bool? UsePrivateAspNetCoreFile
-        {
-            get {
-                if (_usePrivateAspNetCoreFile == null)
-                {
-                    _usePrivateAspNetCoreFile = false;
-                    var envValue = GlobalTestFlags;
-                    if (envValue.ToLower().Contains(ANCMTestFlags.UsePrivateANCM.ToLower()))
-                    {
-                        TestUtility.LogInformation("PrivateAspNetCoreFile is set");
-                        _usePrivateAspNetCoreFile = true;
-                    }
-                    else
-                    {
-                        TestUtility.LogInformation("PrivateAspNetCoreFile is not set");
-                    }
-                }
-                return _usePrivateAspNetCoreFile;
-            }
-            set
-            {
-                _usePrivateAspNetCoreFile = value;
-            }
-        }
-
+        
         public static int SiteId = 40000;
         public const string PrivateFileName = "aspnetcore_private.dll";
         public static string FullIisAspnetcore_path = Path.Combine(Environment.ExpandEnvironmentVariables("%windir%"), "system32", "inetsrv", PrivateFileName);
@@ -83,27 +48,27 @@ namespace AspNetCoreModule.Test.Framework
         private static bool _InitializeTestMachineCompleted = false;
         private string _setupScriptPath = null;
         
-        private static bool? _MakeCertExeAvailable = null;
-        public static bool? MakeCertExeAvailable
+        private static bool? _makeCertExeAvailable = null;
+        public static bool MakeCertExeAvailable
         {
             get
             {
-                if (_MakeCertExeAvailable == null)
+                if (_makeCertExeAvailable == null)
                 {
-                    _MakeCertExeAvailable = false;
+                    _makeCertExeAvailable = false;
                     try
                     {
                         string makecertExeFilePath = TestUtility.GetMakeCertPath();
                         TestUtility.RunCommand(makecertExeFilePath, null, true, true);
                         TestUtility.LogInformation("Verified makecert.exe is available : " + makecertExeFilePath);
-                        _MakeCertExeAvailable = true;
+                        _makeCertExeAvailable = true;
                     }
                     catch
                     {
-                        _MakeCertExeAvailable = false;
+                        _makeCertExeAvailable = false;
                     }
                 }
-                return _MakeCertExeAvailable;
+                return (_makeCertExeAvailable == true);
             }
         }
 
@@ -123,79 +88,105 @@ namespace AspNetCoreModule.Test.Framework
                 if (_globalTestFlags == null)
                 {
                     bool isElevated;
-                    WindowsIdentity identity = WindowsIdentity.GetCurrent();
-                    WindowsPrincipal principal = new WindowsPrincipal(identity);
+                    WindowsPrincipal principal = new WindowsPrincipal(WindowsIdentity.GetCurrent());
                     isElevated = principal.IsInRole(WindowsBuiltInRole.Administrator);
 
                     // check if this test process is started with the Run As Administrator start option
                     _globalTestFlags = Environment.ExpandEnvironmentVariables(ANCMTestFlagsEnvironmentVariable);
-                    _globalTestFlags = _globalTestFlags.ToLower();
-                    if (_globalTestFlags.Contains(ANCMTestFlags.UseIISExpressContext.ToLower()) && _globalTestFlags.Contains(ANCMTestFlags.UseFullIISContext.ToLower()))
-                    {
-                        throw new ApplicationException(ANCMTestFlagsEnvironmentVariable + " can't be set with both "
-                            + ANCMTestFlags.UseIISExpressContext + " and " + ANCMTestFlags.UseFullIISContext);
-                    }
 
-                    // set default context with ANCMTestFlags_DefaultContext_IISExpressP0Only
-                    if (!isElevated
-                        || _globalTestFlags.Replace(ANCMTestFlagsEnvironmentVariable.ToLower(), "").Trim() == ""
-                        || _globalTestFlags.Contains(ANCMTestFlags.UseIISExpressContext.ToLower()))
-                    {
-                        _globalTestFlags = ANCMTestFlags_DefaultContext_IISExpressP0Only;
-                    }
-
-                    // if users set UseFullIIS, the default value should be overwritten with ANCMTestFlags_DefaultContext_FullIIS
-                    if (isElevated
-                        && _globalTestFlags.Contains(ANCMTestFlags.UseFullIISContext.ToLower()))
-                    {
-                        _globalTestFlags = ANCMTestFlags_DefaultContext_FullIIS;
-                    }
-
-                    // adjust the default test context in run time to figure out wrong test context values
+                    //
+                    // Check if ANCMTestFlags environment is not defined and the test program was started 
+                    // without using the Run As Administrator start option. 
+                    // In that case, we have to use the default TestFlags of UseIISExpress and UsePrivateANCM
+                    //
                     if (!isElevated)
                     {
-                        if (_globalTestFlags.Contains(ANCMTestFlags.UseFullIISContext.ToLower()))
+                        if (_globalTestFlags.ToLower().Contains("%" + ANCMTestFlagsEnvironmentVariable.ToLower() + "%"))
                         {
-                            _globalTestFlags = _globalTestFlags.Replace(ANCMTestFlags.UseFullIISContext.ToLower(), "");
-                        }
-
-                        if (!_globalTestFlags.Contains(ANCMTestFlags.UseIISExpressContext.ToLower()))
-                        {
-                            TestUtility.LogInformation("Added test context of " + ANCMTestFlags.UseIISExpressContext);
-                            _globalTestFlags += ";" + ANCMTestFlags.UseIISExpressContext;
-                        }
-
-                        if (!_globalTestFlags.Contains(ANCMTestFlags.RunAsNonAdminUser.ToLower()))
-                        {
-                            TestUtility.LogInformation("Added test context of " + ANCMTestFlags.RunAsNonAdminUser);
-                            _globalTestFlags += ";" + ANCMTestFlags.RunAsNonAdminUser;
+                            _globalTestFlags = TestFlags.UsePrivateANCM + ";" + TestFlags.UseIISExpress;
                         }
                     }
 
-                    if (MakeCertExeAvailable == true)
+                    //
+                    // convert in lower case 
+                    //
+                    _globalTestFlags = _globalTestFlags.ToLower();
+
+                    //
+                    // error handling: UseIISExpress and UseFullIIS can be used together. 
+                    //
+                    if (_globalTestFlags.Contains(TestFlags.UseIISExpress.ToLower()) && _globalTestFlags.Contains(TestFlags.UseFullIIS.ToLower()))
                     {
-                        if (!_globalTestFlags.Contains(ANCMTestFlags.MakeCertExeAvailable.ToLower()))
+                        _globalTestFlags = _globalTestFlags.Replace(TestFlags.UseFullIIS.ToLower(), "");                        
+                    }
+
+                    //
+                    // adjust the default test context in run time to figure out wrong test context values
+                    //
+                    if (isElevated)
+                    {
+                        // add RunAsAdministrator
+                        if (!_globalTestFlags.Contains(TestFlags.RunAsAdministrator.ToLower()))
                         {
-                            TestUtility.LogInformation("Added test context of " + ANCMTestFlags.MakeCertExeAvailable);
-                            _globalTestFlags += ";" + ANCMTestFlags.MakeCertExeAvailable;
+                            TestUtility.LogInformation("Added test context of " + TestFlags.RunAsAdministrator);
+                            _globalTestFlags += ";" + TestFlags.RunAsAdministrator;
+                        }
+                    }
+                    else
+                    {
+                        // add UseIISExpress
+                        if (!_globalTestFlags.Contains(TestFlags.UseIISExpress.ToLower()))
+                        {
+                            TestUtility.LogInformation("Added test context of " + TestFlags.UseIISExpress);
+                            _globalTestFlags += ";" + TestFlags.UseIISExpress;
+                        }
+
+                        // remove UseFullIIS
+                        if (_globalTestFlags.Contains(TestFlags.UseFullIIS.ToLower()))
+                        {
+                            _globalTestFlags = _globalTestFlags.Replace(TestFlags.UseFullIIS.ToLower(), "");
+                        }
+
+                        // remove RunAsAdmistrator
+                        if (_globalTestFlags.Contains(TestFlags.RunAsAdministrator.ToLower()))
+                        {
+                            _globalTestFlags = _globalTestFlags.Replace(TestFlags.RunAsAdministrator.ToLower(), "");
+                        }
+                    }
+
+                    if (MakeCertExeAvailable)
+                    {
+                        // Add MakeCertExeAvailable
+                        if (!_globalTestFlags.Contains(TestFlags.MakeCertExeAvailable.ToLower()))
+                        {
+                            TestUtility.LogInformation("Added test context of " + TestFlags.MakeCertExeAvailable);
+                            _globalTestFlags += ";" + TestFlags.MakeCertExeAvailable;
                         }
                     }
 
                     if (!Environment.Is64BitOperatingSystem)
                     {
-                        if (!_globalTestFlags.Contains(ANCMTestFlags.X86Platform.ToLower()))
+                        // Add X86Platform
+                        if (!_globalTestFlags.Contains(TestFlags.X86Platform.ToLower()))
                         {
-                            TestUtility.LogInformation("Added test context of " + ANCMTestFlags.X86Platform);
-                            _globalTestFlags += ";" + ANCMTestFlags.X86Platform;
+                            TestUtility.LogInformation("Added test context of " + TestFlags.X86Platform);
+                            _globalTestFlags += ";" + TestFlags.X86Platform;
                         }
                     }
 
                     if (Environment.Is64BitOperatingSystem && !Environment.Is64BitProcess)
                     {
-                        if (!_globalTestFlags.Contains(ANCMTestFlags.Wow64BitMode.ToLower()))
+                        // Add Wow64bitMode
+                        if (!_globalTestFlags.Contains(TestFlags.Wow64BitMode.ToLower()))
                         {
-                            TestUtility.LogInformation("Added test context of " + ANCMTestFlags.Wow64BitMode);
-                            _globalTestFlags += ";" + ANCMTestFlags.Wow64BitMode;
+                            TestUtility.LogInformation("Added test context of " + TestFlags.Wow64BitMode);
+                            _globalTestFlags += ";" + TestFlags.Wow64BitMode;
+                        }
+
+                        // remove X86Platform
+                        if (_globalTestFlags.Contains(TestFlags.X86Platform.ToLower()))
+                        {
+                            _globalTestFlags = _globalTestFlags.Replace(TestFlags.X86Platform.ToLower(), "");
                         }
                     }
 
@@ -203,13 +194,77 @@ namespace AspNetCoreModule.Test.Framework
                 }
 
                 return _globalTestFlags;
-            }            
+            }
+        }
+
+        public void InitializeIISServer()
+        {
+            // Check if IIS server is installed or not
+            bool isIISInstalled = true;
+            if (!File.Exists(Path.Combine(IISConfigUtility.Strings.IIS64BitPath, "iiscore.dll")))
+            {
+                isIISInstalled = false;
+            }
+
+            if (!File.Exists(Path.Combine(IISConfigUtility.Strings.IIS64BitPath, "config", "applicationhost.config")))
+            {
+                isIISInstalled = false;
+            }
+            
+            if (!isIISInstalled)
+            {
+                throw new System.ApplicationException("IIS server is not installed");
+            }
+
+            // Check websocket is installed
+            if (File.Exists(Path.Combine(IISConfigUtility.Strings.IIS64BitPath, "iiswsock.dll")))
+            {
+                TestUtility.LogInformation("Websocket is installed");
+            }
+            else
+            {
+                throw new System.ApplicationException("websocket module is not installed");
+            }
+
+            // Clean up IIS worker process
+            TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
+
+            // Reset applicationhost.config
+            TestUtility.LogInformation("Restoring applicationhost.config");
+            IISConfigUtility.RestoreAppHostConfig(restoreFromMasterBackupFile: true);
+            TestUtility.StartW3svc();
+
+            // check w3svc is running after resetting applicationhost.config
+            if (IISConfigUtility.GetServiceStatus("w3svc") == "Running")
+            {
+                TestUtility.LogInformation("W3SVC service is restarted after restoring applicationhost.config");
+            }
+            else
+            {
+                throw new System.ApplicationException("WWW service can't start");
+            }
+
+            // check URLRewrite module exists
+            if (File.Exists(Path.Combine(IISConfigUtility.Strings.IIS64BitPath, "rewrite.dll")))
+            {
+                TestUtility.LogInformation("Verified URL Rewrite module installed for IIS server");
+            }
+            else
+            {
+                throw new System.ApplicationException("URL Rewrite module is not installed");
+            }
+
+            if (IISConfigUtility.ApppHostTemporaryBackupFileExtention == null)
+            {
+                throw new System.ApplicationException("Failed to backup applicationhost.config");
+            }
         }
 
         public InitializeTestMachine()
         {
             _referenceCount++;
 
+            // This method should be called only one time
             if (_referenceCount == 1)
             {
                 TestUtility.LogInformation("InitializeTestMachine::InitializeTestMachine() Start");
@@ -219,86 +274,29 @@ namespace AspNetCoreModule.Test.Framework
                 TestUtility.LogInformation("InitializeTestMachine::Start");
                 if (Environment.ExpandEnvironmentVariables("%ANCMTEST_DEBUG%").ToLower() == "true")
                 {
-                    System.Diagnostics.Debugger.Launch();                    
+                    System.Diagnostics.Debugger.Launch();
                 }
                 
                 //
-                // Clean up IISExpress process
+                // Clean up IISExpress processes
                 //
                 TestUtility.ResetHelper(ResetHelperMode.KillIISExpress);
 
-                // Check if we can use IIS server instead of IISExpress
-                try
+                //
+                // Initalize IIS server
+                //
+
+                if (TestFlags.Enabled(TestFlags.UseFullIIS))
                 {
-                    IISConfigUtility.IsIISReady = false;
-                    if (IISConfigUtility.IsIISInstalled == true)
-                    {
-                        var envValue = GlobalTestFlags;
-                        
-                        if (envValue.ToLower().Contains(ANCMTestFlags.UseIISExpressContext.ToLower()))
-                        {
-                            TestUtility.LogInformation("UseIISExpress is set");
-                            throw new System.ApplicationException("'ANCMTestServerType' environment variable is set to 'true'");
-                        }
-                        else
-                        {
-                            TestUtility.LogInformation("UseIISExpress is not set");
-                        }
-                        
-                        // Check websocket is installed
-                        if (File.Exists(Path.Combine(IISConfigUtility.Strings.IIS64BitPath, "iiswsock.dll")))
-                        {
-                            TestUtility.LogInformation("Websocket is installed");
-                        }
-                        else
-                        {
-                            throw new System.ApplicationException("websocket module is not installed");
-                        }
-
-                        // Clean up IIS worker process
-                        TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
-
-                        // Reset applicationhost.config
-                        TestUtility.LogInformation("Restoring applicationhost.config");                        
-                        IISConfigUtility.RestoreAppHostConfig(restoreFromMasterBackupFile:true);
-                        TestUtility.StartW3svc();
-
-                        // check w3svc is running after resetting applicationhost.config
-                        if (IISConfigUtility.GetServiceStatus("w3svc") == "Running")
-                        {
-                            TestUtility.LogInformation("W3SVC service is restarted after restoring applicationhost.config");
-                        }
-                        else
-                        {
-                            throw new System.ApplicationException("WWW service can't start");
-                        }
-
-                        // check URLRewrite module exists
-                        if (File.Exists(Path.Combine(IISConfigUtility.Strings.IIS64BitPath, "rewrite.dll")))
-                        {
-                            TestUtility.LogInformation("Verified URL Rewrite module installed for IIS server");
-                        }
-                        else
-                        {
-                            throw new System.ApplicationException("URL Rewrite module is not installed");
-                        }
-
-                        if (IISConfigUtility.ApppHostTemporaryBackupFileExtention == null)
-                        {
-                            throw new System.ApplicationException("Failed to backup applicationhost.config");
-                        }
-                        IISConfigUtility.IsIISReady = true;
-                    }
+                    InitializeIISServer();
                 }
-                catch (Exception ex)
-                {
-                    RollbackIISApplicationhostConfigFile();
-                    TestUtility.LogInformation("We will use IISExpress instead of IIS: " + ex.Message);
-                }
-
+                
                 string siteRootPath = TestRootDirectory;
                 if (!Directory.Exists(siteRootPath))
                 {
+                    //
+                    // Create a new directory and set the write permission for the SID of AuthenticatedUser
+                    //
                     Directory.CreateDirectory(siteRootPath);
                     DirectorySecurity sec = Directory.GetAccessControl(siteRootPath);
                     SecurityIdentifier authenticatedUser = new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null);
@@ -331,18 +329,12 @@ namespace AspNetCoreModule.Test.Framework
                     }
                 }
                 
-                if (InitializeTestMachine.UsePrivateAspNetCoreFile == true)
+                //
+                // Intialize Private ANCM files for Full IIS server or IISExpress
+                //
+                if (TestFlags.Enabled(TestFlags.UsePrivateANCM))
                 {
-                    PreparePrivateANCMFiles(IISConfigUtility.IsIISReady);
-
-                    // update applicationhost.config for IIS server
-                    if (IISConfigUtility.IsIISReady)
-                    {
-                        using (var iisConfig = new IISConfigUtility(ServerType.IIS, null))
-                        {
-                            iisConfig.AddModule("AspNetCoreModule", FullIisAspnetcore_path, null);
-                        }
-                    }
+                    PreparePrivateANCMFiles();
                 }
 
                 _InitializeTestMachineCompleted = true;
@@ -354,7 +346,7 @@ namespace AspNetCoreModule.Test.Framework
                 if (_InitializeTestMachineCompleted)
                 {
                     break;
-                }   
+                }
                 else
                 {
                     TestUtility.LogInformation("InitializeTestMachine::InitializeTestMachine() Waiting...");
@@ -412,7 +404,7 @@ namespace AspNetCoreModule.Test.Framework
             }
         }
 
-        private void PreparePrivateANCMFiles(bool isIISReady)
+        private void PreparePrivateANCMFiles()
         {
             var solutionRoot = GetSolutionDirectory();
             string outputPath = string.Empty;
@@ -435,52 +427,42 @@ namespace AspNetCoreModule.Test.Framework
             {
                 throw new ApplicationException("aspnetcore.dll is not available; check if there is any build issue!!!");
             }
-            
-            // create an extra private copy of the private file on IIS directory
-            if (InitializeTestMachine.UsePrivateAspNetCoreFile == true)
-            {
-                bool updateSuccess = false;
 
+            //
+            // NOTE: 
+            // ANCM schema file can't be overwritten here
+            // If there is any schema change, that should be updated with installing setup or manually copied with the new schema file.
+            //
+
+            if (TestFlags.Enabled(TestFlags.UseIISExpress))
+            {
+                //
+                // Initialize 32 bit IisExpressAspnetcore_path
+                //
+                IisExpressAspnetcore_path = Path.Combine(outputPath, "x64", "aspnetcore.dll");
+                IisExpressAspnetcore_X86_path = Path.Combine(outputPath, "Win32", "aspnetcore.dll");
+            }
+            else  // if use Full IIS server
+            { 
+                bool updateSuccess = false;
                 for (int i = 0; i < 3; i++)
                 {
                     updateSuccess = false;
                     try
                     {
-                        //
-                        // NOTE: ANCM schema file can't be overwritten here, if there is any schema change, that should be updated with installing setup
-                        //
-
-                        if (isIISReady)
-                        {
-                            TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
-                            TestUtility.ResetHelper(ResetHelperMode.StopW3svcStartW3svc);
-                            Thread.Sleep(1000);
-                        }
-
-                        string from = Path.Combine(outputPath, "x64", "aspnetcore.dll");
-                        if (isIISReady)
-                        {
-                            // Copy private file on Inetsrv directory
-                            TestUtility.FileCopy(from, FullIisAspnetcore_path, overWrite: true, ignoreExceptionWhileDeletingExistingFile: false);
-                        }
-
-                        // Initialize IisExpressAspnetcore_path
-                        IisExpressAspnetcore_path = from;
+                        TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
+                        TestUtility.ResetHelper(ResetHelperMode.StopW3svcStartW3svc);
+                        Thread.Sleep(1000);
+                        
+                        // Copy private file on Inetsrv directory
+                        TestUtility.FileCopy(Path.Combine(outputPath, "x64", "aspnetcore.dll"), FullIisAspnetcore_path, overWrite: true, ignoreExceptionWhileDeletingExistingFile: false);
                                                 
                         if (TestUtility.IsOSAmd64)
                         {
-                            string from_32bit = Path.Combine(outputPath, "Win32", "aspnetcore.dll");
-
-                            if (isIISReady)
-                            {
-                                // Copy 32bit private file on Inetsrv directory
-                                TestUtility.FileCopy(from_32bit, FullIisAspnetcore_X86_path, overWrite: true, ignoreExceptionWhileDeletingExistingFile: false);
-                            }
-
-                            // Initialize 32 bit IisExpressAspnetcore_path
-                            IisExpressAspnetcore_X86_path = from_32bit;
+                            
+                            // Copy 32bit private file on Inetsrv directory
+                            TestUtility.FileCopy(Path.Combine(outputPath, "Win32", "aspnetcore.dll"), FullIisAspnetcore_X86_path, overWrite: true, ignoreExceptionWhileDeletingExistingFile: false);
                         }
-
                         updateSuccess = true;
                     }
                     catch
@@ -495,6 +477,15 @@ namespace AspNetCoreModule.Test.Framework
                 if (!updateSuccess)
                 {
                     throw new System.ApplicationException("Failed to update aspnetcore.dll");
+                }
+
+                // update applicationhost.config for IIS server with the new private ASPNET Core file name
+                if (TestFlags.Enabled(TestFlags.UseFullIIS))
+                {
+                    using (var iisConfig = new IISConfigUtility(ServerType.IIS, null))
+                    {
+                        iisConfig.AddModule("AspNetCoreModule", FullIisAspnetcore_path, null);
+                    }
                 }
             }
         }

@@ -23,52 +23,31 @@ using Microsoft.AspNetCore.Testing.xunit;
 namespace AspNetCoreModule.Test
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
-    public class ANCMTestTestPriority : Attribute, ITestCondition
+    public class ANCMTestFlags : Attribute, ITestCondition
     {
-        private readonly string _value;
-        public ANCMTestTestPriority(string value)
+        private readonly string _attributeValue;
+        public ANCMTestFlags(string attributeValue)
         {
-            _value = value;
+            _attributeValue = attributeValue.ToString();
         }
 
         public bool IsMet
         {
             get
             {
-                bool result = false;
-                if (_value == ANCMTestFlags.P0 || _value == ANCMTestFlags.P1)
+                if (InitializeTestMachine.GlobalTestFlags.Contains(TestFlags.SkipTest))
                 {
-                    var envValue = InitializeTestMachine.GlobalTestFlags;
-
-                    // split tokens with ';'
-                    var tokens = envValue.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-                    bool testSkipFlagFound = false;
-                    foreach (string token in tokens)
-                    {
-                        if (token.Equals(_value, StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            result = true;
-                        }
-                        if (token.Equals(ANCMTestFlags.TestSkipContext, StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            testSkipFlagFound = true;
-                            result = false;
-                            break;
-                        }
-                    }
-                    if (result == false)
-                    {
-                        if (testSkipFlagFound)
-                        {
-                            AdditionalInfo = ANCMTestFlags.TestSkipContext + " is set";
-                        }
-                        else
-                        {
-                            AdditionalInfo = _value + " is not belong to the given global test context(" + InitializeTestMachine.GlobalTestFlags + ")";
-                        }
-                    }
+                    AdditionalInfo = TestFlags.SkipTest + " is set";
+                    return false;
                 }
-                return result;
+
+                if (_attributeValue == TestFlags.RequireRunAsAdministrator 
+                    && !InitializeTestMachine.GlobalTestFlags.Contains(TestFlags.RunAsAdministrator))
+                { 
+                    AdditionalInfo = _attributeValue + " is not belong to the given global test context(" + InitializeTestMachine.GlobalTestFlags + ")";
+                    return false;
+                }
+                return true;
             }
         }
 
@@ -101,10 +80,8 @@ namespace AspNetCoreModule.Test
 
         public static async Task DoBasicTest(IISConfigUtility.AppPoolBitness appPoolBitness)
         {
-            TestUtility.LogInformation("Test Start");
             using (var testSite = new TestWebSite(appPoolBitness, "DoBasicTest"))
             {
-                TestUtility.LogInformation("Site created");
                 string backendProcessId_old = null;
 
                 DateTime startTime = DateTime.Now;
@@ -122,12 +99,11 @@ namespace AspNetCoreModule.Test
                 {
                     BaseAddress = testSite.AspNetCoreApp.GetUri(),
                     Timeout = TimeSpan.FromSeconds(5),
-                }; 
+                };
 
                 // Invoke given test scenario function
                 await CheckChunkedAsync(httpClient, testSite.AspNetCoreApp);
             }
-            TestUtility.LogInformation("Test End");
         }
 
         public static async Task DoRecycleApplicationAfterBackendProcessBeingKilled(IISConfigUtility.AppPoolBitness appPoolBitness)
@@ -985,7 +961,7 @@ namespace AspNetCoreModule.Test
                     }
 
                     int y = Convert.ToInt32(TestUtility.GetProcessWMIAttributeValue("w3wp.exe", "Handle", userName));
-                    Assert.True(x == y && foundVSJit == false, "worker process is not recycled after 30 seconds");
+                    Assert.True(x == y && !foundVSJit, "worker process is not recycled after 30 seconds");
 
                     string backupPocessIdBackendProcess = await GetResponse(testSite.AspNetCoreApp.GetUri("GetProcessId"), HttpStatusCode.OK);
                     string newPocessIdBackendProcess = backupPocessIdBackendProcess;
@@ -1309,7 +1285,7 @@ namespace AspNetCoreModule.Test
                     string publicKey = iisConfig.GetCertificatePublicKey(thumbPrintForClientAuthentication, @"Cert:\CurrentUser\My");
 
                     bool setPasswordSeperately = false;
-                    if (testSite.IisServerType == ServerType.IISExpress && IISConfigUtility.IsIISInstalled == true)
+                    if (testSite.IisServerType == ServerType.IISExpress)
                     {
                         setPasswordSeperately = true;
                         iisConfig.EnableOneToOneClientCertificateMapping(testSite.SiteName, ".\\" + userName, null, publicKey);
@@ -1921,7 +1897,7 @@ namespace AspNetCoreModule.Test
             TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
 
             // cleanup windbg process incase it is still running
-            if (testResult == false)
+            if (!testResult)
             {
                 TestUtility.RunPowershellScript("stop-process -Name windbg -Force -Confirm:$false 2> $null");
             }
@@ -1971,7 +1947,7 @@ namespace AspNetCoreModule.Test
             // Verify test result
             for (int i = 0; i < 3; i++)
             {
-                if (DoVerifyDataSentAndReceived(websocketClient) == false)
+                if (!DoVerifyDataSentAndReceived(websocketClient))
                 {
                     // retrying after 1 second sleeping
                     Thread.Sleep(1000);
@@ -2197,7 +2173,7 @@ namespace AspNetCoreModule.Test
                         result = reader.ReadToEnd();
                         outputStream.Close();
                     }
-                }                
+                }
             }
             else
             {
