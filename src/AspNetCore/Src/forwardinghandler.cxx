@@ -23,10 +23,12 @@ TRACE_LOG *                 FORWARDING_HANDLER::sm_pTraceLog = NULL;
 PROTOCOL_CONFIG             FORWARDING_HANDLER::sm_ProtocolConfig;
 
 FORWARDING_HANDLER::FORWARDING_HANDLER(
-    __in IHttpContext * pW3Context
+    __in IHttpContext * pW3Context,
+    __in APPLICATION  * pApplication
 ) : m_Signature(FORWARDING_HANDLER_SIGNATURE),
 m_cRefs(1),
 m_pW3Context(pW3Context),
+m_pApplication(pApplication),
 m_pChildRequestContext(NULL),
 m_hRequest(NULL),
 m_fHandleClosedDueToClient(FALSE),
@@ -48,7 +50,6 @@ m_cchHeaders(0),
 m_fWebSocketEnabled(FALSE),
 m_cContentLength(0),
 m_pWebSocket(NULL),
-m_pApplication(NULL),
 m_pAppOfflineHtm(NULL),
 m_fErrorHandled(FALSE),
 m_fWebSocketUpgrade(FALSE),
@@ -120,13 +121,13 @@ FORWARDING_HANDLER::~FORWARDING_HANDLER(
         m_hRequest = NULL;
     }
 
-    if(m_pApplication != NULL)
+    if (m_pApplication != NULL)
     {
         m_pApplication->DereferenceApplication();
         m_pApplication = NULL;
     }
 
-    if(m_pAppOfflineHtm != NULL)
+    if (m_pAppOfflineHtm != NULL)
     {
         m_pAppOfflineHtm->DereferenceAppOfflineHtm();
         m_pAppOfflineHtm = NULL;
@@ -262,7 +263,8 @@ FORWARDING_HANDLER::SetStatusAndHeaders(
             ((*pchEndofHeaderValue == ' ') ||
             (*pchEndofHeaderValue == '\r'));
             pchEndofHeaderValue--)
-        {}
+        {
+        }
 
         //
         // Copy the status description
@@ -324,7 +326,8 @@ FORWARDING_HANDLER::SetStatusAndHeaders(
             (pchEndofHeaderName >= pszHeaders + index) &&
             (*pchEndofHeaderName == ' ');
             pchEndofHeaderName--)
-        {}
+        {
+        }
 
         pchEndofHeaderName++;
 
@@ -344,7 +347,8 @@ FORWARDING_HANDLER::SetStatusAndHeaders(
         for (index = static_cast<DWORD>(pchColon - pszHeaders) + 1;
             pszHeaders[index] == ' ';
             index++)
-        {}
+        {
+        }
 
 
         //
@@ -355,7 +359,8 @@ FORWARDING_HANDLER::SetStatusAndHeaders(
             ((*pchEndofHeaderValue == ' ') ||
             (*pchEndofHeaderValue == '\r'));
             pchEndofHeaderValue--)
-        {}
+        {
+        }
 
         pchEndofHeaderValue++;
 
@@ -1045,6 +1050,7 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
     HTTP_DATA_CHUNK            *pDataChunk = NULL;
 
     DBG_ASSERT(m_RequestStatus == FORWARDER_START);
+    DBG_ASSERT(m_pApplication);
 
     //
     // Take a reference so that object does not go away as a result of
@@ -1052,37 +1058,11 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
     //
     ReferenceForwardingHandler();
 
-    m_pszOriginalHostHeader = pRequest->GetHeader(HttpHeaderHost, &cchHostName);
+    // get application configuation
+    pAspNetCoreConfig = m_pApplication->QueryConfig();
+   
 
-    // read per site aspNetCore configuration.
-    hr = ASPNETCORE_CONFIG::GetConfig(m_pW3Context, &pAspNetCoreConfig);
-    if (FAILED(hr))
-    {
-        // configuration error.
-        goto Failure;
-    }
-
-    // override Protocol related config from aspNetCore config
-    pProtocol->OverrideConfig(pAspNetCoreConfig);
-
-    //
-    // parse original url
-    //
-    if (FAILED(hr = PATH::SplitUrl(pRequest->GetRawHttpRequest()->CookedUrl.pFullUrl,
-        &fSecure,
-        &strDestination,
-        &strUrl)))
-    {
-        goto Failure;
-    }
-
-    if (FAILED(hr = PATH::EscapeAbsPath(pRequest, &struEscapedUrl)))
-    {
-        goto Failure;
-    }
-
-    m_fDoReverseRewriteHeaders = pProtocol->QueryReverseRewriteHeaders();
-
+    // check connection
     IHttpConnection * pClientConnection = m_pW3Context->GetConnection();
     if (pClientConnection == NULL ||
         !pClientConnection->IsConnected())
@@ -1091,26 +1071,7 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
         goto Failure;
     }
 
-    m_cMinBufferLimit = pProtocol->QueryMinResponseBuffer();
-
-    //
-    // Find the application that is supposed to service this request.
-    //
-
-    pApplicationManager = APPLICATION_MANAGER::GetInstance();
-    if (pApplicationManager == NULL)
-    {
-        hr = E_OUTOFMEMORY;
-        goto Failure;
-    }
-
-    hr = pApplicationManager->GetApplication(m_pW3Context,
-        &m_pApplication);
-    if (FAILED(hr))
-    {
-        goto Failure;
-    }
-
+    // check offline
     m_pAppOfflineHtm = m_pApplication->QueryAppOfflineHtm();
     if (m_pAppOfflineHtm != NULL)
     {
@@ -1176,303 +1137,302 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
         goto Finished;
     }
 
-    hr = m_pApplication->GetProcess(m_pW3Context,
-        pAspNetCoreConfig,
-        &pServerProcess);
-    if (FAILED(hr))
+    if (pAspNetCoreConfig->QueryIsInProcess())
     {
-        fProcessStartFailure = TRUE;
-        goto Failure;
-    }
+        // Allow reading and writing to simultaneously
+        ((IHttpContext3*)m_pW3Context)->EnableFullDuplex();
 
-    if (pServerProcess == NULL)
-    {
-        hr = HRESULT_FROM_WIN32(ERROR_CREATE_FAILED);
-        goto Failure;
-    }
+        // Disable response buffering by default, we'll do a write behind buffering in managed code
+        ((IHttpResponse2*)m_pW3Context->GetResponse())->DisableBuffering();
 
-    if (pServerProcess->QueryWinHttpConnection() == NULL)
-    {
-        hr = HRESULT_FROM_WIN32(ERROR_INVALID_HANDLE);
-        goto Failure;
-    }
-
-    hConnect = pServerProcess->QueryWinHttpConnection()->QueryHandle();
-
-    //
-    // Mark request as websocket if upgrade header is present.
-    //
-
-    if (g_fWebSocketSupported)
-    {
-        USHORT cchHeader = 0;
-        PCSTR pszWebSocketHeader = pRequest->GetHeader("Upgrade", &cchHeader);
-
-        if (cchHeader == 9 && _stricmp(pszWebSocketHeader, "websocket") == 0)
+        hr = ((INPROCESS_APPLICATION*)m_pApplication)->LoadManagedApplication();
+        if (FAILED(hr))
         {
-            m_fWebSocketEnabled = TRUE;
+            m_fHasError = TRUE;
+            retVal = RQ_NOTIFICATION_FINISH_REQUEST;
+            // set a  special sub error code indicating loading application error
+            pResponse->SetStatus(500, "Internal Server Error", 19, hr);
+            goto Finished;
         }
+        return  m_pApplication->ExecuteRequest(m_pW3Context);
     }
-
-    hr = CreateWinHttpRequest(pRequest,
-        pProtocol,
-        hConnect,
-        &struEscapedUrl,
-        pAspNetCoreConfig,
-        pServerProcess);
-
-    if (FAILED(hr))
+    else if (pAspNetCoreConfig->QueryIsOutOfProcess())
     {
-        goto Failure;
-    }
+        m_pszOriginalHostHeader = pRequest->GetHeader(HttpHeaderHost, &cchHostName);
 
-    //
-    // Register for connection disconnect notification with http.sys.
-    // N.B. This feature is currently disabled due to synchronization conditions.
-    //
+        // override Protocol related config from aspNetCore config
+        pProtocol->OverrideConfig(pAspNetCoreConfig);
 
-    // disabling this disconnect notification as it causes synchronization/AV issue
-    // will re-enable it in the future after investigation 
+        //
+        // parse original url
+        //
+        if (FAILED(hr = PATH::SplitUrl(pRequest->GetRawHttpRequest()->CookedUrl.pFullUrl,
+            &fSecure,
+            &strDestination,
+            &strUrl)))
+        {
+            goto Failure;
+        }
 
-    //if (g_fAsyncDisconnectAvailable)
-    //{
-    //    m_pDisconnect = static_cast<ASYNC_DISCONNECT_CONTEXT *>(
-    //        pClientConnection->GetModuleContextContainer()->
-    //            GetConnectionModuleContext(g_pModuleId));
-    //    if (m_pDisconnect == NULL)
-    //    {
-    //        m_pDisconnect = new ASYNC_DISCONNECT_CONTEXT;
-    //        if (m_pDisconnect == NULL)
-    //        {
-    //            hr = E_OUTOFMEMORY;
-    //            goto Failure;
-    //        }
+        if (FAILED(hr = PATH::EscapeAbsPath(pRequest, &struEscapedUrl)))
+        {
+            goto Failure;
+        }
 
-    //        hr = pClientConnection->GetModuleContextContainer()->
-    //                SetConnectionModuleContext(m_pDisconnect,
-    //                                           g_pModuleId);
-    //        DBG_ASSERT(hr != HRESULT_FROM_WIN32(ERROR_ALREADY_ASSIGNED));
-    //        if (FAILED(hr))
-    //        {
-    //            goto Failure;
-    //        }
-    //    }
+        m_fDoReverseRewriteHeaders = pProtocol->QueryReverseRewriteHeaders();
+        m_cMinBufferLimit = pProtocol->QueryMinResponseBuffer();
+        hr = ((OUTPROCESS_APPLICATION*)m_pApplication)->GetProcess(
+                                                m_pW3Context,
+                                                &pServerProcess);
+        if (FAILED(hr))
+        {
+            fProcessStartFailure = TRUE;
+            goto Failure;
+        }
 
-    //    //
-    //    // Issue: There is a window of opportunity to miss on the disconnect
-    //    // notification if it happens before the SetHandler() call is made.
-    //    // It is suboptimal for performance, but should functionally be OK.
-    //    //
+        if (pServerProcess == NULL)
+        {
+            hr = HRESULT_FROM_WIN32(ERROR_CREATE_FAILED);
+            goto Failure;
+        }
 
-    //    m_pDisconnect->SetHandler(this);
-    //}
+        if (pServerProcess->QueryWinHttpConnection() == NULL)
+        {
+            hr = HRESULT_FROM_WIN32(ERROR_INVALID_HANDLE);
+            goto Failure;
+        }
 
-    //
-    // Read lock on the WinHTTP handle to protect from server closing
-    // the handle while it is in use.
-    //
+        hConnect = pServerProcess->QueryWinHttpConnection()->QueryHandle();
 
-    AcquireSRWLockShared(&m_RequestLock);
-    fRequestLocked = TRUE;
+        //
+        // Mark request as websocket if upgrade header is present.
+        //
 
-    if (m_hRequest == NULL)
-    {
-        hr = HRESULT_FROM_WIN32(WSAECONNRESET);
-        goto Failure;
-    }
+        if (g_fWebSocketSupported)
+        {
+            USHORT cchHeader = 0;
+            PCSTR pszWebSocketHeader = pRequest->GetHeader("Upgrade", &cchHeader);
 
-    //
-    // Begins normal request handling. Send request to server.
-    //
+            if (cchHeader == 9 && _stricmp(pszWebSocketHeader, "websocket") == 0)
+            {
+                m_fWebSocketEnabled = TRUE;
+            }
+        }
 
-    m_RequestStatus = FORWARDER_SENDING_REQUEST;
+        hr = CreateWinHttpRequest(pRequest,
+            pProtocol,
+            hConnect,
+            &struEscapedUrl,
+            pAspNetCoreConfig,
+            pServerProcess);
 
-    //
-    // Calculate the bytes to receive from the content length.
-    //
+        if (FAILED(hr))
+        {
+            goto Failure;
+        }
 
-    DWORD cbContentLength = 0;
-    PCSTR pszContentLength = pRequest->GetHeader(HttpHeaderContentLength);
-    if (pszContentLength != NULL)
-    {
-        cbContentLength = m_BytesToReceive = atol(pszContentLength);
-        if (m_BytesToReceive == INFINITE)
+        AcquireSRWLockShared(&m_RequestLock);
+        fRequestLocked = TRUE;
+
+        if (m_hRequest == NULL)
         {
             hr = HRESULT_FROM_WIN32(WSAECONNRESET);
             goto Failure;
         }
-    }
-    else if (pRequest->GetHeader(HttpHeaderTransferEncoding) != NULL)
-    {
-        m_BytesToReceive = INFINITE;
-    }
 
-    if (m_fWebSocketEnabled)
-    {
         //
-        // Set the upgrade flag for a websocket request.
+        // Begins normal request handling. Send request to server.
         //
 
-        if (!WinHttpSetOption(m_hRequest,
-            WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET,
-            NULL,
-            0))
+        m_RequestStatus = FORWARDER_SENDING_REQUEST;
+
+        //
+        // Calculate the bytes to receive from the content length.
+        //
+
+        DWORD cbContentLength = 0;
+        PCSTR pszContentLength = pRequest->GetHeader(HttpHeaderContentLength);
+        if (pszContentLength != NULL)
         {
-            hr = HRESULT_FROM_WIN32(GetLastError());
-            goto Finished;
-        }
-    }
-
-    m_cchLastSend = m_cchHeaders;
-
-    //
-    // Remember the handler being processed in the current thread
-    // before staring a WinHTTP operation.
-    //
-
-    DBG_ASSERT(fRequestLocked);
-    DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == NULL);
-    TlsSetValue(g_dwTlsIndex, this);
-    DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
-
-    //
-    // WinHttpSendRequest can operate asynchronously.
-    //
-    // Take reference so that object does not go away as a result of
-    // async completion.
-    //
-    ReferenceForwardingHandler();
-    if (!WinHttpSendRequest(m_hRequest,
-        m_pszHeaders,
-        m_cchHeaders,
-        NULL,
-        0,
-        cbContentLength,
-        reinterpret_cast<DWORD_PTR>(static_cast<PVOID>(this))))
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
-            "FORWARDING_HANDLER::OnExecuteRequestHandler, Send request failed");
-        DereferenceForwardingHandler();
-        goto Failure;
-    }
-
-    //
-    // Async WinHTTP operation is in progress. Release this thread meanwhile,
-    // OnWinHttpCompletion method should resume the work by posting an IIS completion.
-    //
-    retVal = RQ_NOTIFICATION_PENDING;
-    goto Finished;
-
-Failure:
-
-    //
-    // Reset status for consistency.
-    //
-    m_RequestStatus = FORWARDER_DONE;
-    m_fHasError = TRUE;
-
-    pResponse->DisableKernelCache();
-    pResponse->GetRawHttpResponse()->EntityChunkCount = 0;
-    //
-    // Finish the request on failure.
-    //
-    retVal = RQ_NOTIFICATION_FINISH_REQUEST;
-
-    if (hr == HRESULT_FROM_WIN32(WSAECONNRESET))
-    {
-        pResponse->SetStatus(400, "Bad Request", 0, hr);
-        goto Finished;
-    }
-    else if (fProcessStartFailure && !pAspNetCoreConfig->QueryDisableStartUpErrorPage())
-    {
-        PCSTR pszANCMHeader;
-        DWORD cchANCMHeader;
-        BOOL  fCompletionExpected = FALSE;
-
-        if (FAILED(m_pW3Context->GetServerVariable(STR_ANCM_CHILDREQUEST,
-            &pszANCMHeader,
-            &cchANCMHeader))) // first time failure
-        {
-            if (SUCCEEDED(hr = m_pW3Context->CloneContext(
-                CLONE_FLAG_BASICS | CLONE_FLAG_HEADERS | CLONE_FLAG_ENTITY,
-                &m_pChildRequestContext
-            )) &&
-                SUCCEEDED(hr = m_pChildRequestContext->SetServerVariable(
-                    STR_ANCM_CHILDREQUEST,
-                    L"1")) &&
-                SUCCEEDED(hr = m_pW3Context->ExecuteRequest(
-                    TRUE,    // fAsync
-                    m_pChildRequestContext,
-                    EXECUTE_FLAG_DISABLE_CUSTOM_ERROR,    // by pass Custom Error module
-                    NULL, // pHttpUser
-                    &fCompletionExpected)))
+            cbContentLength = m_BytesToReceive = atol(pszContentLength);
+            if (m_BytesToReceive == INFINITE)
             {
-                if (!fCompletionExpected)
-                {
-                    retVal = RQ_NOTIFICATION_CONTINUE;
-                }
-                else
-                {
-                    retVal = RQ_NOTIFICATION_PENDING;
-                }
+                hr = HRESULT_FROM_WIN32(WSAECONNRESET);
+                goto Failure;
+            }
+        }
+        else if (pRequest->GetHeader(HttpHeaderTransferEncoding) != NULL)
+        {
+            m_BytesToReceive = INFINITE;
+        }
+
+        if (m_fWebSocketEnabled)
+        {
+            //
+            // Set the upgrade flag for a websocket request.
+            //
+
+            if (!WinHttpSetOption(m_hRequest,
+                WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET,
+                NULL,
+                0))
+            {
+                hr = HRESULT_FROM_WIN32(GetLastError());
                 goto Finished;
             }
-            //
-            // fail to create child request, fall back to default 502 error 
-            //
+        }
+
+        m_cchLastSend = m_cchHeaders;
+
+        //
+        // Remember the handler being processed in the current thread
+        // before staring a WinHTTP operation.
+        //
+
+        DBG_ASSERT(fRequestLocked);
+        DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == NULL);
+        TlsSetValue(g_dwTlsIndex, this);
+        DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
+
+        //
+        // WinHttpSendRequest can operate asynchronously.
+        //
+        // Take reference so that object does not go away as a result of
+        // async completion.
+        //
+        ReferenceForwardingHandler();
+        if (!WinHttpSendRequest(m_hRequest,
+            m_pszHeaders,
+            m_cchHeaders,
+            NULL,
+            0,
+            cbContentLength,
+            reinterpret_cast<DWORD_PTR>(static_cast<PVOID>(this))))
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
+                "FORWARDING_HANDLER::OnExecuteRequestHandler, Send request failed");
+            DereferenceForwardingHandler();
+            goto Failure;
+        }
+
+        //
+        // Async WinHTTP operation is in progress. Release this thread meanwhile,
+        // OnWinHttpCompletion method should resume the work by posting an IIS completion.
+        //
+        retVal = RQ_NOTIFICATION_PENDING;
+        goto Finished;
+
+    Failure:
+
+        //
+        // Reset status for consistency.
+        //
+        m_RequestStatus = FORWARDER_DONE;
+        m_fHasError = TRUE;
+
+        pResponse->DisableKernelCache();
+        pResponse->GetRawHttpResponse()->EntityChunkCount = 0;
+        //
+        // Finish the request on failure.
+        //
+        retVal = RQ_NOTIFICATION_FINISH_REQUEST;
+
+        if (hr == HRESULT_FROM_WIN32(WSAECONNRESET))
+        {
+            pResponse->SetStatus(400, "Bad Request", 0, hr);
+            goto Finished;
+        }
+        else if (fProcessStartFailure && !pAspNetCoreConfig->QueryDisableStartUpErrorPage())
+        {
+            PCSTR pszANCMHeader;
+            DWORD cchANCMHeader;
+            BOOL  fCompletionExpected = FALSE;
+
+            if (FAILED(m_pW3Context->GetServerVariable(STR_ANCM_CHILDREQUEST,
+                &pszANCMHeader,
+                &cchANCMHeader))) // first time failure
+            {
+                if (SUCCEEDED(hr = m_pW3Context->CloneContext(
+                    CLONE_FLAG_BASICS | CLONE_FLAG_HEADERS | CLONE_FLAG_ENTITY,
+                    &m_pChildRequestContext
+                )) &&
+                    SUCCEEDED(hr = m_pChildRequestContext->SetServerVariable(
+                        STR_ANCM_CHILDREQUEST,
+                        L"1")) &&
+                    SUCCEEDED(hr = m_pW3Context->ExecuteRequest(
+                        TRUE,    // fAsync
+                        m_pChildRequestContext,
+                        EXECUTE_FLAG_DISABLE_CUSTOM_ERROR,    // by pass Custom Error module
+                        NULL, // pHttpUser
+                        &fCompletionExpected)))
+                {
+                    if (!fCompletionExpected)
+                    {
+                        retVal = RQ_NOTIFICATION_CONTINUE;
+                    }
+                    else
+                    {
+                        retVal = RQ_NOTIFICATION_PENDING;
+                    }
+                    goto Finished;
+                }
+                //
+                // fail to create child request, fall back to default 502 error 
+                //
+            }
+            else
+            {
+                if (SUCCEEDED(pApplicationManager->Get502ErrorPage(&pDataChunk)))
+                {
+                    if (FAILED(hr = pResponse->WriteEntityChunkByReference(pDataChunk)))
+                    {
+                        goto Finished;
+                    }
+                    pResponse->SetStatus(502, "Bad Gateway", 5, hr);
+                    pResponse->SetHeader("Content-Type",
+                        "text/html",
+                        (USHORT)strlen("text/html"),
+                        FALSE
+                    );
+                    goto Finished;
+                }
+            }
+        }
+        //
+        // default error behavior
+        //
+        pResponse->SetStatus(502, "Bad Gateway", 3, hr);
+
+        if (hr > HRESULT_FROM_WIN32(WINHTTP_ERROR_BASE) &&
+            hr <= HRESULT_FROM_WIN32(WINHTTP_ERROR_LAST))
+        {
+#pragma prefast (suppress : __WARNING_FUNCTION_NEEDS_REVIEW, "Function and parameters reviewed.")
+            FormatMessage(
+                FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+                g_hWinHttpModule,
+                HRESULT_CODE(hr),
+                0,
+                strDescription.QueryStr(),
+                strDescription.QuerySizeCCH(),
+                NULL);
         }
         else
         {
-            if (SUCCEEDED(pApplicationManager->Get502ErrorPage(&pDataChunk)))
-            {
-                if (FAILED(hr = pResponse->WriteEntityChunkByReference(pDataChunk)))
-                {
-                    goto Finished;
-                }
-                pResponse->SetStatus(502, "Bad Gateway", 5, hr);
-                pResponse->SetHeader("Content-Type",
-                    "text/html",
-                    (USHORT)strlen("text/html"),
-                    FALSE
-                );
-                goto Finished;
-            }
+            LoadString(g_hModule,
+                IDS_SERVER_ERROR,
+                strDescription.QueryStr(),
+                strDescription.QuerySizeCCH());
         }
-    }
-    //
-    // default error behavior
-    //
-    pResponse->SetStatus(502, "Bad Gateway", 3, hr);
 
-    if (hr > HRESULT_FROM_WIN32(WINHTTP_ERROR_BASE) &&
-        hr <= HRESULT_FROM_WIN32(WINHTTP_ERROR_LAST))
-    {
-#pragma prefast (suppress : __WARNING_FUNCTION_NEEDS_REVIEW, "Function and parameters reviewed.")
-        FormatMessage(
-            FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
-            g_hWinHttpModule,
-            HRESULT_CODE(hr),
-            0,
-            strDescription.QueryStr(),
-            strDescription.QuerySizeCCH(),
-            NULL);
-    }
-    else
-    {
-        LoadString(g_hModule,
-            IDS_SERVER_ERROR,
-            strDescription.QueryStr(),
-            strDescription.QuerySizeCCH());
-    }
-
-    strDescription.SyncWithBuffer();
-    if (strDescription.QueryCCH() != 0)
-    {
-        pResponse->SetErrorDescription(
-            strDescription.QueryStr(),
-            strDescription.QueryCCH(),
-            FALSE);
+        strDescription.SyncWithBuffer();
+        if (strDescription.QueryCCH() != 0)
+        {
+            pResponse->SetErrorDescription(
+                strDescription.QueryStr(),
+                strDescription.QueryCCH(),
+                FALSE);
+        }
     }
 
 Finished:
@@ -1511,7 +1471,6 @@ Finished:
     //
     // Do not use this object after dereferencing it, it may be gone.
     //
-
     return retVal;
 }
 
@@ -1564,238 +1523,241 @@ REQUEST_NOTIFICATION_STATUS
             reinterpret_cast<PVOID>(static_cast<DWORD_PTR>(hrCompletionStatus)));
     }
 
-    //
-    // Take a reference so that object does not go away as a result of
-    // async completion.
-    //
-    // Read lock on the WinHTTP handle to protect from server closing
-    // the handle while it is in use.
-    //
-    ReferenceForwardingHandler();
-
-    DBG_ASSERT(m_pW3Context != NULL);
-    __analysis_assume(m_pW3Context != NULL);
-
-    //
-    // OnAsyncCompletion can be called on a Winhttp io completion thread.
-    // Hence we need to check the TLS before we acquire the shared lock.
-    //
-
-    if (TlsGetValue(g_dwTlsIndex) != this)
+    if (m_pApplication->QueryConfig()->QueryIsOutOfProcess())
     {
-        DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == NULL);
-        AcquireSRWLockShared(&m_RequestLock);
-        TlsSetValue(g_dwTlsIndex, this);
-        DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
+        //
+        // Take a reference so that object does not go away as a result of
+        // async completion.
+        //
+        // Read lock on the WinHTTP handle to protect from server closing
+        // the handle while it is in use.
+        //
+        ReferenceForwardingHandler();
 
-        fLocked = TRUE;
-    }
+        DBG_ASSERT(m_pW3Context != NULL);
+        __analysis_assume(m_pW3Context != NULL);
 
-    if (m_hRequest == NULL)
-    {
-        if (m_RequestStatus == FORWARDER_DONE && m_fFinishRequest)
+        //
+        // OnAsyncCompletion can be called on a Winhttp io completion thread.
+        // Hence we need to check the TLS before we acquire the shared lock.
+        //
+
+        if (TlsGetValue(g_dwTlsIndex) != this)
         {
-            if (m_fHasError)
+            DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == NULL);
+            AcquireSRWLockShared(&m_RequestLock);
+            TlsSetValue(g_dwTlsIndex, this);
+            DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
+
+            fLocked = TRUE;
+        }
+
+        if (m_hRequest == NULL)
+        {
+            if (m_RequestStatus == FORWARDER_DONE && m_fFinishRequest)
             {
-                retVal = RQ_NOTIFICATION_FINISH_REQUEST;
+                if (m_fHasError)
+                {
+                    retVal = RQ_NOTIFICATION_FINISH_REQUEST;
+                }
+                goto Finished;
             }
+
+            fClientError = m_fHandleClosedDueToClient;
+            goto Failure;
+        }
+        else if (m_RequestStatus == FORWARDER_RECEIVED_WEBSOCKET_RESPONSE)
+        {
+            DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
+                "FORWARDING_HANDLER::OnAsyncCompletion, Send completed for 101 response");
+            //
+            // This should be the write completion of the 101 response.
+            //
+
+            m_pWebSocket = new WEBSOCKET_HANDLER();
+            if (m_pWebSocket == NULL)
+            {
+                hr = E_OUTOFMEMORY;
+                goto Finished;
+            }
+
+            hr = m_pWebSocket->ProcessRequest(this, m_pW3Context, m_hRequest);
+            if (FAILED(hr))
+            {
+                goto Failure;
+            }
+
+            //
+            // WebSocket upgrade is successful. Close the WinHttpRequest Handle
+            //
+            WinHttpSetStatusCallback(m_hRequest,
+                FORWARDING_HANDLER::OnWinHttpCompletion,
+                WINHTTP_CALLBACK_FLAG_HANDLES,
+                NULL);
+            fClosed = WinHttpCloseHandle(m_hRequest);
+            DBG_ASSERT(fClosed);
+            if (fClosed)
+            {
+                m_fWebSocketUpgrade = TRUE;
+                m_hRequest = NULL;
+            }
+            else
+            {
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                goto Failure;
+            }
+            retVal = RQ_NOTIFICATION_PENDING;
+            goto Finished;
+        }
+        else if (m_RequestStatus == FORWARDER_RESET_CONNECTION)
+        {
+            hr = HRESULT_FROM_WIN32(ERROR_WINHTTP_INVALID_SERVER_RESPONSE);
+            goto Failure;
+
+        }
+
+        //
+        // Begins normal completion handling. There is already a shared acquired
+        // for protecting the WinHTTP request handle from being closed.
+        //
+        switch (m_RequestStatus)
+        {
+        case FORWARDER_RECEIVING_RESPONSE:
+
+            //
+            // This is a completion of a write (send) to http.sys, abort in case of
+            // failure, if there is more data available from WinHTTP, read it
+            // or else ask if there is more.
+            //
+            if (FAILED(hrCompletionStatus))
+            {
+                hr = hrCompletionStatus;
+                fClientError = TRUE;
+                goto Failure;
+            }
+
+            hr = OnReceivingResponse();
+            if (FAILED(hr))
+            {
+                goto Failure;
+            }
+            break;
+
+        case FORWARDER_SENDING_REQUEST:
+
+            hr = OnSendingRequest(cbCompletion,
+                hrCompletionStatus,
+                &fClientError);
+            if (FAILED(hr))
+            {
+                goto Failure;
+            }
+            break;
+
+        default:
+            DBG_ASSERT(m_RequestStatus == FORWARDER_DONE);
             goto Finished;
         }
 
-        fClientError = m_fHandleClosedDueToClient;
-        goto Failure;
-    }
-    else if (m_RequestStatus == FORWARDER_RECEIVED_WEBSOCKET_RESPONSE)
-    {
-        DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
-            "FORWARDING_HANDLER::OnAsyncCompletion, Send completed for 101 response");
         //
-        // This should be the write completion of the 101 response.
+        // Either OnReceivingResponse or OnSendingRequest initiated an
+        // async WinHTTP operation, release this thread meanwhile,
+        // OnWinHttpCompletion method should resume the work by posting an IIS completion.
         //
-
-        m_pWebSocket = new WEBSOCKET_HANDLER();
-        if (m_pWebSocket == NULL)
-        {
-            hr = E_OUTOFMEMORY;
-            goto Finished;
-        }
-
-        hr = m_pWebSocket->ProcessRequest(this, m_pW3Context, m_hRequest);
-        if (FAILED(hr))
-        {
-            goto Failure;
-        }
-
-        //
-        // WebSocket upgrade is successful. Close the WinHttpRequest Handle
-        //
-        WinHttpSetStatusCallback(m_hRequest,
-            FORWARDING_HANDLER::OnWinHttpCompletion,
-            WINHTTP_CALLBACK_FLAG_HANDLES,
-            NULL);
-        fClosed = WinHttpCloseHandle(m_hRequest);
-        DBG_ASSERT(fClosed);
-        if (fClosed)
-        {
-            m_fWebSocketUpgrade = TRUE;
-            m_hRequest = NULL;
-        }
-        else
-        {
-            hr = HRESULT_FROM_WIN32(GetLastError());
-            goto Failure;
-        }
         retVal = RQ_NOTIFICATION_PENDING;
         goto Finished;
-    }
-    else if (m_RequestStatus == FORWARDER_RESET_CONNECTION)
-    {
-        hr = HRESULT_FROM_WIN32(ERROR_WINHTTP_INVALID_SERVER_RESPONSE);
-        goto Failure;
 
-    }
-
-    //
-    // Begins normal completion handling. There is already a shared acquired
-    // for protecting the WinHTTP request handle from being closed.
-    //
-    switch (m_RequestStatus)
-    {
-    case FORWARDER_RECEIVING_RESPONSE:
+    Failure:
 
         //
-        // This is a completion of a write (send) to http.sys, abort in case of
-        // failure, if there is more data available from WinHTTP, read it
-        // or else ask if there is more.
+        // Reset status for consistency.
         //
-        if (FAILED(hrCompletionStatus))
+        m_RequestStatus = FORWARDER_DONE;
+        m_fHasError = TRUE;
+        //
+        // Do the right thing based on where the error originated from.
+        //
+        IHttpResponse *pResponse = m_pW3Context->GetResponse();
+        pResponse->DisableKernelCache();
+        pResponse->GetRawHttpResponse()->EntityChunkCount = 0;
+
+        // double check to set right status code
+        if (!m_pW3Context->GetConnection()->IsConnected())
         {
-            hr = hrCompletionStatus;
             fClientError = TRUE;
-            goto Failure;
         }
 
-        hr = OnReceivingResponse();
-        if (FAILED(hr))
+        if (fClientError)
         {
-            goto Failure;
-        }
-        break;
-
-    case FORWARDER_SENDING_REQUEST:
-
-        hr = OnSendingRequest(cbCompletion,
-            hrCompletionStatus,
-            &fClientError);
-        if (FAILED(hr))
-        {
-            goto Failure;
-        }
-        break;
-
-    default:
-        DBG_ASSERT(m_RequestStatus == FORWARDER_DONE);
-        goto Finished;
-    }
-
-    //
-    // Either OnReceivingResponse or OnSendingRequest initiated an
-    // async WinHTTP operation, release this thread meanwhile,
-    // OnWinHttpCompletion method should resume the work by posting an IIS completion.
-    //
-    retVal = RQ_NOTIFICATION_PENDING;
-    goto Finished;
-
-Failure:
-
-    //
-    // Reset status for consistency.
-    //
-    m_RequestStatus = FORWARDER_DONE;
-    m_fHasError = TRUE;
-    //
-    // Do the right thing based on where the error originated from.
-    //
-    IHttpResponse *pResponse = m_pW3Context->GetResponse();
-    pResponse->DisableKernelCache();
-    pResponse->GetRawHttpResponse()->EntityChunkCount = 0;
-
-    // double check to set right status code
-    if (!m_pW3Context->GetConnection()->IsConnected())
-    {
-        fClientError = TRUE;
-    }
-
-    if (fClientError)
-    {
-        if (!m_fResponseHeadersReceivedAndSet)
-        {
-            pResponse->SetStatus(400, "Bad Request", 0, HRESULT_FROM_WIN32(WSAECONNRESET));
+            if (!m_fResponseHeadersReceivedAndSet)
+            {
+                pResponse->SetStatus(400, "Bad Request", 0, HRESULT_FROM_WIN32(WSAECONNRESET));
+            }
+            else
+            {
+                //
+                // Response headers from origin server were
+                // already received and set for the current response.
+                // Honor the response status.
+                //
+            }
         }
         else
         {
-            //
-            // Response headers from origin server were
-            // already received and set for the current response.
-            // Honor the response status.
-            //
-        }
-    }
-    else
-    {
-        STACK_STRU(strDescription, 128);
+            STACK_STRU(strDescription, 128);
 
-        pResponse->SetStatus(502, "Bad Gateway", 3, hr);
+            pResponse->SetStatus(502, "Bad Gateway", 3, hr);
 
-        if (hr > HRESULT_FROM_WIN32(WINHTTP_ERROR_BASE) &&
-            hr <= HRESULT_FROM_WIN32(WINHTTP_ERROR_LAST))
-        {
+            if (hr > HRESULT_FROM_WIN32(WINHTTP_ERROR_BASE) &&
+                hr <= HRESULT_FROM_WIN32(WINHTTP_ERROR_LAST))
+            {
 #pragma prefast (suppress : __WARNING_FUNCTION_NEEDS_REVIEW, "Function and parameters reviewed.")
-            FormatMessage(
-                FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
-                g_hWinHttpModule,
-                HRESULT_CODE(hr),
-                0,
-                strDescription.QueryStr(),
-                strDescription.QuerySizeCCH(),
-                NULL);
-        }
-        else
-        {
-            LoadString(g_hModule,
-                IDS_SERVER_ERROR,
-                strDescription.QueryStr(),
-                strDescription.QuerySizeCCH());
-        }
-        (VOID)strDescription.SyncWithBuffer();
-        if (strDescription.QueryCCH() != 0)
-        {
-            pResponse->SetErrorDescription(
-                strDescription.QueryStr(),
-                strDescription.QueryCCH(),
-                FALSE);
+                FormatMessage(
+                    FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+                    g_hWinHttpModule,
+                    HRESULT_CODE(hr),
+                    0,
+                    strDescription.QueryStr(),
+                    strDescription.QuerySizeCCH(),
+                    NULL);
+            }
+            else
+            {
+                LoadString(g_hModule,
+                    IDS_SERVER_ERROR,
+                    strDescription.QueryStr(),
+                    strDescription.QuerySizeCCH());
+            }
+            (VOID)strDescription.SyncWithBuffer();
+            if (strDescription.QueryCCH() != 0)
+            {
+                pResponse->SetErrorDescription(
+                    strDescription.QueryStr(),
+                    strDescription.QueryCCH(),
+                    FALSE);
+            }
+
+            if (hr == HRESULT_FROM_WIN32(ERROR_WINHTTP_INVALID_SERVER_RESPONSE))
+            {
+                pResponse->ResetConnection();
+                goto Finished;
+            }
         }
 
-        if (hr == HRESULT_FROM_WIN32(ERROR_WINHTTP_INVALID_SERVER_RESPONSE))
+        //
+        // Finish the request on failure.
+        // Let IIS pipeline continue only after receiving handle close callback
+        // from WinHttp. This ensures no more callback from WinHttp
+        //
+        if (m_hRequest != NULL)
         {
-            pResponse->ResetConnection();
-            goto Finished;
+            if (WinHttpCloseHandle(m_hRequest))
+            {
+                m_hRequest = NULL;
+            }
         }
+        retVal = RQ_NOTIFICATION_PENDING;
     }
-
-    //
-    // Finish the request on failure.
-    // Let IIS pipeline continue only after receiving handle close callback
-    // from WinHttp. This ensures no more callback from WinHttp
-    //
-    if (m_hRequest != NULL)
-    {
-        if (WinHttpCloseHandle(m_hRequest))
-        {
-            m_hRequest = NULL;
-        }
-    }
-    retVal = RQ_NOTIFICATION_PENDING;
 
 Finished:
 
@@ -1849,12 +1811,12 @@ FORWARDING_HANDLER::OnSendingRequest(
             m_BytesToReceive = 0;
             m_cchLastSend = 5; // "0\r\n\r\n"
 
-                               //
-                               // WinHttpWriteData can operate asynchronously.
-                               //
-                               // Take reference so that object does not go away as a result of
-                               // async completion.
-                               //
+            //
+            // WinHttpWriteData can operate asynchronously.
+            //
+            // Take reference so that object does not go away as a result of
+            // async completion.
+            //
             ReferenceForwardingHandler();
             if (!WinHttpWriteData(m_hRequest,
                 "0\r\n\r\n",
@@ -2134,7 +2096,7 @@ None
 #endif // DEBUG
 
     fEndRequest = (dwInternetStatus == WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING);
-    if (!fEndRequest) 
+    if (!fEndRequest)
     {
         if (!m_pW3Context->GetConnection()->IsConnected())
         {
@@ -2169,7 +2131,7 @@ None
         fDerefForwardingHandler = FALSE;
         fAnotherCompletionExpected = TRUE;
 
-        if(m_pWebSocket == NULL)
+        if (m_pWebSocket == NULL)
         {
             goto Finished;
         }
@@ -2194,8 +2156,8 @@ None
 
         case WINHTTP_CALLBACK_STATUS_REQUEST_ERROR:
             m_pWebSocket->OnWinHttpIoError(
-                 (WINHTTP_WEB_SOCKET_ASYNC_RESULT*)lpvStatusInformation
-                );
+                (WINHTTP_WEB_SOCKET_ASYNC_RESULT*)lpvStatusInformation
+            );
             break;
         }
         goto Finished;
@@ -2255,7 +2217,7 @@ None
 
     case WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING:
         if (m_RequestStatus != FORWARDER_DONE)
-        { 
+        {
             hr = ERROR_CONNECTION_ABORTED;
             fClientError = m_fHandleClosedDueToClient;
         }
@@ -2400,7 +2362,7 @@ Finished:
                 FORWARDING_HANDLER::OnWinHttpCompletion,
                 WINHTTP_CALLBACK_FLAG_HANDLES,
                 NULL);
-            if(WinHttpCloseHandle(m_hRequest))
+            if (WinHttpCloseHandle(m_hRequest))
             {
                 m_hRequest = NULL;
             }
@@ -2414,7 +2376,7 @@ Finished:
             m_pWebSocket->TerminateRequest();
         }
 
-        if(fEndRequest)
+        if (fEndRequest)
         {
             // only postCompletion after WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING
             // so that no further WinHttp callback will be called
@@ -2432,7 +2394,7 @@ Finished:
         // IndicateCompletion to allow cleaning up the TLS before thread reuse.
         //
 
-            m_pW3Context->PostCompletion(0);
+        m_pW3Context->PostCompletion(0);
 
         //
         // No code executed after posting the completion.
@@ -3111,7 +3073,7 @@ FORWARDING_HANDLER::TerminateRequest(
             FORWARDING_HANDLER::OnWinHttpCompletion,
             WINHTTP_CALLBACK_FLAG_HANDLES,
             NULL);
-        if (WinHttpCloseHandle(m_hRequest)) 
+        if (WinHttpCloseHandle(m_hRequest))
         {
             m_hRequest = NULL;
         }

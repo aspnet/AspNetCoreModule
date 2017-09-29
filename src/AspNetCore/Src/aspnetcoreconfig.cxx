@@ -5,23 +5,17 @@
 
 ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
 {
-    //
-    // the destructor will be called once IIS decides to recycle the module context (i.e., application)
-    //
-    // shutting down core application first
-    if (ASPNETCORE_APPLICATION::GetInstance() != NULL) {
-        ASPNETCORE_APPLICATION::GetInstance()->Shutdown();
-    }
     m_struApplicationFullPath.Reset();
-    if (!m_struApplication.IsEmpty())
-    {
-        APPLICATION_MANAGER::GetInstance()->RecycleApplication(m_struApplication.QueryStr());
-    }
     if (m_pEnvironmentVariables != NULL)
     {
         m_pEnvironmentVariables->Clear();
         delete m_pEnvironmentVariables;
         m_pEnvironmentVariables = NULL;
+    }
+
+    if (!m_struApplication.IsEmpty())
+    {
+        APPLICATION_MANAGER::GetInstance()->RecycleApplication(m_struApplication.QueryStr());
     }
 }
 

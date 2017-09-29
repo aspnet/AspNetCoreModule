@@ -8,6 +8,7 @@ APPLICATION_MANAGER* APPLICATION_MANAGER::sm_pApplicationManager = NULL;
 HRESULT
 APPLICATION_MANAGER::GetApplication(
     _In_ IHttpContext*         pContext,
+    _In_ ASPNETCORE_CONFIG*    pConfig,
     _Out_ APPLICATION **       ppApplication
 )
 {
@@ -21,6 +22,7 @@ APPLICATION_MANAGER::GetApplication(
     
     DBG_ASSERT(pContext != NULL);
     DBG_ASSERT(pContext->GetApplication() != NULL);
+
     pszApplicationId = pContext->GetApplication()->GetApplicationId();
 
     hr = key.Initialize(pszApplicationId);
@@ -33,8 +35,22 @@ APPLICATION_MANAGER::GetApplication(
 
     if (*ppApplication == NULL)
     {
+        if (pConfig->QueryIsInProcess())
+        {
+            if (m_pApplicationHash->Count() >0)
+            {
+                // ? better error code and better error page
+                hr = ERROR_APP_INIT_FAILURE;
+                goto Finished;
+            }
+            pApplication = new INPROCESS_APPLICATION();
+        }
+        // though we current ly only support two models, let still do else if
+        else if(pConfig->QueryIsOutOfProcess())
+        {
+            pApplication = new OUTPROCESS_APPLICATION();
+        }
 
-        pApplication = new APPLICATION();
         if (pApplication == NULL)
         {
             hr = E_OUTOFMEMORY;
@@ -53,13 +69,43 @@ APPLICATION_MANAGER::GetApplication(
             goto Finished;
         }
 
-        hr = pApplication->Initialize(this, pszApplicationId, pContext->GetApplication()->GetApplicationPhysicalPath());
+        // hosting model check. We do not allow mixed scenario for now
+        // could be changed in the future
+        if (m_hostingModel != HOSTING_UNKNOWN)
+        {
+            // todo: use enum instead of bool for hosting model
+            if (((m_hostingModel == HOSTING_IN_PROCESS) && pConfig->QueryIsOutOfProcess())
+                || (m_hostingModel == HOSTING_IN_PROCESS && pConfig->QueryIsInProcess()))
+            {
+                // hosting model does not match, error out
+                hr = ERROR_APP_INIT_FAILURE;
+                goto Finished;
+            }
+        }
+
+        hr = pApplication->Initialize(this, pConfig);
         if (FAILED(hr))
         {
             goto Finished;
         }
 
         hr = m_pApplicationHash->InsertRecord( pApplication );
+
+        //
+        // first application will decide which hosting model allowed by this process
+        //
+        if (m_hostingModel == HOSTING_UNKNOWN)
+        {
+            // todo: use enum instead of bool for hosting model
+            if (pConfig->QueryIsInProcess())
+            {
+                m_hostingModel = HOSTING_IN_PROCESS;
+            }
+            else
+            {
+                m_hostingModel = HOSTING_OUT_PROCESS;
+            }
+        }
 
         if (FAILED(hr))
         {
@@ -86,11 +132,11 @@ Finished:
             pApplication->DereferenceApplication();
             pApplication = NULL;
         }
+        //todo: log the error to windows event log
     }
 
     return hr;
 }
-
 
 HRESULT
 APPLICATION_MANAGER::RecycleApplication(

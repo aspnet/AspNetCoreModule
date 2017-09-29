@@ -4,6 +4,15 @@
 #pragma once
 
 //
+//todo: replace the boolen with enum
+enum APP_HOSTING_MODEL
+{
+    HOSTING_UNKNOWN,
+    HOSTING_IN_PROCESS,
+    HOSTING_OUT_PROCESS
+};
+
+//
 // The key used for hash-table lookups, consists of the port on which the http process is created.
 //
 class APPLICATION_KEY
@@ -141,14 +150,15 @@ Finished:
 };
 
 class APPLICATION_MANAGER;
+class PROTOCOL_CONFIG;
 
 class APPLICATION
 {
 public:
 
-    APPLICATION() : m_pProcessManager(NULL), m_pApplicationManager(NULL), m_cRefs(1), 
-        m_fAppOfflineFound(FALSE), m_pAppOfflineHtm(NULL), m_pFileWatcherEntry(NULL),
-        m_pAspNetCoreApplication(NULL)
+    APPLICATION() : m_pApplicationManager(NULL), m_cRefs(1),
+        m_fAppOfflineFound(FALSE), m_pAppOfflineHtm(NULL),
+        m_pFileWatcherEntry(NULL), m_pConfiguration(NULL)
     {
         InitializeSRWLock(&m_srwLock);
     }
@@ -159,92 +169,18 @@ public:
         return &m_applicationKey;
     }
 
+    virtual
+    ~APPLICATION();
+
+    virtual
+    HRESULT
+    Initialize(
+        _In_ APPLICATION_MANAGER *pApplicationManager,
+        _In_ ASPNETCORE_CONFIG   *pConfiguration) = 0;
+
+    virtual
     VOID
-    SetAppOfflineFound(
-        BOOL found
-    )
-    {
-        m_fAppOfflineFound = found;
-    }
-
-    BOOL
-    AppOfflineFound()
-    {
-        return m_fAppOfflineFound;
-    }
-
-    HRESULT
-    GetProcess(
-        _In_    IHttpContext          *context,
-        _In_    ASPNETCORE_CONFIG     *pConfig,
-        _Out_   SERVER_PROCESS       **ppServerProcess
-    )
-    {
-        return m_pProcessManager->GetProcess( context, pConfig, ppServerProcess );
-    }
-
-    HRESULT
-    GetAspNetCoreApplication(
-        _In_    ASPNETCORE_CONFIG       *pConfig,
-        _In_    IHttpContext            *context,
-        _Out_   ASPNETCORE_APPLICATION  **ppAspNetCoreApplication
-    )
-    {
-        HRESULT hr = S_OK;
-        BOOL fLockTaken = FALSE;
-        ASPNETCORE_APPLICATION *application;
-        IHttpApplication *pHttpApplication = context->GetApplication();
-
-        if (m_pAspNetCoreApplication == NULL)
-        {
-            AcquireSRWLockExclusive(&m_srwLock);
-            fLockTaken = TRUE;
-
-            if (m_pAspNetCoreApplication == NULL)
-            {
-                application = new ASPNETCORE_APPLICATION();
-                if (application == NULL) {
-                    hr = E_OUTOFMEMORY;
-                    goto Finished;
-                }
-
-                hr = application->Initialize(pConfig);
-                if (FAILED(hr))
-                {
-                    goto Finished;
-                }
-
-                // Assign after initialization
-                m_pAspNetCoreApplication = application;
-            }
-        }
-        else if (pHttpApplication->GetModuleContextContainer()->GetModuleContext(g_pModuleId) == NULL)
-        {
-            // This means that we are trying to load a second application
-            // TODO set a flag saying that the whole app pool is invalid '
-            // (including the running application) and return 500 every request.
-            hr = E_FAIL;
-            goto Finished;
-        }
-
-        *ppAspNetCoreApplication = m_pAspNetCoreApplication;
-
-    Finished:
-        if (fLockTaken)
-        {
-            ReleaseSRWLockExclusive(&m_srwLock);
-        }
-
-        return hr;
-    }
-
-    HRESULT
-    Recycle()
-    {
-        HRESULT hr = S_OK;
-        m_pProcessManager->ShutdownAllProcesses();
-        return hr;
-    }
+    Recycle() = 0;
 
     VOID
     ReferenceApplication() const
@@ -266,14 +202,23 @@ public:
         return m_pAppOfflineHtm;
     }
 
-    ~APPLICATION();
+    VOID
+    SetAppOfflineFound(
+        BOOL found
+    )
+    {
+        m_fAppOfflineFound = found;
+    }
 
-    HRESULT
-    Initialize(
-        _In_ APPLICATION_MANAGER *pApplicationManager,
-        _In_ LPCWSTR  pszApplication,
-        _In_ LPCWSTR  pszPhysicalPath
-    );
+    BOOL
+    AppOfflineFound()
+    {
+        return m_fAppOfflineFound;
+    }
+
+    virtual
+    VOID
+    OnAppOfflineHandleChange() = 0;
 
     VOID
     UpdateAppOfflineFileHandle();
@@ -281,18 +226,30 @@ public:
     HRESULT
     StartMonitoringAppOffline();
 
-private:
+    ASPNETCORE_CONFIG*
+    QueryConfig()
+    {
+        return m_pConfiguration;
+    }
 
-    STRU                    m_strAppPhysicalPath;
+    virtual
+    REQUEST_NOTIFICATION_STATUS
+    ExecuteRequest(
+        _In_ IHttpContext* pHttpContext
+    ) = 0;
+
+protected:
+
     mutable LONG            m_cRefs;
     APPLICATION_KEY         m_applicationKey;
-    PROCESS_MANAGER*        m_pProcessManager;
     APPLICATION_MANAGER    *m_pApplicationManager;
     BOOL                    m_fAppOfflineFound;
     APP_OFFLINE_HTM        *m_pAppOfflineHtm;
     FILE_WATCHER_ENTRY     *m_pFileWatcherEntry;
-    ASPNETCORE_APPLICATION *m_pAspNetCoreApplication;
+    ASPNETCORE_CONFIG      *m_pConfiguration;
+    PROTOCOL_CONFIG        *m_pProtocal;
     SRWLOCK                 m_srwLock;
+
 };
 
 class APPLICATION_HASH :

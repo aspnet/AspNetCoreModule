@@ -201,7 +201,9 @@ private:
     //    
     ASPNETCORE_CONFIG():
         m_fStdoutLogEnabled( FALSE ),
-        m_pEnvironmentVariables( NULL )
+        m_pEnvironmentVariables( NULL ),
+        m_fIsInProcess( FALSE ),
+        m_fIsOutOfProcess( FALSE )
     {
     }
 

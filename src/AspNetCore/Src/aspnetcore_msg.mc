@@ -67,6 +67,12 @@ Language=English
 %1
 .
 
+Messageid=1007
+SymbolicName=ASPNETCORE_EVENT_LOAD_CLR_FALIURE
+Language=English
+%1
+.
+
 ;
 ;#endif     // _ASPNETCORE_MODULE_MSG_H_
 ;
