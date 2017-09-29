@@ -1047,6 +1047,7 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
     USHORT                      cchHostName = 0;
     BOOL                        fSecure = FALSE;
     BOOL                        fProcessStartFailure = FALSE;
+    BOOL                        fInternalError = FALSE;
     HTTP_DATA_CHUNK            *pDataChunk = NULL;
 
     DBG_ASSERT(m_RequestStatus == FORWARDER_START);
@@ -1137,7 +1138,9 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
         goto Finished;
     }
 
-    if (pAspNetCoreConfig->QueryIsInProcess())
+    switch (pAspNetCoreConfig->QueryHostingModel())
+    {
+    case HOSTING_IN_PROCESS:
     {
         // Allow reading and writing to simultaneously
         ((IHttpContext3*)m_pW3Context)->EnableFullDuplex();
@@ -1148,15 +1151,12 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
         hr = ((INPROCESS_APPLICATION*)m_pApplication)->LoadManagedApplication();
         if (FAILED(hr))
         {
-            m_fHasError = TRUE;
-            retVal = RQ_NOTIFICATION_FINISH_REQUEST;
-            // set a  special sub error code indicating loading application error
-            pResponse->SetStatus(500, "Internal Server Error", 19, hr);
-            goto Finished;
+            fInternalError = TRUE;
+            goto Failure;
         }
         return  m_pApplication->ExecuteRequest(m_pW3Context);
     }
-    else if (pAspNetCoreConfig->QueryIsOutOfProcess())
+    case HOSTING_OUT_PROCESS:
     {
         m_pszOriginalHostHeader = pRequest->GetHeader(HttpHeaderHost, &cchHostName);
 
@@ -1182,8 +1182,8 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
         m_fDoReverseRewriteHeaders = pProtocol->QueryReverseRewriteHeaders();
         m_cMinBufferLimit = pProtocol->QueryMinResponseBuffer();
         hr = ((OUTPROCESS_APPLICATION*)m_pApplication)->GetProcess(
-                                                m_pW3Context,
-                                                &pServerProcess);
+            m_pW3Context,
+            &pServerProcess);
         if (FAILED(hr))
         {
             fProcessStartFailure = TRUE;
@@ -1323,120 +1323,131 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
         retVal = RQ_NOTIFICATION_PENDING;
         goto Finished;
 
-    Failure:
+    }
 
-        //
-        // Reset status for consistency.
-        //
-        m_RequestStatus = FORWARDER_DONE;
-        m_fHasError = TRUE;
+    default:
+        hr = E_UNEXPECTED;
+        fInternalError = TRUE;
+        goto Failure;
+    }
 
-        pResponse->DisableKernelCache();
-        pResponse->GetRawHttpResponse()->EntityChunkCount = 0;
-        //
-        // Finish the request on failure.
-        //
-        retVal = RQ_NOTIFICATION_FINISH_REQUEST;
+Failure:
+    //
+    // Reset status for consistency.
+    //
+    m_RequestStatus = FORWARDER_DONE;
+    m_fHasError = TRUE;
 
-        if (hr == HRESULT_FROM_WIN32(WSAECONNRESET))
+    pResponse->DisableKernelCache();
+    pResponse->GetRawHttpResponse()->EntityChunkCount = 0;
+    //
+    // Finish the request on failure.
+    //
+    retVal = RQ_NOTIFICATION_FINISH_REQUEST;
+
+    if (hr == HRESULT_FROM_WIN32(WSAECONNRESET))
+    {
+        pResponse->SetStatus(400, "Bad Request", 0, hr);
+        goto Finished;
+    }
+    else if (fInternalError)
+    {
+        // set a  special sub error code indicating loading application error
+        pResponse->SetStatus(500, "Internal Server Error", 19, hr);
+        goto Finished;
+    }
+    else if (fProcessStartFailure && !pAspNetCoreConfig->QueryDisableStartUpErrorPage())
+    {
+        PCSTR pszANCMHeader;
+        DWORD cchANCMHeader;
+        BOOL  fCompletionExpected = FALSE;
+
+        if (FAILED(m_pW3Context->GetServerVariable(STR_ANCM_CHILDREQUEST,
+            &pszANCMHeader,
+            &cchANCMHeader))) // first time failure
         {
-            pResponse->SetStatus(400, "Bad Request", 0, hr);
-            goto Finished;
-        }
-        else if (fProcessStartFailure && !pAspNetCoreConfig->QueryDisableStartUpErrorPage())
-        {
-            PCSTR pszANCMHeader;
-            DWORD cchANCMHeader;
-            BOOL  fCompletionExpected = FALSE;
-
-            if (FAILED(m_pW3Context->GetServerVariable(STR_ANCM_CHILDREQUEST,
-                &pszANCMHeader,
-                &cchANCMHeader))) // first time failure
+            if (SUCCEEDED(hr = m_pW3Context->CloneContext(
+                CLONE_FLAG_BASICS | CLONE_FLAG_HEADERS | CLONE_FLAG_ENTITY,
+                &m_pChildRequestContext
+            )) &&
+                SUCCEEDED(hr = m_pChildRequestContext->SetServerVariable(
+                    STR_ANCM_CHILDREQUEST,
+                    L"1")) &&
+                SUCCEEDED(hr = m_pW3Context->ExecuteRequest(
+                    TRUE,    // fAsync
+                    m_pChildRequestContext,
+                    EXECUTE_FLAG_DISABLE_CUSTOM_ERROR,    // by pass Custom Error module
+                    NULL, // pHttpUser
+                    &fCompletionExpected)))
             {
-                if (SUCCEEDED(hr = m_pW3Context->CloneContext(
-                    CLONE_FLAG_BASICS | CLONE_FLAG_HEADERS | CLONE_FLAG_ENTITY,
-                    &m_pChildRequestContext
-                )) &&
-                    SUCCEEDED(hr = m_pChildRequestContext->SetServerVariable(
-                        STR_ANCM_CHILDREQUEST,
-                        L"1")) &&
-                    SUCCEEDED(hr = m_pW3Context->ExecuteRequest(
-                        TRUE,    // fAsync
-                        m_pChildRequestContext,
-                        EXECUTE_FLAG_DISABLE_CUSTOM_ERROR,    // by pass Custom Error module
-                        NULL, // pHttpUser
-                        &fCompletionExpected)))
+                if (!fCompletionExpected)
                 {
-                    if (!fCompletionExpected)
-                    {
-                        retVal = RQ_NOTIFICATION_CONTINUE;
-                    }
-                    else
-                    {
-                        retVal = RQ_NOTIFICATION_PENDING;
-                    }
-                    goto Finished;
+                    retVal = RQ_NOTIFICATION_CONTINUE;
                 }
-                //
-                // fail to create child request, fall back to default 502 error 
-                //
-            }
-            else
-            {
-                if (SUCCEEDED(pApplicationManager->Get502ErrorPage(&pDataChunk)))
+                else
                 {
-                    if (FAILED(hr = pResponse->WriteEntityChunkByReference(pDataChunk)))
-                    {
-                        goto Finished;
-                    }
-                    pResponse->SetStatus(502, "Bad Gateway", 5, hr);
-                    pResponse->SetHeader("Content-Type",
-                        "text/html",
-                        (USHORT)strlen("text/html"),
-                        FALSE
-                    );
-                    goto Finished;
+                    retVal = RQ_NOTIFICATION_PENDING;
                 }
+                goto Finished;
             }
-        }
-        //
-        // default error behavior
-        //
-        pResponse->SetStatus(502, "Bad Gateway", 3, hr);
-
-        if (hr > HRESULT_FROM_WIN32(WINHTTP_ERROR_BASE) &&
-            hr <= HRESULT_FROM_WIN32(WINHTTP_ERROR_LAST))
-        {
-#pragma prefast (suppress : __WARNING_FUNCTION_NEEDS_REVIEW, "Function and parameters reviewed.")
-            FormatMessage(
-                FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
-                g_hWinHttpModule,
-                HRESULT_CODE(hr),
-                0,
-                strDescription.QueryStr(),
-                strDescription.QuerySizeCCH(),
-                NULL);
+            //
+            // fail to create child request, fall back to default 502 error 
+            //
         }
         else
         {
-            LoadString(g_hModule,
-                IDS_SERVER_ERROR,
-                strDescription.QueryStr(),
-                strDescription.QuerySizeCCH());
+            if (SUCCEEDED(pApplicationManager->Get502ErrorPage(&pDataChunk)))
+            {
+                if (FAILED(hr = pResponse->WriteEntityChunkByReference(pDataChunk)))
+                {
+                    goto Finished;
+                }
+                pResponse->SetStatus(502, "Bad Gateway", 5, hr);
+                pResponse->SetHeader("Content-Type",
+                    "text/html",
+                    (USHORT)strlen("text/html"),
+                    FALSE
+                );
+                goto Finished;
+            }
         }
+    }
+    //
+    // default error behavior
+    //
+    pResponse->SetStatus(502, "Bad Gateway", 3, hr);
 
-        strDescription.SyncWithBuffer();
-        if (strDescription.QueryCCH() != 0)
-        {
-            pResponse->SetErrorDescription(
-                strDescription.QueryStr(),
-                strDescription.QueryCCH(),
-                FALSE);
-        }
+    if (hr > HRESULT_FROM_WIN32(WINHTTP_ERROR_BASE) &&
+        hr <= HRESULT_FROM_WIN32(WINHTTP_ERROR_LAST))
+    {
+#pragma prefast (suppress : __WARNING_FUNCTION_NEEDS_REVIEW, "Function and parameters reviewed.")
+        FormatMessage(
+            FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+            g_hWinHttpModule,
+            HRESULT_CODE(hr),
+            0,
+            strDescription.QueryStr(),
+            strDescription.QuerySizeCCH(),
+            NULL);
+    }
+    else
+    {
+        LoadString(g_hModule,
+            IDS_SERVER_ERROR,
+            strDescription.QueryStr(),
+            strDescription.QuerySizeCCH());
+    }
+
+    strDescription.SyncWithBuffer();
+    if (strDescription.QueryCCH() != 0)
+    {
+        pResponse->SetErrorDescription(
+            strDescription.QueryStr(),
+            strDescription.QueryCCH(),
+            FALSE);
     }
 
 Finished:
-
     if (pConnection != NULL)
     {
         pConnection->DereferenceForwarderConnection();
@@ -1523,7 +1534,7 @@ REQUEST_NOTIFICATION_STATUS
             reinterpret_cast<PVOID>(static_cast<DWORD_PTR>(hrCompletionStatus)));
     }
 
-    if (m_pApplication->QueryConfig()->QueryIsOutOfProcess())
+    if (m_pApplication->QueryConfig()->QueryHostingModel() == HOSTING_OUT_PROCESS)
     {
         //
         // Take a reference so that object does not go away as a result of

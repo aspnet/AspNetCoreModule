@@ -39,6 +39,13 @@
 extern HTTP_MODULE_ID   g_pModuleId;
 extern IHttpServer *    g_pHttpServer;
 
+enum APP_HOSTING_MODEL
+{
+    HOSTING_UNKNOWN = 0,
+    HOSTING_IN_PROCESS,
+    HOSTING_OUT_PROCESS
+};
+
 class ASPNETCORE_CONFIG : IHttpStoredContext
 {
 public:
@@ -123,13 +130,13 @@ public:
         return &m_struApplication;
     }
 
-	STRU*
-	QueryApplicationFullPath(
+    STRU*
+    QueryApplicationFullPath(
         VOID
-	)
-	{
-		return &m_struApplicationFullPath;
-	}
+    )
+    {
+        return &m_struApplicationFullPath;
+    }
 
     STRU*
     QueryProcessPath(
@@ -137,6 +144,22 @@ public:
     )
     {
         return &m_struProcessPath;
+    }
+
+    APP_HOSTING_MODEL
+    QueryHostingModel(
+            VOID
+    )
+    {
+        return m_hostingModel;
+    }
+
+    STRU*
+    QueryHostingModelStr(
+            VOID
+        )
+    {
+        return &m_strHostingModel;
     }
 
     BOOL
@@ -175,19 +198,6 @@ public:
         return m_fDisableStartUpErrorPage;
     }
 
-    BOOL
-    QueryIsInProcess()
-    {
-        return m_fIsInProcess;
-    }
-
-    BOOL
-    QueryIsOutOfProcess()
-    {
-        return m_fIsOutOfProcess;
-    }
-
-
     STRU*
     QueryStdoutLogFile()
     {
@@ -202,8 +212,7 @@ private:
     ASPNETCORE_CONFIG():
         m_fStdoutLogEnabled( FALSE ),
         m_pEnvironmentVariables( NULL ),
-        m_fIsInProcess( FALSE ),
-        m_fIsOutOfProcess( FALSE )
+        m_hostingModel( HOSTING_UNKNOWN )
     {
     }
 
@@ -222,13 +231,13 @@ private:
     STRU                   m_struProcessPath;
     STRU                   m_struStdoutLogFile;
     STRU                   m_struApplicationFullPath;
+    STRU                   m_strHostingModel;
     BOOL                   m_fStdoutLogEnabled;
     BOOL                   m_fForwardWindowsAuthToken;
     BOOL                   m_fDisableStartUpErrorPage;
     BOOL                   m_fWindowsAuthEnabled;
     BOOL                   m_fBasicAuthEnabled;
     BOOL                   m_fAnonymousAuthEnabled;
-    BOOL                   m_fIsInProcess;
-    BOOL                   m_fIsOutOfProcess;
+    APP_HOSTING_MODEL      m_hostingModel;
     ENVIRONMENT_VAR_HASH*  m_pEnvironmentVariables;
 };

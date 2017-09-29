@@ -16,7 +16,11 @@ APPLICATION_MANAGER::GetApplication(
     APPLICATION     *pApplication = NULL;
     APPLICATION_KEY  key;
     BOOL             fExclusiveLock = FALSE;
+    BOOL             fMixedHostingModelError = FALSE;
+    BOOL             fDulicatedInProcessApp = FALSE;
     PCWSTR           pszApplicationId = NULL;
+    LPCWSTR          apsz[1];
+    STACK_STRU ( strEventMsg, 256 );
 
     *ppApplication = NULL;
     
@@ -35,20 +39,26 @@ APPLICATION_MANAGER::GetApplication(
 
     if (*ppApplication == NULL)
     {
-        if (pConfig->QueryIsInProcess())
+        switch (pConfig->QueryHostingModel())
         {
+        case HOSTING_IN_PROCESS:
             if (m_pApplicationHash->Count() >0)
             {
-                // ? better error code and better error page
-                hr = ERROR_APP_INIT_FAILURE;
+                // Only one inprocess app allow per worker process
+                fDulicatedInProcessApp = TRUE;
+                hr = HRESULT_FROM_WIN32(ERROR_APP_INIT_FAILURE);
                 goto Finished;
             }
             pApplication = new INPROCESS_APPLICATION();
-        }
-        // though we current ly only support two models, let still do else if
-        else if(pConfig->QueryIsOutOfProcess())
-        {
+            break;
+
+        case HOSTING_OUT_PROCESS:
             pApplication = new OUTPROCESS_APPLICATION();
+            break;
+
+        default:
+            hr = E_UNEXPECTED;
+            goto Finished;
         }
 
         if (pApplication == NULL)
@@ -73,12 +83,11 @@ APPLICATION_MANAGER::GetApplication(
         // could be changed in the future
         if (m_hostingModel != HOSTING_UNKNOWN)
         {
-            // todo: use enum instead of bool for hosting model
-            if (((m_hostingModel == HOSTING_IN_PROCESS) && pConfig->QueryIsOutOfProcess())
-                || (m_hostingModel == HOSTING_IN_PROCESS && pConfig->QueryIsInProcess()))
+            if (m_hostingModel != pConfig->QueryHostingModel())
             {
                 // hosting model does not match, error out
-                hr = ERROR_APP_INIT_FAILURE;
+                fMixedHostingModelError = TRUE;
+                hr = HRESULT_FROM_WIN32(ERROR_APP_INIT_FAILURE);
                 goto Finished;
             }
         }
@@ -90,27 +99,19 @@ APPLICATION_MANAGER::GetApplication(
         }
 
         hr = m_pApplicationHash->InsertRecord( pApplication );
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
 
         //
         // first application will decide which hosting model allowed by this process
         //
         if (m_hostingModel == HOSTING_UNKNOWN)
         {
-            // todo: use enum instead of bool for hosting model
-            if (pConfig->QueryIsInProcess())
-            {
-                m_hostingModel = HOSTING_IN_PROCESS;
-            }
-            else
-            {
-                m_hostingModel = HOSTING_OUT_PROCESS;
-            }
+            m_hostingModel = pConfig->QueryHostingModel();
         }
 
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
         ReleaseSRWLockExclusive(&m_srwLock);
         fExclusiveLock = FALSE;
 
@@ -123,7 +124,9 @@ APPLICATION_MANAGER::GetApplication(
 Finished:
 
     if (fExclusiveLock == TRUE)
+    {
         ReleaseSRWLockExclusive(&m_srwLock);
+    }
 
     if (FAILED(hr))
     {
@@ -132,7 +135,75 @@ Finished:
             pApplication->DereferenceApplication();
             pApplication = NULL;
         }
-        //todo: log the error to windows event log
+
+        if (fDulicatedInProcessApp)
+        {
+            if (SUCCEEDED(strEventMsg.SafeSnwprintf(
+                ASPNETCORE_EVENT_DUPLICATED_INPROCESS_APP_MSG,
+                pszApplicationId)))
+            {
+                apsz[0] = strEventMsg.QueryStr();
+                if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+                {
+                    ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
+                        EVENTLOG_ERROR_TYPE,
+                        0,
+                        ASPNETCORE_EVENT_DUPLICATED_INPROCESS_APP,
+                        NULL,
+                        1,
+                        0,
+                        apsz,
+                        NULL);
+                }
+            }
+        }
+        else if (fMixedHostingModelError)
+        {
+            if (SUCCEEDED(strEventMsg.SafeSnwprintf(
+                ASPNETCORE_EVENT_MIXED_HOSTING_MODEL_ERROR_MSG,
+                pszApplicationId,
+                pConfig->QueryHostingModelStr())))
+            {
+                apsz[0] = strEventMsg.QueryStr();
+                if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+                {
+                    ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
+                        EVENTLOG_ERROR_TYPE,
+                        0,
+                        ASPNETCORE_EVENT_MIXED_HOSTING_MODEL_ERROR,
+                        NULL,
+                        1,
+                        0,
+                        apsz,
+                        NULL);
+                }
+            }
+        }
+        else
+        {
+            if (SUCCEEDED(strEventMsg.SafeSnwprintf(
+                ASPNETCORE_EVENT_ADD_APPLICATION_ERROR_MSG,
+                pszApplicationId,
+                hr)))
+            {
+                apsz[0] = strEventMsg.QueryStr();
+                if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+                {
+                    ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
+                        EVENTLOG_ERROR_TYPE,
+                        0,
+                        ASPNETCORE_EVENT_ADD_APPLICATION_ERROR,
+                        NULL,
+                        1,
+                        0,
+                        apsz,
+                        NULL);
+                }
+
+            }
+
+        }
+
     }
 
     return hr;

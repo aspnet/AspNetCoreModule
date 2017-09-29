@@ -73,6 +73,24 @@ Language=English
 %1
 .
 
+Messageid=1008
+SymbolicName=ASPNETCORE_EVENT_DUPLICATED_INPROCESS_APP
+Language=English
+%1
+.
+
+Messageid=1009
+SymbolicName=ASPNETCORE_EVENT_MIXED_HOSTING_MODEL_ERROR
+Language=English
+%1
+.
+
+Messageid=1010
+SymbolicName=ASPNETCORE_EVENT_ADD_APPLICATION_ERROR
+Language=English
+%1
+.
+
 ;
 ;#endif     // _ASPNETCORE_MODULE_MSG_H_
 ;

@@ -86,7 +86,7 @@ http_get_completion_info(
 
 //
 // todo: we should not rely on INPROCESS_APPLICATION::GetInstance()
-// the signure should be changed. application based address should be passed in
+// the signature should be changed. application's based address should be passed in
 //
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 BSTR // TODO probably should make this a wide string
@@ -195,7 +195,8 @@ http_flush_response_bytes(
 INPROCESS_APPLICATION*  INPROCESS_APPLICATION::s_Application = NULL;
 
 INPROCESS_APPLICATION::INPROCESS_APPLICATION(): 
-    m_fManagedAppLoaded ( FALSE ), m_fLoadManagedAppError ( FALSE )
+    m_fManagedAppLoaded ( FALSE ), m_fLoadManagedAppError ( FALSE ),
+    m_fRecycleCalled ( FALSE )
 {
 }
 
@@ -222,9 +223,12 @@ INPROCESS_APPLICATION::~INPROCESS_APPLICATION()
     }
 
     s_Application = NULL;
-    // todo:  calling RecycleProcess too often in a short time may cause issue.
-    // Need further investigation
-    g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on File Change Notification");
+
+    if (!m_fRecycleCalled) 
+    {
+        m_fRecycleCalled = TRUE;
+        g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Removing Application");
+    }
 }
 
 BOOL
@@ -503,13 +507,13 @@ Finished:
     return hr;
 }
 
-__override
-VOID
-INPROCESS_APPLICATION::Recycle()
-{
-    m_pApplicationManager->GetInstance()->RecycleApplication(
-        m_pConfiguration->QueryApplicationPath()->QueryStr());
-}
+//__override
+//VOID
+//INPROCESS_APPLICATION::Recycle()
+//{
+//    m_pApplicationManager->GetInstance()->RecycleApplication(
+//        m_pConfiguration->QueryApplicationPath()->QueryStr());
+//}
 
 VOID
 INPROCESS_APPLICATION::OnAppOfflineHandleChange()
@@ -517,8 +521,12 @@ INPROCESS_APPLICATION::OnAppOfflineHandleChange()
     // only recycle the worker process after managed app was loaded
     if (m_fManagedAppLoaded || m_fLoadManagedAppError)
     {
-        Recycle();
-        //g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on App Offline");
+        //Recycle();
+        if (!m_fRecycleCalled)
+        {
+            m_fRecycleCalled = TRUE;
+            g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on App Offline");
+        }
     }
 }
 
@@ -712,7 +720,9 @@ INPROCESS_APPLICATION::ExecuteApplication(
     }
 
     argv[0] = strDotnetExeLocation.QueryStr();
-    PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(), m_pConfiguration->QueryApplicationFullPath()->QueryStr(), &strApplicationFullPath);
+    PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(),
+                                m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
+                                &strApplicationFullPath);
     argv[1] = strApplicationFullPath.QueryStr();
 
     // There can only ever be a single instance of .NET Core

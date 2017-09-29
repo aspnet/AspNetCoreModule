@@ -4,15 +4,6 @@
 #pragma once
 
 //
-//todo: replace the boolen with enum
-enum APP_HOSTING_MODEL
-{
-    HOSTING_UNKNOWN,
-    HOSTING_IN_PROCESS,
-    HOSTING_OUT_PROCESS
-};
-
-//
 // The key used for hash-table lookups, consists of the port on which the http process is created.
 //
 class APPLICATION_KEY
@@ -178,9 +169,9 @@ public:
         _In_ APPLICATION_MANAGER *pApplicationManager,
         _In_ ASPNETCORE_CONFIG   *pConfiguration) = 0;
 
-    virtual
-    VOID
-    Recycle() = 0;
+    //virtual
+    //VOID
+    //Recycle() = 0;
 
     VOID
     ReferenceApplication() const

@@ -82,6 +82,7 @@ private:
 
     BOOL                            m_fManagedAppLoaded;
     BOOL                            m_fLoadManagedAppError;
+    BOOL                            m_fRecycleCalled;
 
     static INPROCESS_APPLICATION*   s_Application;
 
