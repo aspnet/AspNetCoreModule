@@ -107,13 +107,6 @@ OUTPROCESS_APPLICATION::OnAppOfflineHandleChange()
 }
 
 __override
-VOID
-OUTPROCESS_APPLICATION::Recycle()
-{
-    m_pProcessManager->ShutdownAllProcesses();
-}
-
-__override
 REQUEST_NOTIFICATION_STATUS
 OUTPROCESS_APPLICATION::ExecuteRequest(
     _In_ IHttpContext* pHttpContext

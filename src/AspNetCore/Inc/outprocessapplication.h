@@ -17,9 +17,6 @@ public:
                        _In_ ASPNETCORE_CONFIG*   pConfiguration);
 
     __override
-    VOID Recycle();
-
-    __override
     VOID OnAppOfflineHandleChange();
 
     __override

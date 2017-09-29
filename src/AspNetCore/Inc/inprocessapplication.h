@@ -21,8 +21,10 @@ public:
     Initialize(_In_ APPLICATION_MANAGER* pApplicationManager,
                _In_ ASPNETCORE_CONFIG*   pConfiguration);
 
-    __override
-    VOID Recycle();
+    VOID
+    Recycle(
+        VOID
+    );
 
     __override
     VOID OnAppOfflineHandleChange();
@@ -86,7 +88,6 @@ private:
 
     static INPROCESS_APPLICATION*   s_Application;
 
-
     static
     VOID
     FindDotNetFolders(
@@ -118,4 +119,5 @@ private:
     ExecuteAspNetCoreProcess(
         _In_ LPVOID pContext
     );
+
 };

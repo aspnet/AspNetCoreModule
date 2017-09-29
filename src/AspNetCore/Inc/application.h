@@ -169,10 +169,6 @@ public:
         _In_ APPLICATION_MANAGER *pApplicationManager,
         _In_ ASPNETCORE_CONFIG   *pConfiguration) = 0;
 
-    //virtual
-    //VOID
-    //Recycle() = 0;
-
     VOID
     ReferenceApplication() const
     {

@@ -203,32 +203,7 @@ INPROCESS_APPLICATION::INPROCESS_APPLICATION():
 
 INPROCESS_APPLICATION::~INPROCESS_APPLICATION()
 {
-    DWORD    dwThreadStatus = 0;
-    // First call into the managed server and shutdown
-    if (m_ShutdownHandler != NULL)
-    {
-        m_ShutdownHandler(m_ShutdownHandlerContext);
-        m_ShutdownHandler = NULL;
-    }
-
-    if (m_hThread!= NULL)
-    {
-        // if the thread is still running, we need kill it first before exit to avoid AV
-        if (GetExitCodeThread(m_hThread, &dwThreadStatus) != 0 && dwThreadStatus == STILL_ACTIVE)
-        {
-            TerminateThread(m_hThread, STATUS_CONTROL_C_EXIT);
-        }
-        CloseHandle(m_hThread);
-        m_hThread = NULL;
-    }
-
-    s_Application = NULL;
-
-    if (!m_fRecycleCalled) 
-    {
-        m_fRecycleCalled = TRUE;
-        g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Removing Application");
-    }
+    Recycle();
 }
 
 BOOL
@@ -507,26 +482,46 @@ Finished:
     return hr;
 }
 
-//__override
-//VOID
-//INPROCESS_APPLICATION::Recycle()
-//{
-//    m_pApplicationManager->GetInstance()->RecycleApplication(
-//        m_pConfiguration->QueryApplicationPath()->QueryStr());
-//}
+VOID
+INPROCESS_APPLICATION::Recycle()
+{
+    DWORD    dwThreadStatus = 0;
+    // First call into the managed server and shutdown
+    if (m_ShutdownHandler != NULL)
+    {
+        m_ShutdownHandler(m_ShutdownHandlerContext);
+        m_ShutdownHandler = NULL;
+    }
+
+    if (m_hThread != NULL)
+    {
+        // if the thread is still running, we need kill it first before exit to avoid AV
+        if (GetExitCodeThread(m_hThread, &dwThreadStatus) != 0 && dwThreadStatus == STILL_ACTIVE)
+        {
+            TerminateThread(m_hThread, STATUS_CONTROL_C_EXIT);
+        }
+        CloseHandle(m_hThread);
+        m_hThread = NULL;
+    }
+
+    s_Application = NULL;
+
+    if (!m_fRecycleCalled)
+    {
+        m_fRecycleCalled = TRUE;
+        g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Demand");
+    }
+}
 
 VOID
 INPROCESS_APPLICATION::OnAppOfflineHandleChange()
 {
     // only recycle the worker process after managed app was loaded
+    // app_offline scenario managed application has not been loaded yet
     if (m_fManagedAppLoaded || m_fLoadManagedAppError)
     {
-        //Recycle();
-        if (!m_fRecycleCalled)
-        {
-            m_fRecycleCalled = TRUE;
-            g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on App Offline");
-        }
+        Recycle();
+
     }
 }
 
