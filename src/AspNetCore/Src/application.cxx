@@ -48,7 +48,6 @@ APPLICATION::UpdateAppOfflineFileHandle()
     else
     {
         m_fAppOfflineFound = TRUE;
-
         pNewAppOfflineHtm = new APP_OFFLINE_HTM(strFilePath.QueryStr());
 
         if ( pNewAppOfflineHtm != NULL )

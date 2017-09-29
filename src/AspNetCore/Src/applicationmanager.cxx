@@ -44,7 +44,7 @@ APPLICATION_MANAGER::GetApplication(
         case HOSTING_IN_PROCESS:
             if (m_pApplicationHash->Count() >0)
             {
-                // Only one inprocess app allow per worker process
+                // Only one inprocess app is allowed per IIS worker process
                 fDulicatedInProcessApp = TRUE;
                 hr = HRESULT_FROM_WIN32(ERROR_APP_INIT_FAILURE);
                 goto Finished;
@@ -199,11 +199,8 @@ Finished:
                         apsz,
                         NULL);
                 }
-
             }
-
         }
-
     }
 
     return hr;

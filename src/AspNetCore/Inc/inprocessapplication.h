@@ -23,7 +23,7 @@ public:
 
     VOID
     Recycle(
-        VOID
+        _In_opt_ BOOL fRecycleProcess = TRUE
     );
 
     __override

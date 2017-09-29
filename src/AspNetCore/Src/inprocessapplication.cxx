@@ -443,18 +443,15 @@ Finished:
         ReleaseSRWLockExclusive(&m_srwLock);
     }
 
-    if (m_hThread != NULL)
-    {
-        CloseHandle(m_hThread);
-        m_hThread = NULL;
-    }
+    // cleanup
+    Recycle(FALSE);
 
     if (FAILED(hr))
     {
         m_fLoadManagedAppError = TRUE;
 
         if (SUCCEEDED(strEventMsg.SafeSnwprintf(
-            ASPNETCORE_EVENT_PROCESS_START_SUCCESS_MSG,
+            ASPNETCORE_EVENT_LOAD_CLR_FALIURE_MSG,
             m_pConfiguration->QueryApplicationPath()->QueryStr(),
             m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
             hr)))
@@ -483,7 +480,9 @@ Finished:
 }
 
 VOID
-INPROCESS_APPLICATION::Recycle()
+INPROCESS_APPLICATION::Recycle(
+    BOOL fRecycleProcess  // optional parameter, default TRUE
+)
 {
     DWORD    dwThreadStatus = 0;
     // First call into the managed server and shutdown
@@ -506,7 +505,7 @@ INPROCESS_APPLICATION::Recycle()
 
     s_Application = NULL;
 
-    if (!m_fRecycleCalled)
+    if (!m_fRecycleCalled && fRecycleProcess)
     {
         m_fRecycleCalled = TRUE;
         g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Demand");
@@ -747,14 +746,14 @@ INPROCESS_APPLICATION::ExecuteAspNetCoreProcess(
     _In_ LPVOID pContext
 )
 {
-    HRESULT hr;
-    INPROCESS_APPLICATION *pApplication = (INPROCESS_APPLICATION*)pContext;
 
-    hr = pApplication->ExecuteApplication();
-    if (hr != S_OK)
-    {
-        // TODO log error
-    }
+    INPROCESS_APPLICATION *pApplication = (INPROCESS_APPLICATION*)pContext;
+    DBG_ASSERT(pApplication != NULL);
+    pApplication->ExecuteApplication();
+    //
+    // no need to log the error here as if error happened, the thread will exit
+    // the error will ba catched by caller LoadManagedApplication which will log an error
+    //
 }
 
 HRESULT
