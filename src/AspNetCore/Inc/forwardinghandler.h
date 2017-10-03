@@ -314,7 +314,7 @@ private:
 
     APP_OFFLINE_HTM                    *m_pAppOfflineHtm;
     APPLICATION                        *m_pApplication;
-
+    LPCGUID                             m_pTraceGuid;
     bool                                m_fHandleClosedDueToClient;
     bool                                m_fResponseHeadersReceivedAndSet;
     BOOL                                m_fDoReverseRewriteHeaders;
