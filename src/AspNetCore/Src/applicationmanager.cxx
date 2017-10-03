@@ -17,7 +17,7 @@ APPLICATION_MANAGER::GetApplication(
     APPLICATION_KEY  key;
     BOOL             fExclusiveLock = FALSE;
     BOOL             fMixedHostingModelError = FALSE;
-    BOOL             fDulicatedInProcessApp = FALSE;
+    BOOL             fDuplicatedInProcessApp = FALSE;
     PCWSTR           pszApplicationId = NULL;
     LPCWSTR          apsz[1];
     STACK_STRU ( strEventMsg, 256 );
@@ -42,10 +42,10 @@ APPLICATION_MANAGER::GetApplication(
         switch (pConfig->QueryHostingModel())
         {
         case HOSTING_IN_PROCESS:
-            if (m_pApplicationHash->Count() >0)
+            if (m_pApplicationHash->Count() > 0)
             {
                 // Only one inprocess app is allowed per IIS worker process
-                fDulicatedInProcessApp = TRUE;
+                fDuplicatedInProcessApp = TRUE;
                 hr = HRESULT_FROM_WIN32(ERROR_APP_INIT_FAILURE);
                 goto Finished;
             }
@@ -123,7 +123,7 @@ APPLICATION_MANAGER::GetApplication(
 
 Finished:
 
-    if (fExclusiveLock == TRUE)
+    if (fExclusiveLock)
     {
         ReleaseSRWLockExclusive(&m_srwLock);
     }
@@ -136,7 +136,7 @@ Finished:
             pApplication = NULL;
         }
 
-        if (fDulicatedInProcessApp)
+        if (fDuplicatedInProcessApp)
         {
             if (SUCCEEDED(strEventMsg.SafeSnwprintf(
                 ASPNETCORE_EVENT_DUPLICATED_INPROCESS_APP_MSG,

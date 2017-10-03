@@ -28,7 +28,6 @@ public:
     HRESULT
     GetProcess(
         _In_    IHttpContext          *context,
-//        _In_    ASPNETCORE_CONFIG     *pConfig,
         _Out_   SERVER_PROCESS       **ppServerProcess
     )
     {

@@ -38,6 +38,7 @@
 
 extern HTTP_MODULE_ID   g_pModuleId;
 extern IHttpServer *    g_pHttpServer;
+extern BOOL             g_fRecycleProcessCalled;
 
 enum APP_HOSTING_MODEL
 {

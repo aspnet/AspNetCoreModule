@@ -195,8 +195,7 @@ http_flush_response_bytes(
 INPROCESS_APPLICATION*  INPROCESS_APPLICATION::s_Application = NULL;
 
 INPROCESS_APPLICATION::INPROCESS_APPLICATION(): 
-    m_fManagedAppLoaded ( FALSE ), m_fLoadManagedAppError ( FALSE ),
-    m_fRecycleCalled ( FALSE )
+    m_fManagedAppLoaded ( FALSE ), m_fLoadManagedAppError ( FALSE )
 {
 }
 
@@ -420,18 +419,10 @@ INPROCESS_APPLICATION::LoadManagedApplication()
         goto Finished;
     }
 
-    dwResult = WaitForSingleObject(m_hThread, 0);
-
     // The thread ended it means that something failed
     if (dwResult == WAIT_OBJECT_0)
     {
-        hr = HRESULT_FROM_WIN32(dwResult);
-        goto Finished;
-
-    }
-    else if (dwResult == WAIT_FAILED)
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
+        hr = E_APPLICATION_ACTIVATION_EXEC_FAILURE;
         goto Finished;
     }
 
@@ -443,12 +434,11 @@ Finished:
         ReleaseSRWLockExclusive(&m_srwLock);
     }
 
-    // cleanup
-    Recycle(FALSE);
-
     if (FAILED(hr))
     {
-        m_fLoadManagedAppError = TRUE;
+        // Question: in case of application loading failure, should we allow retry on 
+        // following request or block the activation at all
+        m_fLoadManagedAppError = FALSE; // m_hThread != NULL ?
 
         if (SUCCEEDED(strEventMsg.SafeSnwprintf(
             ASPNETCORE_EVENT_LOAD_CLR_FALIURE_MSG,
@@ -481,10 +471,20 @@ Finished:
 
 VOID
 INPROCESS_APPLICATION::Recycle(
-    BOOL fRecycleProcess  // optional parameter, default TRUE
+    VOID
 )
 {
     DWORD    dwThreadStatus = 0;
+    DWORD    dwTimeout = m_pConfiguration->QueryShutdownTimeLimitInMS();
+
+    AcquireSRWLockExclusive(&m_srwLock);
+    if (!g_fRecycleProcessCalled)
+    {
+        g_fRecycleProcessCalled = TRUE;
+
+        // notify IIS first so that new request will be routed to new worker process
+        g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Demand");
+    }
     // First call into the managed server and shutdown
     if (m_ShutdownHandler != NULL)
     {
@@ -492,24 +492,25 @@ INPROCESS_APPLICATION::Recycle(
         m_ShutdownHandler = NULL;
     }
 
-    if (m_hThread != NULL)
+    if (m_hThread != NULL &&
+        GetExitCodeThread(m_hThread, &dwThreadStatus) != 0 &&
+        dwThreadStatus == STILL_ACTIVE)
     {
-        // if the thread is still running, we need kill it first before exit to avoid AV
-        if (GetExitCodeThread(m_hThread, &dwThreadStatus) != 0 && dwThreadStatus == STILL_ACTIVE)
+        // wait for gracefullshut down, i.e., the exit of the background thread or timeout
+        if (WaitForSingleObject(m_hThread, dwTimeout) != WAIT_OBJECT_0)
         {
-            TerminateThread(m_hThread, STATUS_CONTROL_C_EXIT);
+            // if the thread is still running, we need kill it first before exit to avoid AV
+            if (GetExitCodeThread(m_hThread, &dwThreadStatus) != 0 && dwThreadStatus == STILL_ACTIVE)
+            {
+                TerminateThread(m_hThread, STATUS_CONTROL_C_EXIT);
+            }
         }
-        CloseHandle(m_hThread);
-        m_hThread = NULL;
     }
 
+    CloseHandle(m_hThread);
+    m_hThread = NULL;
     s_Application = NULL;
-
-    if (!m_fRecycleCalled && fRecycleProcess)
-    {
-        m_fRecycleCalled = TRUE;
-        g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Demand");
-    }
+    ReleaseSRWLockExclusive(&m_srwLock);
 }
 
 VOID

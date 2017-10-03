@@ -5,6 +5,15 @@
 
 ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
 {
+    if (QueryHostingModel() == HOSTING_IN_PROCESS && !g_fRecycleProcessCalled)
+    {
+        // RecycleProcess can olny be called once
+        // In case of configuration change for in-process app
+        // We want notify IIS first to let new request routed to new worker process
+        g_fRecycleProcessCalled = TRUE;
+        g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Configuration Change");
+    }
+
     m_struApplicationFullPath.Reset();
     if (m_pEnvironmentVariables != NULL)
     {
@@ -234,7 +243,9 @@ ASPNETCORE_CONFIG::Populate(
         &m_strHostingModel);
     if (FAILED(hr))
     {
-        goto Finished;
+        // Swallow this error for backward compatability
+        // Use default behavior for empty string
+        hr = S_OK;
     }
 
     if (m_strHostingModel.IsEmpty() || m_strHostingModel.Equals(L"outofprocess", TRUE))

@@ -22,7 +22,7 @@ OUTPROCESS_APPLICATION::~OUTPROCESS_APPLICATION()
 //
 // Initialize is guarded by a lock inside APPLICATION_MANAGER::GetApplication
 // It ensures only one application will be initialized and singleton
-// Error wuill happen if you call Initialized outside APPLICATION_MANAGER::GetApplication
+// Error will happen if you call Initialized outside APPLICATION_MANAGER::GetApplication
 //
 __override
 HRESULT

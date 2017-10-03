@@ -23,7 +23,7 @@ public:
 
     VOID
     Recycle(
-        _In_opt_ BOOL fRecycleProcess = TRUE
+        VOID
     );
 
     __override
@@ -84,7 +84,6 @@ private:
 
     BOOL                            m_fManagedAppLoaded;
     BOOL                            m_fLoadManagedAppError;
-    BOOL                            m_fRecycleCalled;
 
     static INPROCESS_APPLICATION*   s_Application;
 

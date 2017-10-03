@@ -83,7 +83,7 @@ CProxyModule::OnExecuteRequestHandler(
     APPLICATION_MANAGER   *pApplicationManager = NULL;
     APPLICATION           *pApplication = NULL;
     hr = ASPNETCORE_CONFIG::GetConfig(pHttpContext, &pConfig);
-    if(FAILED (hr))
+    if (FAILED(hr))
     {
         goto Failed;
     }

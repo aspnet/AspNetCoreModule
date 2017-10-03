@@ -141,7 +141,6 @@ Finished:
 };
 
 class APPLICATION_MANAGER;
-class PROTOCOL_CONFIG;
 
 class APPLICATION
 {
@@ -189,14 +188,6 @@ public:
         return m_pAppOfflineHtm;
     }
 
-    VOID
-    SetAppOfflineFound(
-        BOOL found
-    )
-    {
-        m_fAppOfflineFound = found;
-    }
-
     BOOL
     AppOfflineFound()
     {
@@ -234,7 +225,6 @@ protected:
     APP_OFFLINE_HTM        *m_pAppOfflineHtm;
     FILE_WATCHER_ENTRY     *m_pFileWatcherEntry;
     ASPNETCORE_CONFIG      *m_pConfiguration;
-    PROTOCOL_CONFIG        *m_pProtocal;
     SRWLOCK                 m_srwLock;
 
 };
