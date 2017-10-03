@@ -85,12 +85,6 @@ CProxyModule::OnExecuteRequestHandler(
     ASPNETCORE_APPLICATION* pAspNetCoreApplication;
     ASPNETCORE_CONFIG::GetConfig(pHttpContext, &config);
 
-    if (config == NULL)
-    {
-        pHttpContext->GetResponse()->SetStatus(500, "AspNetCore configuration failed to load.", 0, hr);
-        return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
-    }
-
     if (config->QueryIsOutOfProcess())// case insensitive
     {
         m_pHandler = new FORWARDING_HANDLER(pHttpContext);

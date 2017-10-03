@@ -241,9 +241,10 @@ ASPNETCORE_CONFIG::Populate(
         &strHostingModel);
     if (FAILED(hr))
     {
-        m_fIsOutOfProcess = TRUE;
+        hr = S_OK;
     }
-    else if (strHostingModel.IsEmpty() || strHostingModel.Equals(L"outofprocess", TRUE))
+
+    if (strHostingModel.IsEmpty() || strHostingModel.Equals(L"outofprocess", TRUE))
     {
         m_fIsOutOfProcess = TRUE;
     }
