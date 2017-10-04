@@ -3,12 +3,12 @@
 
 #include "precomp.hxx"
 
-OUTPROCESS_APPLICATION::OUTPROCESS_APPLICATION()
+OUT_OF_PROCESS_APPLICATION::OUT_OF_PROCESS_APPLICATION()
     : m_pProcessManager(NULL)
 {
 }
 
-OUTPROCESS_APPLICATION::~OUTPROCESS_APPLICATION()
+OUT_OF_PROCESS_APPLICATION::~OUT_OF_PROCESS_APPLICATION()
 {
     if (m_pProcessManager != NULL)
     {
@@ -26,7 +26,7 @@ OUTPROCESS_APPLICATION::~OUTPROCESS_APPLICATION()
 //
 __override
 HRESULT
-OUTPROCESS_APPLICATION::Initialize(
+OUT_OF_PROCESS_APPLICATION::Initialize(
     _In_ APPLICATION_MANAGER* pApplicationManager,
     _In_ ASPNETCORE_CONFIG*   pConfiguration
 )
@@ -95,7 +95,7 @@ Finished:
 
 __override
 VOID 
-OUTPROCESS_APPLICATION::OnAppOfflineHandleChange()
+OUT_OF_PROCESS_APPLICATION::OnAppOfflineHandleChange()
 {
     //
     // Sending signal to backend process for shutdown
@@ -108,7 +108,7 @@ OUTPROCESS_APPLICATION::OnAppOfflineHandleChange()
 
 __override
 REQUEST_NOTIFICATION_STATUS
-OUTPROCESS_APPLICATION::ExecuteRequest(
+OUT_OF_PROCESS_APPLICATION::ExecuteRequest(
     _In_ IHttpContext* pHttpContext
 )
 {

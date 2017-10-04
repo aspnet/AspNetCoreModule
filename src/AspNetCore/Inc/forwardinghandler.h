@@ -165,18 +165,6 @@ public:
         m_RequestStatus = status;
     }
 
-    bool
-    QueryWebSocketEnabled()
-    {
-        return m_fWebSocketEnabled;
-    }
-
-    VOID
-    SetWebSocketEnabled()
-    {
-        m_fWebSocketEnabled = TRUE;
-    }
-
 private:
 
     virtual

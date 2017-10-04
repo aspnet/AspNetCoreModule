@@ -9,12 +9,12 @@ typedef BOOL(*PFN_SHUTDOWN_HANDLER) (void* pvShutdownHandlerContext);
 
 #include "application.h"
 
-class INPROCESS_APPLICATION : public APPLICATION
+class IN_PROCESS_APPLICATION : public APPLICATION
 {
 public:
-    INPROCESS_APPLICATION();
+    IN_PROCESS_APPLICATION();
 
-    ~INPROCESS_APPLICATION();
+    ~IN_PROCESS_APPLICATION();
 
     __override
     HRESULT
@@ -55,7 +55,7 @@ public:
         );
 
     static
-    INPROCESS_APPLICATION*
+    IN_PROCESS_APPLICATION*
     GetInstance(
         VOID
     )
@@ -85,12 +85,12 @@ private:
     BOOL                            m_fManagedAppLoaded;
     BOOL                            m_fLoadManagedAppError;
 
-    static INPROCESS_APPLICATION*   s_Application;
+    static IN_PROCESS_APPLICATION*   s_Application;
 
     static
     VOID
     FindDotNetFolders(
-        _In_ STRU *pstrPath,   //todo -- this may not need to be stru, can be PCWSTR
+        _In_ PCWSTR pszPath,
         _Out_ std::vector<std::wstring> *pvFolders
     );
 

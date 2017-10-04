@@ -49,11 +49,11 @@ APPLICATION_MANAGER::GetApplication(
                 hr = HRESULT_FROM_WIN32(ERROR_APP_INIT_FAILURE);
                 goto Finished;
             }
-            pApplication = new INPROCESS_APPLICATION();
+            pApplication = new IN_PROCESS_APPLICATION();
             break;
 
         case HOSTING_OUT_PROCESS:
-            pApplication = new OUTPROCESS_APPLICATION();
+            pApplication = new OUT_OF_PROCESS_APPLICATION();
             break;
 
         default:

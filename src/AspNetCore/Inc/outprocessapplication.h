@@ -5,12 +5,12 @@
 
 #include "application.h"
 
-class OUTPROCESS_APPLICATION : public APPLICATION
+class OUT_OF_PROCESS_APPLICATION : public APPLICATION
 {
 public:
-    OUTPROCESS_APPLICATION();
+    OUT_OF_PROCESS_APPLICATION();
 
-    ~OUTPROCESS_APPLICATION();
+    ~OUT_OF_PROCESS_APPLICATION();
 
     __override
     HRESULT Initialize(_In_ APPLICATION_MANAGER* pApplicationManager,
@@ -35,25 +35,6 @@ public:
     }
 
 private:
- /*   HRESULT
-    GetHeaders(
-        FORWARDING_HANDLER *    pForwardingHandler,
-        const PROTOCOL_CONFIG * pProtocol,
-        PCWSTR *                ppszHeaders,
-        DWORD *                 pcchHeaders,
-        ASPNETCORE_CONFIG*      pAspNetCoreConfig,
-        SERVER_PROCESS*         pServerProcess
-    );
-
-    HRESULT
-    CreateWinHttpRequest(
-        __in const FORWARDING_HANDLER * pForwardingHandler,
-        __in const PROTOCOL_CONFIG *    pProtocol,
-        __in HINTERNET                  hConnect,
-        __inout STRU *                  pstrUrl,
-        ASPNETCORE_CONFIG*              pAspNetCoreConfig,
-        SERVER_PROCESS*                 pServerProcess
-    );*/
 
     PROCESS_MANAGER*        m_pProcessManager;
 };

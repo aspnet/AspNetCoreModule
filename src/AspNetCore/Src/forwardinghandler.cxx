@@ -1148,7 +1148,7 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
         // Disable response buffering by default, we'll do a write behind buffering in managed code
         ((IHttpResponse2*)m_pW3Context->GetResponse())->DisableBuffering();
 
-        hr = ((INPROCESS_APPLICATION*)m_pApplication)->LoadManagedApplication();
+        hr = ((IN_PROCESS_APPLICATION*)m_pApplication)->LoadManagedApplication();
         if (FAILED(hr))
         {
             fInternalError = TRUE;
@@ -1181,7 +1181,7 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
 
         m_fDoReverseRewriteHeaders = pProtocol->QueryReverseRewriteHeaders();
         m_cMinBufferLimit = pProtocol->QueryMinResponseBuffer();
-        hr = ((OUTPROCESS_APPLICATION*)m_pApplication)->GetProcess(
+        hr = ((OUT_OF_PROCESS_APPLICATION*)m_pApplication)->GetProcess(
             m_pW3Context,
             &pServerProcess);
         if (FAILED(hr))

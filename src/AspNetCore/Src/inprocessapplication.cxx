@@ -18,7 +18,7 @@ register_callbacks(
     _In_ VOID* pvShutdownHandlerContext
 )
 {
-    INPROCESS_APPLICATION::GetInstance()->SetCallbackHandles(
+    IN_PROCESS_APPLICATION::GetInstance()->SetCallbackHandles(
         request_handler,
         shutdown_handler,
         pvRequstHandlerContext,
@@ -85,7 +85,7 @@ http_get_completion_info(
 }
 
 //
-// todo: we should not rely on INPROCESS_APPLICATION::GetInstance()
+// todo: we should not rely on IN_PROCESS_APPLICATION::GetInstance()
 // the signature should be changed. application's based address should be passed in
 //
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
@@ -93,7 +93,7 @@ BSTR // TODO probably should make this a wide string
 http_get_application_full_path()
 {
     LPWSTR pwzPath = NULL;
-    INPROCESS_APPLICATION* pApplication = INPROCESS_APPLICATION::GetInstance();
+    IN_PROCESS_APPLICATION* pApplication = IN_PROCESS_APPLICATION::GetInstance();
     if(pApplication != NULL)
     {
         pwzPath = pApplication->QueryConfig()->QueryApplicationFullPath()->QueryStr();
@@ -192,21 +192,21 @@ http_flush_response_bytes(
 // End of export 
 
 
-INPROCESS_APPLICATION*  INPROCESS_APPLICATION::s_Application = NULL;
+IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
 
-INPROCESS_APPLICATION::INPROCESS_APPLICATION(): 
+IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(): 
     m_fManagedAppLoaded ( FALSE ), m_fLoadManagedAppError ( FALSE )
 {
 }
 
 
-INPROCESS_APPLICATION::~INPROCESS_APPLICATION()
+IN_PROCESS_APPLICATION::~IN_PROCESS_APPLICATION()
 {
     Recycle();
 }
 
 BOOL
-INPROCESS_APPLICATION::DirectoryExists(
+IN_PROCESS_APPLICATION::DirectoryExists(
     _In_ STRU *pstrPath
 )
 {
@@ -221,7 +221,7 @@ INPROCESS_APPLICATION::DirectoryExists(
 }
 
 BOOL
-INPROCESS_APPLICATION::GetEnv(
+IN_PROCESS_APPLICATION::GetEnv(
     _In_ PCWSTR pszEnvironmentVariable,
     _Out_ STRU *pstrResult
 )
@@ -260,15 +260,15 @@ Finished:
 }
 
 VOID
-INPROCESS_APPLICATION::FindDotNetFolders(
-    _In_ STRU *pstrPath,
+IN_PROCESS_APPLICATION::FindDotNetFolders(
+    _In_ PCWSTR pszPath,
     _Out_ std::vector<std::wstring> *pvFolders
 )
 {
     HANDLE handle = NULL;
     WIN32_FIND_DATAW data = { 0 };
 
-    handle = FindFirstFileExW(pstrPath->QueryStr(), FindExInfoStandard, &data, FindExSearchNameMatch, NULL, 0);
+    handle = FindFirstFileExW(pszPath, FindExInfoStandard, &data, FindExSearchNameMatch, NULL, 0);
     if (handle == INVALID_HANDLE_VALUE)
     {
         return;
@@ -284,7 +284,7 @@ INPROCESS_APPLICATION::FindDotNetFolders(
 }
 
 VOID
-INPROCESS_APPLICATION::SetCallbackHandles(
+IN_PROCESS_APPLICATION::SetCallbackHandles(
     _In_ PFN_REQUEST_HANDLER request_handler,
     _In_ PFN_SHUTDOWN_HANDLER shutdown_handler,
     _In_ VOID* pvRequstHandlerContext,
@@ -307,12 +307,11 @@ INPROCESS_APPLICATION::SetCallbackHandles(
 //
 __override
 HRESULT
-INPROCESS_APPLICATION::Initialize(
+IN_PROCESS_APPLICATION::Initialize(
     _In_ APPLICATION_MANAGER* pApplicationManager,
     _In_ ASPNETCORE_CONFIG*   pConfiguration
 )
 {
-
     HRESULT hr = S_OK;
     DBG_ASSERT(pApplicationManager != NULL);
     DBG_ASSERT(pConfiguration != NULL);
@@ -354,7 +353,7 @@ Finished:
 }
 
 HRESULT
-INPROCESS_APPLICATION::LoadManagedApplication()
+IN_PROCESS_APPLICATION::LoadManagedApplication()
 {
     HRESULT    hr = S_OK;
     DWORD      dwTimeout;
@@ -470,7 +469,7 @@ Finished:
 }
 
 VOID
-INPROCESS_APPLICATION::Recycle(
+IN_PROCESS_APPLICATION::Recycle(
     VOID
 )
 {
@@ -514,7 +513,7 @@ INPROCESS_APPLICATION::Recycle(
 }
 
 VOID
-INPROCESS_APPLICATION::OnAppOfflineHandleChange()
+IN_PROCESS_APPLICATION::OnAppOfflineHandleChange()
 {
     // only recycle the worker process after managed app was loaded
     // app_offline scenario managed application has not been loaded yet
@@ -526,7 +525,7 @@ INPROCESS_APPLICATION::OnAppOfflineHandleChange()
 }
 
 REQUEST_NOTIFICATION_STATUS
-INPROCESS_APPLICATION::ExecuteRequest(
+IN_PROCESS_APPLICATION::ExecuteRequest(
     _In_ IHttpContext* pHttpContext
 )
 {
@@ -543,7 +542,7 @@ INPROCESS_APPLICATION::ExecuteRequest(
 }
 
 HRESULT
-INPROCESS_APPLICATION::ExecuteApplication(
+IN_PROCESS_APPLICATION::ExecuteApplication(
     VOID
 )
 {
@@ -657,7 +656,7 @@ INPROCESS_APPLICATION::ExecuteApplication(
 
     // As we use the logic from core-setup, we are opting to use std here.
     // TODO remove all uses of std?
-    FindDotNetFolders(&strHostFxrSearchExpression, &vVersionFolders);
+    FindDotNetFolders(strHostFxrSearchExpression.QueryStr(), &vVersionFolders);
 
     if (vVersionFolders.size() == 0)
     {
@@ -743,12 +742,12 @@ Finished:
 
 // static
 VOID
-INPROCESS_APPLICATION::ExecuteAspNetCoreProcess(
+IN_PROCESS_APPLICATION::ExecuteAspNetCoreProcess(
     _In_ LPVOID pContext
 )
 {
 
-    INPROCESS_APPLICATION *pApplication = (INPROCESS_APPLICATION*)pContext;
+    IN_PROCESS_APPLICATION *pApplication = (IN_PROCESS_APPLICATION*)pContext;
     DBG_ASSERT(pApplication != NULL);
     pApplication->ExecuteApplication();
     //
@@ -758,7 +757,7 @@ INPROCESS_APPLICATION::ExecuteAspNetCoreProcess(
 }
 
 HRESULT
-INPROCESS_APPLICATION::FindHighestDotNetVersion(
+IN_PROCESS_APPLICATION::FindHighestDotNetVersion(
     _In_ std::vector<std::wstring> vFolders,
     _Out_ STRU *pstrResult
 )
