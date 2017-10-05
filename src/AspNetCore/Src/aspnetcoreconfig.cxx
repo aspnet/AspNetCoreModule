@@ -5,7 +5,9 @@
 
 ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
 {
-    if (QueryHostingModel() == HOSTING_IN_PROCESS && !g_fRecycleProcessCalled)
+    if (QueryHostingModel() == HOSTING_IN_PROCESS && 
+        !g_fRecycleProcessCalled && 
+        !g_pHttpServer->IsCommandLineLaunch())
     {
         // RecycleProcess can olny be called once
         // In case of configuration change for in-process app
@@ -25,6 +27,14 @@ ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
     if (!m_struApplication.IsEmpty())
     {
         APPLICATION_MANAGER::GetInstance()->RecycleApplication(m_struApplication.QueryStr());
+    }
+
+    if (QueryHostingModel() == HOSTING_IN_PROCESS && 
+        g_pHttpServer->IsCommandLineLaunch())
+    {
+        // IISExpress scenario, only option is to call exit in case configuration change
+        // as CLR or application may change
+        exit(0);
     }
 }
 

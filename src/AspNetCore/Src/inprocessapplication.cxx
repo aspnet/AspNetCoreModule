@@ -477,11 +477,12 @@ IN_PROCESS_APPLICATION::Recycle(
     DWORD    dwTimeout = m_pConfiguration->QueryShutdownTimeLimitInMS();
 
     AcquireSRWLockExclusive(&m_srwLock);
-    if (!g_fRecycleProcessCalled)
-    {
-        g_fRecycleProcessCalled = TRUE;
 
+    if (!g_pHttpServer->IsCommandLineLaunch() && !g_fRecycleProcessCalled)
+    {
+        // IIS scenario.
         // notify IIS first so that new request will be routed to new worker process
+        g_fRecycleProcessCalled = TRUE;
         g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Demand");
     }
     // First call into the managed server and shutdown
@@ -510,6 +511,13 @@ IN_PROCESS_APPLICATION::Recycle(
     m_hThread = NULL;
     s_Application = NULL;
     ReleaseSRWLockExclusive(&m_srwLock);
+
+    if (g_pHttpServer->IsCommandLineLaunch())
+    {
+        // IISExpress scenario
+        // Can only call exit to terminate current process
+        exit(0);
+    }
 }
 
 VOID
