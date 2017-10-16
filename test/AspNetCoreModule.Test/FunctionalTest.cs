@@ -12,7 +12,7 @@ namespace AspNetCoreModule.Test
     public class FunctionalTest : FunctionalTestHelper, IClassFixture<InitializeTestMachine>
     {
         [ConditionalTheory]
-        [ANCMTestFlags(TestFlags.RequireRunAsAdministrator)]
+        [ANCMTestFlags(TestFlags.Default)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange)]
