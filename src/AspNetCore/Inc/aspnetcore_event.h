@@ -1,4 +1,3 @@
-
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
@@ -38,7 +37,7 @@ public:
     enum enumAreaFlags
     {
         // AspNetCore module events
-        ANCM = 0x8000
+        ANCM = 0x10000
     };
     static
     LPCWSTR
@@ -46,7 +45,7 @@ public:
     {
         switch( (DWORD) EnumValue )
         {
-        case 0x8000: return L"ANCM";
+        case 0x10000: return L"ANCM";
         }
         return NULL;
     };
