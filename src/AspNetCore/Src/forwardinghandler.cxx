@@ -1565,7 +1565,6 @@ REQUEST_NOTIFICATION_STATUS
             reinterpret_cast<PVOID>(static_cast<DWORD_PTR>(hrCompletionStatus)));
     }
 
-    // Application is null here? Can this happen for out of proc scenario?
     if (m_pApplication->QueryConfig()->QueryHostingModel() == HOSTING_IN_PROCESS)
     {
         if (FAILED(hrCompletionStatus))

@@ -333,9 +333,9 @@ http_cancel_io(
 IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
 
 IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION() :
-    m_ProcessExitCode(0),
-    m_fManagedAppLoaded(FALSE),
-    m_fLoadManagedAppError(FALSE)
+    m_ProcessExitCode ( 0 ),
+    m_fManagedAppLoaded ( FALSE ),
+    m_fLoadManagedAppError ( FALSE )
 {
 }
 
