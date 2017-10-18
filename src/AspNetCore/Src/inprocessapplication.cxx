@@ -194,7 +194,7 @@ http_flush_response_bytes(
 
 IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
 
-IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION():
+IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION() :
     m_ProcessExitCode ( 0 ),
     m_fManagedAppLoaded ( FALSE ),
     m_fLoadManagedAppError ( FALSE )
@@ -480,13 +480,17 @@ IN_PROCESS_APPLICATION::Recycle(
 
     AcquireSRWLockExclusive(&m_srwLock);
 
-    if (!g_pHttpServer->IsCommandLineLaunch() && !g_fRecycleProcessCalled)
+    if (!g_pHttpServer->IsCommandLineLaunch() &&
+        !g_fRecycleProcessCalled &&
+        (g_pHttpServer->GetAdminManager() != NULL))
     {
         // IIS scenario.
         // notify IIS first so that new request will be routed to new worker process
-        g_fRecycleProcessCalled = TRUE;
         g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Demand");
     }
+
+    g_fRecycleProcessCalled = TRUE;
+
     // First call into the managed server and shutdown
     if (m_ShutdownHandler != NULL)
     {
@@ -512,14 +516,15 @@ IN_PROCESS_APPLICATION::Recycle(
     CloseHandle(m_hThread);
     m_hThread = NULL;
     s_Application = NULL;
-    ReleaseSRWLockExclusive(&m_srwLock);
 
-    if (g_pHttpServer->IsCommandLineLaunch())
+    ReleaseSRWLockExclusive(&m_srwLock);
+    if (g_pHttpServer && g_pHttpServer->IsCommandLineLaunch())
     {
         // IISExpress scenario
         // Can only call exit to terminate current process
         exit(0);
     }
+
 }
 
 VOID
