@@ -84,6 +84,7 @@ private:
 
     BOOL                            m_fManagedAppLoaded;
     BOOL                            m_fLoadManagedAppError;
+    BOOL                            m_fInitialized;
 
     static IN_PROCESS_APPLICATION*   s_Application;
 

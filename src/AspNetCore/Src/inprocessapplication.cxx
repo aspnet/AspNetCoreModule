@@ -197,7 +197,8 @@ IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
 IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION() :
     m_ProcessExitCode ( 0 ),
     m_fManagedAppLoaded ( FALSE ),
-    m_fLoadManagedAppError ( FALSE )
+    m_fLoadManagedAppError ( FALSE ),
+    m_fInitialized ( FALSE )
 {
 }
 
@@ -349,6 +350,7 @@ IN_PROCESS_APPLICATION::Initialize(
        hr =  HRESULT_FROM_WIN32(GetLastError());
        goto Finished;
     }
+    m_fInitialized = TRUE;
 
 Finished:
     return hr;
@@ -475,56 +477,58 @@ IN_PROCESS_APPLICATION::Recycle(
     VOID
 )
 {
-    DWORD    dwThreadStatus = 0;
-    DWORD    dwTimeout = m_pConfiguration->QueryShutdownTimeLimitInMS();
-
-    AcquireSRWLockExclusive(&m_srwLock);
-
-    if (!g_pHttpServer->IsCommandLineLaunch() &&
-        !g_fRecycleProcessCalled &&
-        (g_pHttpServer->GetAdminManager() != NULL))
+    if (m_fInitialized)
     {
-        // IIS scenario.
-        // notify IIS first so that new request will be routed to new worker process
-        g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Demand");
-    }
+        DWORD    dwThreadStatus = 0;
+        DWORD    dwTimeout = m_pConfiguration->QueryShutdownTimeLimitInMS();
 
-    g_fRecycleProcessCalled = TRUE;
+        AcquireSRWLockExclusive(&m_srwLock);
 
-    // First call into the managed server and shutdown
-    if (m_ShutdownHandler != NULL)
-    {
-        m_ShutdownHandler(m_ShutdownHandlerContext);
-        m_ShutdownHandler = NULL;
-    }
-
-    if (m_hThread != NULL &&
-        GetExitCodeThread(m_hThread, &dwThreadStatus) != 0 &&
-        dwThreadStatus == STILL_ACTIVE)
-    {
-        // wait for gracefullshut down, i.e., the exit of the background thread or timeout
-        if (WaitForSingleObject(m_hThread, dwTimeout) != WAIT_OBJECT_0)
+        if (!g_pHttpServer->IsCommandLineLaunch() &&
+            !g_fRecycleProcessCalled &&
+            (g_pHttpServer->GetAdminManager() != NULL))
         {
-            // if the thread is still running, we need kill it first before exit to avoid AV
-            if (GetExitCodeThread(m_hThread, &dwThreadStatus) != 0 && dwThreadStatus == STILL_ACTIVE)
+            // IIS scenario.
+            // notify IIS first so that new request will be routed to new worker process
+            g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Demand");
+        }
+
+        g_fRecycleProcessCalled = TRUE;
+
+        // First call into the managed server and shutdown
+        if (m_ShutdownHandler != NULL)
+        {
+            m_ShutdownHandler(m_ShutdownHandlerContext);
+            m_ShutdownHandler = NULL;
+        }
+
+        if (m_hThread != NULL &&
+            GetExitCodeThread(m_hThread, &dwThreadStatus) != 0 &&
+            dwThreadStatus == STILL_ACTIVE)
+        {
+            // wait for gracefullshut down, i.e., the exit of the background thread or timeout
+            if (WaitForSingleObject(m_hThread, dwTimeout) != WAIT_OBJECT_0)
             {
-                TerminateThread(m_hThread, STATUS_CONTROL_C_EXIT);
+                // if the thread is still running, we need kill it first before exit to avoid AV
+                if (GetExitCodeThread(m_hThread, &dwThreadStatus) != 0 && dwThreadStatus == STILL_ACTIVE)
+                {
+                    TerminateThread(m_hThread, STATUS_CONTROL_C_EXIT);
+                }
             }
         }
+
+        CloseHandle(m_hThread);
+        m_hThread = NULL;
+        s_Application = NULL;
+
+        ReleaseSRWLockExclusive(&m_srwLock);
+        if (g_pHttpServer && g_pHttpServer->IsCommandLineLaunch())
+        {
+            // IISExpress scenario
+            // Can only call exit to terminate current process
+            exit(0);
+        }
     }
-
-    CloseHandle(m_hThread);
-    m_hThread = NULL;
-    s_Application = NULL;
-
-    ReleaseSRWLockExclusive(&m_srwLock);
-    if (g_pHttpServer && g_pHttpServer->IsCommandLineLaunch())
-    {
-        // IISExpress scenario
-        // Can only call exit to terminate current process
-        exit(0);
-    }
-
 }
 
 VOID
