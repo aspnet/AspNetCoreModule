@@ -56,7 +56,16 @@ EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_post_completion(
     _In_ IHttpContext* pHttpContext,
-    DWORD cbBytes,
+    DWORD cbBytes
+)
+{
+    return pHttpContext->PostCompletion(cbBytes);
+}
+
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
+HRESULT
+http_set_completion_status(
+    _In_ IHttpContext* pHttpContext,
     REQUEST_NOTIFICATION_STATUS requestNotificationStatus
 )
 {
@@ -74,7 +83,7 @@ http_post_completion(
     }
     pInProcessStoredContext->IndicateManagedRequestComplete();
     pInProcessStoredContext->SetAsyncCompletionStatus(requestNotificationStatus);
-    return pHttpContext->PostCompletion(cbBytes);
+    return hr;
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
