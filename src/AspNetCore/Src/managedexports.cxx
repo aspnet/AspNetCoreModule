@@ -203,7 +203,6 @@ http_write_response_bytes(
 {
     HRESULT hr S_OK;
     IHttpResponse *pHttpResponse = NULL;
-    IN_PROCESS_STORED_CONTEXT* pInProcessStoredContext = NULL;
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
     DWORD dwBytesSent = 0;
@@ -365,7 +364,7 @@ http_cancel_io(
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
-http_abort_request(
+http_reset_connection(
     _In_ IHttpContext* pHttpContext
 )
 {
