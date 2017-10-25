@@ -26,30 +26,37 @@ register_callbacks(
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
-HTTP_REQUEST*
+HRESULT
 http_get_raw_request(
-    _In_ IHttpContext* pHttpContext
+    _In_ IHttpContext* pHttpContext,
+    _Out_ HTTP_REQUEST** pHttpRequest
+
 )
 {
-    return pHttpContext->GetRequest()->GetRawHttpRequest();
+    *pHttpRequest = pHttpContext->GetRequest()->GetRawHttpRequest();
+    return S_OK;
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
-HTTP_RESPONSE*
+HRESULT
 http_get_raw_response(
-    _In_ IHttpContext* pHttpContext
+    _In_ IHttpContext* pHttpContext,
+    _Out_ HTTP_RESPONSE** pHttpResponse
 )
 {
-    return pHttpContext->GetResponse()->GetRawHttpResponse();
+    *pHttpResponse = pHttpContext->GetResponse()->GetRawHttpResponse();
+    return S_OK;
 }
 
-EXTERN_C __MIDL_DECLSPEC_DLLEXPORT VOID http_set_response_status_code(
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
+HRESULT
+http_set_response_status_code(
     _In_ IHttpContext* pHttpContext,
     _In_ USHORT statusCode,
     _In_ PCSTR pszReason
 )
 {
-    pHttpContext->GetResponse()->SetStatus(statusCode, pszReason);
+    return pHttpContext->GetResponse()->SetStatus(statusCode, pszReason);
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
@@ -110,17 +117,18 @@ http_set_managed_context(
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
-VOID
+HRESULT
 http_indicate_completion(
     _In_ IHttpContext* pHttpContext,
     _In_ REQUEST_NOTIFICATION_STATUS notificationStatus
 )
 {
     pHttpContext->IndicateCompletion(notificationStatus);
+    return S_OK;
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
-VOID
+HRESULT
 http_get_completion_info(
     _In_ IHttpCompletionInfo2* info,
     _Out_ DWORD* cbBytes,
@@ -129,6 +137,7 @@ http_get_completion_info(
 {
     *cbBytes = info->GetCompletionBytes();
     *hr = info->GetCompletionStatus();
+    return S_OK;
 }
 
 //
