@@ -43,11 +43,7 @@ IN_PROCESS_APPLICATION::OnAsyncCompletion(
     {
         // means PostCompletion has been called and this is the associated callback.
         dwRequestNotificationStatus = pInProcessStoredContext->QueryAsyncCompletionStatus();
-        if (dwRequestNotificationStatus == RQ_NOTIFICATION_FINISH_REQUEST)
-        {
-            pHttpContext->DisableNotifications(RQ_END_REQUEST, 0);
-            // TODO cleanup whatever disconnect listener there is
-        }
+        // TODO cleanup whatever disconnect listener there is
         return dwRequestNotificationStatus;
     }
     else
