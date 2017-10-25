@@ -160,7 +160,6 @@ http_read_request_bytes(
 )
 {
     HRESULT hr S_OK;
-    IN_PROCESS_STORED_CONTEXT* pInProcessStoredContext = NULL;
     IHttpRequest * pHttpRequest = NULL;
     BOOL fAsync = TRUE;
 
