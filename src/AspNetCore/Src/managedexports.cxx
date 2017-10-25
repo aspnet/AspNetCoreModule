@@ -148,6 +148,7 @@ http_get_application_full_path()
     return SysAllocString(pwzPath);
 }
 
+
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_read_request_bytes(
@@ -158,19 +159,21 @@ http_read_request_bytes(
     _Out_ BOOL* pfCompletionPending
 )
 {
-    HRESULT hr;
+    HRESULT hr S_OK;
+    IHttpRequest * pHttpRequest = NULL;
+    BOOL fAsync = TRUE;
 
     if (pHttpContext == NULL)
     {
         return E_FAIL;
     }
+
     if (dwCbBuffer == 0)
     {
         return E_FAIL;
     }
-    IHttpRequest *pHttpRequest = (IHttpRequest*)pHttpContext->GetRequest();
 
-    BOOL fAsync = TRUE;
+    pHttpRequest = (IHttpRequest*)pHttpContext->GetRequest();
 
     hr = pHttpRequest->ReadEntityBody(
         pvBuffer,
@@ -197,12 +200,21 @@ http_write_response_bytes(
     _In_ BOOL* pfCompletionExpected
 )
 {
-    IHttpResponse *pHttpResponse = (IHttpResponse*)pHttpContext->GetResponse();
+    HRESULT hr S_OK;
+    IHttpResponse *pHttpResponse = NULL;
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
     DWORD dwBytesSent = 0;
 
-    HRESULT hr = pHttpResponse->WriteEntityChunks(
+
+    if (pHttpContext == NULL)
+    {
+        return E_FAIL;
+    }
+
+    pHttpResponse = (IHttpResponse*)pHttpContext->GetResponse();
+
+    hr = pHttpResponse->WriteEntityChunks(
         pDataChunks,
         dwChunks,
         fAsync,
@@ -221,12 +233,12 @@ http_flush_response_bytes(
 )
 {
     IHttpResponse *pHttpResponse = (IHttpResponse*)pHttpContext->GetResponse();
-
+    HRESULT hr = S_OK;
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
     DWORD dwBytesSent = 0;
 
-    HRESULT hr = pHttpResponse->Flush(
+    hr = pHttpResponse->Flush(
         fAsync,
         fMoreData,
         &dwBytesSent,
@@ -347,6 +359,17 @@ http_cancel_io(
 )
 {
     return pHttpContext->CancelIo();
+}
+
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
+HRESULT
+http_reset_connection(
+    _In_ IHttpContext* pHttpContext
+)
+{
+    pHttpContext->GetResponse()->ResetConnection();
+
+    return S_OK;
 }
 
 // End of export
