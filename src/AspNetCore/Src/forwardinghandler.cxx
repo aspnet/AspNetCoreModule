@@ -3147,9 +3147,8 @@ FORWARDING_HANDLER::TerminateRequest(
 {
     if (m_pApplication->QueryConfig()->QueryHostingModel() == HOSTING_IN_PROCESS) 
     {
-        //
-        // Todo: need inform managed layer to abort the request
-        //
+        // TODO Terminate Request is being called on Shutdown of IISExpress, causing 
+        // disconnect to be called at the wrong time.
         IN_PROCESS_APPLICATION* application = (IN_PROCESS_APPLICATION*)m_pApplication;
         application->OnClientDisconnect( m_pW3Context, fClientInitiated );
     }
