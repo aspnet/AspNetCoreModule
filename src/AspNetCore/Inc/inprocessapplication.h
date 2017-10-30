@@ -54,11 +54,12 @@ public:
 
     HRESULT
     LoadManagedApplication(
-            VOID
-        );
+        VOID
+    );
     
     HRESULT
     OnClientDisconnect(
+        IHttpContext* pHttpContext,
         BOOL fClientDisconnected
     );
 
@@ -105,7 +106,7 @@ private:
     BOOL                            m_fInitialized;
     BOOL                            m_fIsWebSocketsConnection;
 
-    static IN_PROCESS_APPLICATION*   s_Application;
+    static IN_PROCESS_APPLICATION*  s_Application;
 
     static
     VOID

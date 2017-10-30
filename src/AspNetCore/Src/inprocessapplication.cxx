@@ -652,16 +652,32 @@ Finished:
     return hr;
 }
 
-VOID
+HRESULT
 IN_PROCESS_APPLICATION::OnClientDisconnect(
+    IHttpContext* pHttpContext,
     BOOL fClientDisconnected
 )
 {
-    if ( m_clientDisconnectHandler != NULL && fClientDisconnected)
+    HRESULT hr;
+    IN_PROCESS_STORED_CONTEXT* pInProcessStoredContext = NULL;
+
+
+
+    if ( m_ClientDisconnectHandler == NULL || !fClientDisconnected)
     {
-        m_clientDisconnectHandler();
+        return E_FAIL;
     }
 
+    hr = IN_PROCESS_STORED_CONTEXT::GetInProcessStoredContext( pHttpContext, &pInProcessStoredContext );
+    if ( FAILED( hr ) )
+    {
+        // Finish the request as we couldn't get the callback
+        pHttpContext->GetResponse()->SetStatus( 500, "Internal Server Error", 19, hr );
+        return hr;
+    }
+
+    m_ClientDisconnectHandler(pInProcessStoredContext->QueryManagedHttpContext());
+    return S_OK;
 }
 
 // static
