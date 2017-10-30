@@ -355,4 +355,14 @@ http_cancel_io(
     return pHttpContext->CancelIo();
 }
 
+
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
+VOID
+http_reset_connection(
+    _In_ IHttpContext* pHttpContext
+)
+{
+    pHttpContext->GetResponse()->ResetConnection();
+}
+
 // End of export
