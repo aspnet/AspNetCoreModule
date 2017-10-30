@@ -357,7 +357,6 @@ http_cancel_io(
     return pHttpContext->CancelIo();
 }
 
-
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 VOID
 http_reset_connection(

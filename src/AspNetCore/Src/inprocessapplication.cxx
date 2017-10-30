@@ -661,8 +661,6 @@ IN_PROCESS_APPLICATION::OnClientDisconnect(
     HRESULT hr;
     IN_PROCESS_STORED_CONTEXT* pInProcessStoredContext = NULL;
 
-
-
     if ( m_ClientDisconnectHandler == NULL || !fClientDisconnected)
     {
         return E_FAIL;
@@ -718,4 +716,3 @@ IN_PROCESS_APPLICATION::FindHighestDotNetVersion(
     // we check FAILED(hr) outside of function
     return hr;
 }
-

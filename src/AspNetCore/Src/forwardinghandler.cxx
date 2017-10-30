@@ -3276,7 +3276,7 @@ FORWARDING_HANDLER::SetHttpSysDisconnectCallback()
         //
         m_pDisconnect->SetHandler(this);
 
-    Finished: 
-        return hr;
     }
+Finished:
+    return hr;
 }
