@@ -618,6 +618,7 @@ Finished:
             ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT_MSG,
             m_pConfiguration->QueryApplicationPath()->QueryStr(),
             m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
+            hr,
             m_ProcessExitCode
         )))
         {
