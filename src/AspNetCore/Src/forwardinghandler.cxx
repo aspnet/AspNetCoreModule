@@ -3150,6 +3150,8 @@ FORWARDING_HANDLER::TerminateRequest(
         //
         // Todo: need inform managed layer to abort the request
         //
+        IN_PROCESS_APPLICATION* application = (IN_PROCESS_APPLICATION*)m_pApplication;
+        application->OnClientDisconnect(fClientInitiated);
     }
     else
     {

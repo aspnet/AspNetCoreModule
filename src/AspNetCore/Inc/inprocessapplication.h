@@ -6,8 +6,8 @@
 typedef void(*request_handler_cb) (int error, IHttpContext* pHttpContext, void* pvCompletionContext);
 typedef REQUEST_NOTIFICATION_STATUS(*PFN_REQUEST_HANDLER) (IHttpContext* pHttpContext, void* pvRequstHandlerContext);
 typedef BOOL(*PFN_SHUTDOWN_HANDLER) (void* pvShutdownHandlerContext);
-typedef REQUEST_NOTIFICATION_STATUS(*PFN_MANAGED_CONTEXT_HANDLER)(void *pvManagedHttpContext, HRESULT hrCompletionStatus, DWORD cbCompletion);
-
+typedef REQUEST_NOTIFICATION_STATUS(*PFN_ASYNC_COMPLETION_HANDLER)(void *pvManagedHttpContext, HRESULT hrCompletionStatus, DWORD cbCompletion);
+typedef VOID( *PFN_CLIENT_DISCONNECT_HANDLER ) ( void *pvManagedHttpContext );
 #include "application.h"
 
 class IN_PROCESS_APPLICATION : public APPLICATION
@@ -40,8 +40,9 @@ public:
     SetCallbackHandles(
         _In_ PFN_REQUEST_HANDLER request_callback,
         _In_ PFN_SHUTDOWN_HANDLER shutdown_callback,
-        _In_ PFN_MANAGED_CONTEXT_HANDLER managed_context_callback,
-        _In_ VOID* pvRequstHandlerContext,
+        _In_ PFN_ASYNC_COMPLETION_HANDLER managed_context_callback,
+        _In_ PFN_CLIENT_DISCONNECT_HANDLER client_disconnect_callback,
+        _In_ VOID* pvRequestHandlerContext,
         _In_ VOID* pvShutdownHandlerContext
     );
 
@@ -55,6 +56,11 @@ public:
     LoadManagedApplication(
             VOID
         );
+    
+    HRESULT
+    OnClientDisconnect(
+        BOOL fClientDisconnected
+    );
 
     REQUEST_NOTIFICATION_STATUS
     OnAsyncCompletion(
@@ -85,8 +91,9 @@ private:
     PFN_SHUTDOWN_HANDLER            m_ShutdownHandler;
     VOID*                           m_ShutdownHandlerContext;
 
-    PFN_MANAGED_CONTEXT_HANDLER     m_AsyncCompletionHandler;
+    PFN_ASYNC_COMPLETION_HANDLER    m_AsyncCompletionHandler;
 
+    PFN_CLIENT_DISCONNECT_HANDLER   m_ClientDisconnectHandler;
     // The event that gets triggered when managed initialization is complete
     HANDLE                          m_pInitalizeEvent;
 
@@ -120,7 +127,8 @@ private:
     _In_ STRU *pstrPath  //todo: this does not need to be stru, can be PCWSTR
     );
 
-    static BOOL
+    static 
+    BOOL
     GetEnv(
         _In_ PCWSTR pszEnvironmentVariable,
         _Out_ STRU *pstrResult

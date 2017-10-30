@@ -207,6 +207,8 @@ private:
         __in IHttpResponse *pResponse
     );
 
+    VOID TerminateRequest(bool fClientInitiated);
+
     BYTE *
     GetNewResponseBuffer(
         DWORD   dwBufferSize

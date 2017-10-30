@@ -135,17 +135,18 @@ VOID
 IN_PROCESS_APPLICATION::SetCallbackHandles(
     _In_ PFN_REQUEST_HANDLER request_handler,
     _In_ PFN_SHUTDOWN_HANDLER shutdown_handler,
-    _In_ PFN_MANAGED_CONTEXT_HANDLER async_completion_handler,
-    _In_ VOID* pvRequstHandlerContext,
+    _In_ PFN_ASYNC_COMPLETION_HANDLER async_completion_handler,
+    _In_ PFN_CLIENT_DISCONNECT_HANDLER client_disconnect_handler,
+    _In_ VOID* pvRequestHandlerContext,
     _In_ VOID* pvShutdownHandlerContext
 )
 {
     m_RequestHandler = request_handler;
-    m_RequstHandlerContext = pvRequstHandlerContext;
+    m_RequstHandlerContext = pvRequestHandlerContext;
     m_ShutdownHandler = shutdown_handler;
     m_ShutdownHandlerContext = pvShutdownHandlerContext;
     m_AsyncCompletionHandler = async_completion_handler;
-
+    m_ClientDisconnectHandler = client_disconnect_handler;
     // Initialization complete
     SetEvent(m_pInitalizeEvent);
 }
@@ -651,6 +652,17 @@ Finished:
     return hr;
 }
 
+VOID
+IN_PROCESS_APPLICATION::OnClientDisconnect(
+    BOOL fClientDisconnected
+)
+{
+    if ( m_clientDisconnectHandler != NULL && fClientDisconnected)
+    {
+        m_clientDisconnectHandler();
+    }
+
+}
 
 // static
 VOID
@@ -690,3 +702,4 @@ IN_PROCESS_APPLICATION::FindHighestDotNetVersion(
     // we check FAILED(hr) outside of function
     return hr;
 }
+
