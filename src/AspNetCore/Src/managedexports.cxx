@@ -73,7 +73,7 @@ http_set_completion_status(
 {
     HRESULT hr = S_OK;
     IN_PROCESS_STORED_CONTEXT* pInProcessStoredContext = NULL;
-
+    ASYNC_DISCONNECT_CONTEXT* pDisconnectContext = NULL;
     hr = IN_PROCESS_STORED_CONTEXT::GetInProcessStoredContext(
         pHttpContext,
         &pInProcessStoredContext
@@ -85,6 +85,14 @@ http_set_completion_status(
     }
     pInProcessStoredContext->IndicateManagedRequestComplete();
     pInProcessStoredContext->SetAsyncCompletionStatus(requestNotificationStatus);
+
+    // remove disconnect listener
+    pDisconnectContext = ( ASYNC_DISCONNECT_CONTEXT* ) pHttpContext->GetConnection()->GetModuleContextContainer()->GetConnectionModuleContext( g_pModuleId );
+    if ( pDisconnectContext != NULL )
+    {
+        pDisconnectContext->ResetHandler();
+    }
+
     return hr;
 }
 
