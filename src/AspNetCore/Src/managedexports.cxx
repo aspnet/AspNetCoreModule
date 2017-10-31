@@ -355,4 +355,17 @@ http_cancel_io(
     return pHttpContext->CancelIo();
 }
 
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
+HRESULT
+http_set_header(
+    _In_ IHttpContext* pHttpContext,
+    _In_ PCSTR pszHeaderName,
+    _In_ PCSTR pszHeaderValue,
+    _In_ USHORT usHeaderValueLength,
+    _In_ BOOL  fReplace
+)
+{
+    return pHttpContext->GetResponse()->SetHeader( pszHeaderName, pszHeaderValue, usHeaderValueLength, fReplace );
+}
+
 // End of export
