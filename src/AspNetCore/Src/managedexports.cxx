@@ -357,7 +357,7 @@ http_cancel_io(
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
-http_set_header(
+http_response_set_header(
     _In_ IHttpContext* pHttpContext,
     _In_ PCSTR pszHeaderName,
     _In_ PCSTR pszHeaderValue,
