@@ -140,7 +140,6 @@ IN_PROCESS_APPLICATION::SetStdOut(
 )
 {
     HRESULT      hr = S_OK;
-    STRU         struLogFileName;
     BOOL         fLocked = FALSE;
     BOOL         fResult = FALSE;
 
@@ -158,7 +157,7 @@ IN_PROCESS_APPLICATION::SetStdOut(
             //
             if (!GetConsoleWindow())
             {
-                hr = m_pConfiguration->CreateLogFile(TRUE, &struLogFileName, &m_hLogFileHandle);
+                hr = m_pConfiguration->CreateLogFile(TRUE, &m_struLogFilePath, &m_hLogFileHandle);
                 if (FAILED(hr))
                 {
                     goto Finished;
@@ -172,19 +171,24 @@ IN_PROCESS_APPLICATION::SetStdOut(
                 {
                     SetStdHandle(STD_OUTPUT_HANDLE, m_hLogFileHandle);
                     // not work
-                   // *stdout = *m_pStdFile;
-                   // *stderr = *m_pStdFile;
-                   // _dup2(_fileno(m_pStdFile), _fileno(stdout));
-                   // _dup2(_fileno(m_pStdFile), _fileno(stderr));
-                   // this one cannot capture the process start failure
-                   // _wfreopen_s(&m_pStdFile, struLogFileName.QueryStr(), L"w", stdout);
+                    // AllocConsole()  does not help
+                    // *stdout = *m_pStdFile;
+                    // *stderr = *m_pStdFile;
+                    // _dup2(_fileno(m_pStdFile), _fileno(stdout));
+                    // _dup2(_fileno(m_pStdFile), _fileno(stderr));
+                    // this one cannot capture the process start failure
+                    // _wfreopen_s(&m_pStdFile, struLogFileName.QueryStr(), L"w", stdout);
+
+                    // Periodically flush the log content to file
+                    // Reuse the callback function already defined in SERVER_PROCESS
+                    m_Timer.InitializeTimer(SERVER_PROCESS::TimerCallback, &m_struLogFilePath, 3000, 3000);
                 }
             }
             else
             {
                 if (m_pConfiguration->QueryStdoutLogEnabled())
                 {
-                    hr = m_pConfiguration->CreateLogFile(TRUE, &struLogFileName, &m_hLogFileHandle);
+                    hr = m_pConfiguration->CreateLogFile(TRUE, &m_struLogFilePath, &m_hLogFileHandle);
                     if (FAILED(hr))
                     {
                         goto Finished;
@@ -193,7 +197,7 @@ IN_PROCESS_APPLICATION::SetStdOut(
                     // The process has console, e.g., IIS Express scenario
                     CloseHandle(m_hLogFileHandle);
                     m_hLogFileHandle = INVALID_HANDLE_VALUE;
-                    if (_wfopen_s(&m_pStdFile, struLogFileName.QueryStr(), L"w") == 0)
+                    if (_wfopen_s(&m_pStdFile, m_struLogFilePath.QueryStr(), L"w") == 0)
                     {
                         // known issue: error info may not be capture when process crashes during buffering
                         // even we disabled FILE buffering
@@ -202,6 +206,7 @@ IN_PROCESS_APPLICATION::SetStdOut(
                         _dup2(_fileno(m_pStdFile), _fileno(stderr));
                     }
                     // not work for console scenario
+                    // close and AllocConsole does not help
                     //_wfreopen_s(&m_pStdFile, struLogFileName.QueryStr(), L"w", stdout);
                     // SetStdHandle(STD_ERROR_HANDLE, m_hLogFileHandle);
                     // SetStdHandle(STD_OUTPUT_HANDLE, m_hLogFileHandle);
@@ -224,7 +229,7 @@ Finished:
 
         if (SUCCEEDED(strEventMsg.SafeSnwprintf(
             ASPNETCORE_EVENT_INVALID_STDOUT_LOG_FILE_MSG,
-            struLogFileName.QueryStr(),
+            m_struLogFilePath.QueryStr(),
             HRESULT_FROM_GETLASTERROR())))
         {
             apsz[0] = strEventMsg.QueryStr();
@@ -487,6 +492,7 @@ IN_PROCESS_APPLICATION::Recycle(
 
         if (m_hLogFileHandle != INVALID_HANDLE_VALUE)
         {
+            m_Timer.CancelTimer();
             CloseHandle(m_hLogFileHandle);
             m_hLogFileHandle = INVALID_HANDLE_VALUE;
         }
@@ -496,6 +502,22 @@ IN_PROCESS_APPLICATION::Recycle(
             fflush(stdout);
             fflush(stderr);
             fclose(m_pStdFile);
+        }
+
+        // delete empty log file
+        if (!m_struLogFilePath.IsEmpty())
+        {
+            WIN32_FIND_DATA fileData;
+            HANDLE handle = FindFirstFile(m_struLogFilePath.QueryStr(), &fileData);
+            if (handle != INVALID_HANDLE_VALUE && 
+                fileData.nFileSizeHigh == 0 && 
+                fileData.nFileSizeLow ==0)
+            {
+                FindClose(handle);
+                // no need to check whether the deletion succeeds
+                // as nothing can be done
+                DeleteFile(m_struLogFilePath.QueryStr());
+            }
         }
 
         ReleaseSRWLockExclusive(&m_srwLock);

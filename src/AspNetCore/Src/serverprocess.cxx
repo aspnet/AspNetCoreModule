@@ -1259,7 +1259,7 @@ SERVER_PROCESS::SetupStdHandles(
             m_struFullLogFile.Copy(struLogFileName);
 
             // start timer to open and close handles regularly.
-            m_Timer.InitializeTimer(SERVER_PROCESS::TimerCallback, this, 3000, 3000);
+            m_Timer.InitializeTimer(SERVER_PROCESS::TimerCallback, &m_struFullLogFile, 3000, 3000);
         }
     }
 
@@ -1288,7 +1288,7 @@ SERVER_PROCESS::TimerCallback(
 {
     Instance;
     Timer;
-    SERVER_PROCESS*         pServerProcess = (SERVER_PROCESS*) Context;
+    STRU*                   pstruLogFilePath = (STRU*)Context;
     HANDLE                  hStdoutHandle = NULL;
     SECURITY_ATTRIBUTES     saAttr = {0};
     HRESULT                 hr = S_OK;
@@ -1297,7 +1297,7 @@ SERVER_PROCESS::TimerCallback(
     saAttr.bInheritHandle = TRUE; 
     saAttr.lpSecurityDescriptor = NULL;
 
-    hStdoutHandle = CreateFileW(pServerProcess->QueryFullLogPath(),
+    hStdoutHandle = CreateFileW(pstruLogFilePath->QueryStr(),
                                 FILE_READ_DATA,
                                 FILE_SHARE_WRITE,
                                 &saAttr,
