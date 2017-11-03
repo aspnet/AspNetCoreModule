@@ -48,6 +48,114 @@ ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
 }
 
 HRESULT
+ASPNETCORE_CONFIG::CreateLogFile(
+    _In_  BOOL    fIgnoreDisableInConfig,
+    _Out_ STRU*   pstruFullFileName,
+    _Out_ HANDLE* pHandle
+)
+{
+    HRESULT hr = HRESULT_FROM_NT(ERROR_NOT_SUPPORTED); // Assume log is not enabled
+    SECURITY_ATTRIBUTES     saAttr = { 0 };
+    SYSTEMTIME              systemTime;
+    STRU    struPath;
+
+    DBG_ASSERT(pstruFullFileName);
+    DBG_ASSERT(pHandle);
+
+    *pHandle = INVALID_HANDLE_VALUE;
+    if (fIgnoreDisableInConfig || m_fStdoutLogEnabled)
+    {
+        STRU   struTmp;
+        STRU   struLogPath;
+        WCHAR* strSegment = NULL;
+        WCHAR* strRestSegments = NULL;
+        hr = struTmp.Copy(m_struStdoutLogFile.QueryStr());
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+
+        //
+        // Check whether the (first) segment exists based on configuration element 'stdoutLogFile'
+        // If not, create that folder. We only want make the default '.\logs\stdout' work.
+        // No recursive folder creation
+        //
+        strSegment = wcstok_s(struTmp.QueryStr(), L"\\", &strRestSegments);
+        if (strSegment != NULL && (strSegment[0] == L'.') && strSegment[1] == L'\0')
+        {
+            struLogPath.Append(L".\\");
+            strSegment = wcstok_s(NULL, L"\\", &strRestSegments);
+            if (strSegment != NULL)
+            {
+                struLogPath.Append(strSegment);
+            }
+            strSegment = struLogPath.QueryStr();
+        }
+        if (strSegment != NULL)
+        {
+            hr = PATH::ConvertPathToFullPath(
+                strSegment,
+                m_struApplicationFullPath.QueryStr(),
+                &struPath);
+            if (FAILED(hr))
+            {
+                goto Finished;
+            }
+            if (!CreateDirectory(struPath.QueryStr(), NULL) &&
+                ERROR_ALREADY_EXISTS != GetLastError())
+            {
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                goto Finished;
+            }
+        }
+        struPath.Reset();
+        hr = PATH::ConvertPathToFullPath(
+            m_struStdoutLogFile.QueryStr(),
+            m_struApplicationFullPath.QueryStr(),
+            &struPath);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+
+        GetSystemTime(&systemTime);
+        hr = pstruFullFileName->SafeSnwprintf(L"%s_%d%02d%02d%02d%02d%02d_%d.log",
+                struPath.QueryStr(),
+                systemTime.wYear,
+                systemTime.wMonth,
+                systemTime.wDay,
+                systemTime.wHour,
+                systemTime.wMinute,
+                systemTime.wSecond,
+                GetCurrentProcessId());
+        if (FAILED(hr))
+        {
+           goto Finished;
+        }
+
+        saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+        saAttr.bInheritHandle = TRUE;
+        saAttr.lpSecurityDescriptor = NULL;
+
+        *pHandle = CreateFileW(pstruFullFileName->QueryStr(),
+                FILE_WRITE_DATA,
+                FILE_SHARE_READ,
+                &saAttr,
+                CREATE_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL,
+                NULL);
+        if (*pHandle == INVALID_HANDLE_VALUE)
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            goto Finished;
+        }
+        hr = S_OK;
+    }
+Finished:
+    return hr;
+}
+
+HRESULT
 ASPNETCORE_CONFIG::GetConfig(
     _In_  IHttpContext            *pHttpContext,
     _Out_ ASPNETCORE_CONFIG     **ppAspNetCoreConfig

@@ -1189,23 +1189,18 @@ SERVER_PROCESS::SetupStdHandles(
     LPSTARTUPINFOW pStartupInfo
 )
 {
-    SECURITY_ATTRIBUTES     saAttr = {0};
     HRESULT                 hr = S_OK;
     SYSTEMTIME              systemTime;
     STRU                    struLogFileName;
     BOOL                    fStdoutLoggingFailed = FALSE;
     STRU                    strEventMsg;
     LPCWSTR                 apsz[1];
-    STRU                    struAbsLogFilePath;
+    ASPNETCORE_CONFIG*      pConfig = NULL;
 
     DBG_ASSERT(pStartupInfo);
 
     if (m_fStdoutLogEnabled)
     {
-        saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-        saAttr.bInheritHandle = TRUE; 
-        saAttr.lpSecurityDescriptor = NULL;
-
         if (m_hStdoutHandle != NULL)
         {
             if (!CloseHandle(m_hStdoutHandle))
@@ -1213,40 +1208,16 @@ SERVER_PROCESS::SetupStdHandles(
                 hr = HRESULT_FROM_GETLASTERROR();
                 goto Finished;
             }
-
             m_hStdoutHandle = NULL;
         }
 
-        hr = PATH::ConvertPathToFullPath(m_struLogFile.QueryStr(),
-                                         context->GetApplication()->GetApplicationPhysicalPath(),
-                                         &struAbsLogFilePath );
+        hr = ASPNETCORE_CONFIG::GetConfig(context, &pConfig);
         if (FAILED(hr))
         {
             goto Finished;
         }
 
-        GetSystemTime(&systemTime);
-        hr = struLogFileName.SafeSnwprintf(L"%s_%d%02d%02d%02d%02d%02d_%d.log",
-                                           struAbsLogFilePath.QueryStr(),
-                                           systemTime.wYear,
-                                           systemTime.wMonth,
-                                           systemTime.wDay,
-                                           systemTime.wHour,
-                                           systemTime.wMinute,
-                                           systemTime.wSecond,
-                                           GetCurrentProcessId() );
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        m_hStdoutHandle = CreateFileW(struLogFileName.QueryStr(),
-                                      FILE_WRITE_DATA,
-                                      FILE_SHARE_READ,
-                                      &saAttr,
-                                      CREATE_ALWAYS,
-                                      FILE_ATTRIBUTE_NORMAL,
-                                      NULL);
+        pConfig->CreateLogFile(FALSE, &struLogFileName, &m_hStdoutHandle);
         if (m_hStdoutHandle == INVALID_HANDLE_VALUE)
         {
             fStdoutLoggingFailed = TRUE;
