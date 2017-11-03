@@ -11,7 +11,8 @@ VOID
 register_callbacks(
     _In_ PFN_REQUEST_HANDLER request_handler,
     _In_ PFN_SHUTDOWN_HANDLER shutdown_handler,
-    _In_ PFN_MANAGED_CONTEXT_HANDLER async_completion_handler,
+    _In_ PFN_ASYNC_COMPLETION_HANDLER async_completion_handler,
+    _In_ PFN_CLIENT_DISCONNECT_HANDLER client_disconnect_handler,
     _In_ VOID* pvRequstHandlerContext,
     _In_ VOID* pvShutdownHandlerContext
 )
@@ -20,6 +21,7 @@ register_callbacks(
         request_handler,
         shutdown_handler,
         async_completion_handler,
+        client_disconnect_handler,
         pvRequstHandlerContext,
         pvShutdownHandlerContext
     );
@@ -71,7 +73,7 @@ http_set_completion_status(
 {
     HRESULT hr = S_OK;
     IN_PROCESS_STORED_CONTEXT* pInProcessStoredContext = NULL;
-
+    ASYNC_DISCONNECT_CONTEXT* pDisconnectContext = NULL;
     hr = IN_PROCESS_STORED_CONTEXT::GetInProcessStoredContext(
         pHttpContext,
         &pInProcessStoredContext
@@ -83,6 +85,14 @@ http_set_completion_status(
     }
     pInProcessStoredContext->IndicateManagedRequestComplete();
     pInProcessStoredContext->SetAsyncCompletionStatus(requestNotificationStatus);
+
+    // remove disconnect listener
+    pDisconnectContext = ( ASYNC_DISCONNECT_CONTEXT* ) pHttpContext->GetConnection()->GetModuleContextContainer()->GetConnectionModuleContext( g_pModuleId );
+    if ( pDisconnectContext != NULL )
+    {
+        pDisconnectContext->ResetHandler();
+    }
+
     return hr;
 }
 
@@ -353,6 +363,15 @@ http_cancel_io(
 )
 {
     return pHttpContext->CancelIo();
+}
+
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
+VOID
+http_reset_connection(
+    _In_ IHttpContext* pHttpContext
+)
+{
+    pHttpContext->GetResponse()->ResetConnection();
 }
 
 // End of export
