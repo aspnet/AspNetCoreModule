@@ -504,14 +504,14 @@ IN_PROCESS_APPLICATION::Recycle(
             fclose(m_pStdFile);
         }
 
-        // delete empty log file
-        if (!m_struLogFilePath.IsEmpty())
+        // delete empty log file, if logging is not enabled
+        if (!m_pConfiguration->QueryStdoutLogEnabled() && !m_struLogFilePath.IsEmpty())
         {
             WIN32_FIND_DATA fileData;
             HANDLE handle = FindFirstFile(m_struLogFilePath.QueryStr(), &fileData);
-            if (handle != INVALID_HANDLE_VALUE && 
-                fileData.nFileSizeHigh == 0 && 
-                fileData.nFileSizeLow ==0)
+            if (handle != INVALID_HANDLE_VALUE &&
+                fileData.nFileSizeHigh &&
+                fileData.nFileSizeLow ==0) // skip check of nFileSizeHigh
             {
                 FindClose(handle);
                 // no need to check whether the deletion succeeds
