@@ -378,7 +378,7 @@ http_response_set_known_header(
     _In_ BOOL  fReplace
 )
 {
-    return pHttpContext->GetResponse()->SetHeader( (HTTP_HEADER_ID)dwHeaderId, pszHeaderValue, usHeaderValueLength, fReplace );
+    return pHttpContext->GetResponse()->SetHeader( dwHeaderId, pszHeaderValue, usHeaderValueLength, fReplace );
 }
 
 // End of export
