@@ -36,17 +36,6 @@ namespace AspnetCoreModule.TestSites.Standard
                     await context.Response.WriteAsync("Called ShutdownMessage with disabled of GracefulShutdown");
                     return;
                 }
-                // The below code might be required for old version of AspnetCore in case IISMiddleware does not handle the graceful shutdown message.
-                // In that case, the below code should be added back later.
-                //else
-                //{
-                //    // invoke StopApplication to complete gracefulshutdown
-                //    Program.AappLifetime.StopApplication();
-                //    // return 202 and start gracefulshutdown
-                //    context.Response.StatusCode = StatusCodes.Status202Accepted;
-                //    await context.Response.WriteAsync("Called ShutdownMessage with enabled of GracefulShutdown");
-                //    return;
-                //}
             }
             await next.Invoke(context);
         }
