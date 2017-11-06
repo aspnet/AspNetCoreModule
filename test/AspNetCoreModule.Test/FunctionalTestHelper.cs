@@ -35,14 +35,14 @@ namespace AspNetCoreModule.Test
         {
             get
             {
-                if (TestFlags.Enabled(TestFlags.SkipTest))
+                if (InitializeTestMachine.GlobalTestFlags.Contains(TestFlags.SkipTest))
                 {
                     AdditionalInfo = TestFlags.SkipTest + " is set";
                     return false;
                 }
 
                 if (_attributeValue == TestFlags.RequireRunAsAdministrator 
-                    && !TestFlags.Enabled(TestFlags.RunAsAdministrator))
+                    && !InitializeTestMachine.GlobalTestFlags.Contains(TestFlags.RunAsAdministrator))
                 { 
                     AdditionalInfo = _attributeValue + " is not belong to the given global test context(" + InitializeTestMachine.GlobalTestFlags + ")";
                     return false;
