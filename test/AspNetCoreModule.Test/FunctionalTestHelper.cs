@@ -47,7 +47,6 @@ namespace AspNetCoreModule.Test
                     AdditionalInfo = _attributeValue + " is not belong to the given global test context(" + InitializeTestMachine.GlobalTestFlags + ")";
                     return false;
                 }
-
                 return true;
             }
         }
