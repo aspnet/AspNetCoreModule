@@ -4,7 +4,6 @@
 #include "precomp.hxx"
 #include <algorithm>
 
-
 typedef DWORD(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
 
 IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
