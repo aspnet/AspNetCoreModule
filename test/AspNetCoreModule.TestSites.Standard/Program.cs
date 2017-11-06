@@ -93,10 +93,7 @@ namespace AspnetCoreModule.TestSites.Standard
                         const string PairingToken = "TOKEN";
                         string paringToken = builder.GetSetting(PairingToken) ?? Environment.GetEnvironmentVariable($"ASPNETCORE_{PairingToken}");
                         services.AddSingleton<IStartupFilter>(
-                            new IISSetupFilter(
-                                paringToken,
-                                new Microsoft.AspNetCore.Http.PathString(null) // this parameter is not used yet
-                            )
+                            new IISSetupFilter(paringToken)
                         );
                     })
                     .UseConfiguration(config)

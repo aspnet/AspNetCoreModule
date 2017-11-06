@@ -25,6 +25,7 @@ namespace AspnetCoreModule.TestSites.Standard
             // the shutdown message is handled by this middleware instead of IISMiddleware.
 
             if (HttpMethods.IsPost(context.Request.Method) &&
+                context.Request.Path.ToString().EndsWith("/iisintegration") &&
                 string.Equals("shutdown", context.Request.Headers["MS-ASPNETCORE-EVENT"], StringComparison.OrdinalIgnoreCase))
             {
                 string shutdownMode = Environment.GetEnvironmentVariable("GracefulShutdown");

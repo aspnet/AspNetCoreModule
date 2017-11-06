@@ -12,12 +12,10 @@ namespace AspnetCoreModule.TestSites.Standard
     internal class IISSetupFilter : IStartupFilter
     {
         private readonly string _pairingToken;
-        private readonly PathString _pathBase;
-
-        internal IISSetupFilter(string pairingToken, PathString pathBase)
+        
+        internal IISSetupFilter(string pairingToken)
         {
             _pairingToken = pairingToken;
-            _pathBase = pathBase;
         }
 
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
