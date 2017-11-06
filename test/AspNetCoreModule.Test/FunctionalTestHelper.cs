@@ -29,7 +29,7 @@ namespace AspNetCoreModule.Test
         public ANCMTestFlags(string attributeValue)
         {
             _attributeValue = attributeValue.ToString();
-        }   
+        }
 
         public bool IsMet
         {
