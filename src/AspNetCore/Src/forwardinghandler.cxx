@@ -4,8 +4,6 @@
 #include "precomp.hxx"
 #include <dbgutil.h>
 #include <comdef.h>
-#include <io.h>
-#include <stdio.h>
 
 // Just to be aware of the FORWARDING_HANDLER object size.
 C_ASSERT(sizeof(FORWARDING_HANDLER) <= 632);
