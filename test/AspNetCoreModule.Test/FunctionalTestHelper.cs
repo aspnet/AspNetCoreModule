@@ -42,7 +42,7 @@ namespace AspNetCoreModule.Test
                     return false;
                 }
 
-                if (_attributeValue == TestFlags.RunAsAdministrator 
+                if (_attributeValue == TestFlags.RequireRunAsAdministrator 
                     && !TestFlags.Enabled(TestFlags.RunAsAdministrator))
                 { 
                     AdditionalInfo = _attributeValue + " is not belong to the given global test context(" + InitializeTestMachine.GlobalTestFlags + ")";

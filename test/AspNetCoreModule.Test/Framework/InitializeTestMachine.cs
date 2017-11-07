@@ -22,6 +22,7 @@ namespace AspNetCoreModule.Test.Framework
         public const string UrlRewriteModuleAvailable = "UrlRewriteModuleAvailable";
         public const string X86Platform = "X86Platform";
         public const string Wow64BitMode = "Wow64BitMode";
+        public const string RequireRunAsAdministrator = "RequireRunAsAdministrator";
         public const string Default = "Default";
 
         public static bool Enabled(string flagValue)
