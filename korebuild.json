@@ -3,11 +3,11 @@
     "channel": "dev",
     "toolsets": {
       "visualstudio": {
-        "required": false,
+        "required": ["Windows"],
         "includePrerelease": true,
         "minVersion": "15.0.26730.03",
         "requiredWorkloads": [
-          "Microsoft.VisualStudio.Workload.VCTools"
+          "Microsoft.VisualStudio.Component.VC.Tools.x86.x64"
         ]
       }
     }
