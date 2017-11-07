@@ -80,7 +80,7 @@ namespace AspnetCoreModule.TestSites.Standard
                         .UseIISIntegration()
                         .UseStartup<StartupNtlmAuthentication>();
                 }
-                else if (startUpClassString == "StartupWithIStartupFilter")
+                else if (startUpClassString == "StartupWithShutdownDisabled")
                 {
                     builder = new WebHostBuilder()
                     .ConfigureServices(services =>
