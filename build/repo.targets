@@ -11,7 +11,7 @@
     </ItemGroup>
 
     <Error
-      Text="Unable to locate MSBuild 15.0 under $(VisualStudioMSBuildx86Path)"
+      Text="Could not find an installation of Visual Studio with the C++ development tools. MSBuild path: $(VisualStudioMSBuildx86Path)"
       Condition="'$(VisualStudioMSBuildx86Path)' == ''" />
       
     <Exec Command="&quot;$(VisualStudioMSBuildx86Path)&quot; &quot;$(RepositoryRoot)src\AspNetCore\AspNetCore.vcxproj&quot; %(BuildConfigurations.Identity)"
