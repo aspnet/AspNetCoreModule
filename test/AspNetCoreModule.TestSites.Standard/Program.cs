@@ -96,7 +96,7 @@ namespace AspnetCoreModule.TestSites.Standard
                 }
                 else
                 {
-                    throw new System.Exception("Invalid startup class name : " + startUpClassString);
+                    throw new Exception("Invalid startup class name : " + startUpClassString);
                 }
             }
             else
