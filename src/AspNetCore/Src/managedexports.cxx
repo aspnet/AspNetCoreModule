@@ -381,4 +381,15 @@ http_response_set_known_header(
     return pHttpContext->GetResponse()->SetHeader( dwHeaderId, pszHeaderValue, usHeaderValueLength, fReplace );
 }
 
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
+HRESULT
+http_get_authentication_primary_token(
+    _In_ IHttpContext* pHttpContext,
+    _Out_ VOID** pvToken
+)
+{
+    *pvToken = pHttpContext->GetUser()->GetPrimaryToken();
+    return S_OK;
+}
+
 // End of export
