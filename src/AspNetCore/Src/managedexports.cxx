@@ -137,20 +137,29 @@ http_get_completion_info(
 //
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT // TODO probably should make this a wide string
-http_get_application_paths(
+http_get_application_properties(
     _Out_ BSTR* pwzFullPath,
-    _Out_ BSTR* pwzVirtualPath
+    _Out_ BSTR* pwzVirtualPath,
+    _Out_ BOOL* pfWindowsAuthEnabled,
+    _Out_ BOOL* pfBasicAuthEnabled,
+    _Out_ BOOL* pfAnonymousAuthEnabled
 )
 {
+    ASPNETCORE_CONFIG* pConfiguration = NULL;
     IN_PROCESS_APPLICATION* pApplication = IN_PROCESS_APPLICATION::GetInstance();
-
+    
     if (pApplication == NULL)
     {
         return E_FAIL;
     }
-    // These should be provided to the in process application as arguments?
-    *pwzFullPath = SysAllocString(pApplication->QueryConfig()->QueryApplicationFullPath()->QueryStr());
-    *pwzVirtualPath = SysAllocString(pApplication->QueryConfig()->QueryApplicationVirtualPath()->QueryStr());
+    pConfiguration = pApplication->QueryConfig();
+
+    *pwzFullPath = SysAllocString(pConfiguration->QueryApplicationFullPath()->QueryStr());
+    *pwzVirtualPath = SysAllocString(pConfiguration->QueryApplicationVirtualPath()->QueryStr());
+    *pfWindowsAuthEnabled = pConfiguration->QueryWindowsAuthEnabled();
+    *pfBasicAuthEnabled = pConfiguration->QueryBasicAuthEnabled();
+    *pfAnonymousAuthEnabled = pConfiguration->QueryAnonymousAuthEnabled();
+
     return S_OK;
 }
 
@@ -388,6 +397,7 @@ http_get_authentication_primary_token(
     _Out_ VOID** pvToken
 )
 {
+    // We shouldn't be querying the config here, 
     *pvToken = pHttpContext->GetUser()->GetPrimaryToken();
     return S_OK;
 }
