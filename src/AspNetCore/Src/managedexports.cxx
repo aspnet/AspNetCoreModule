@@ -135,30 +135,38 @@ http_get_completion_info(
 // todo: we should not rely on IN_PROCESS_APPLICATION::GetInstance()
 // the signature should be changed. application's based address should be passed in
 //
+
+struct IISConfigurationData
+{
+    BSTR pwzFullApplicationPath;
+    BSTR pwzVirtualApplicationPath;
+    BOOL fWindowsAuthEnabled;
+    BOOL fBasicAuthEnabled;
+    BOOL fAnonymousAuthEnable;
+};
+
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT // TODO probably should make this a wide string
 http_get_application_properties(
-    _Out_ BSTR* pwzFullPath,
-    _Out_ BSTR* pwzVirtualPath,
-    _Out_ BOOL* pfWindowsAuthEnabled,
-    _Out_ BOOL* pfBasicAuthEnabled,
-    _Out_ BOOL* pfAnonymousAuthEnabled
+    _In_ IISConfigurationData* pIISCofigurationData
 )
 {
     ASPNETCORE_CONFIG* pConfiguration = NULL;
+    IISConfigurationData* pConfigurationData = NULL;
     IN_PROCESS_APPLICATION* pApplication = IN_PROCESS_APPLICATION::GetInstance();
     
     if (pApplication == NULL)
     {
         return E_FAIL;
     }
+
     pConfiguration = pApplication->QueryConfig();
 
-    *pwzFullPath = SysAllocString(pConfiguration->QueryApplicationFullPath()->QueryStr());
-    *pwzVirtualPath = SysAllocString(pConfiguration->QueryApplicationVirtualPath()->QueryStr());
-    *pfWindowsAuthEnabled = pConfiguration->QueryWindowsAuthEnabled();
-    *pfBasicAuthEnabled = pConfiguration->QueryBasicAuthEnabled();
-    *pfAnonymousAuthEnabled = pConfiguration->QueryAnonymousAuthEnabled();
+    pIISCofigurationData->pwzFullApplicationPath = SysAllocString(pConfiguration->QueryApplicationFullPath()->QueryStr());
+    pIISCofigurationData->pwzVirtualApplicationPath = SysAllocString(pConfiguration->QueryApplicationVirtualPath()->QueryStr());
+    pIISCofigurationData->fWindowsAuthEnabled = pConfiguration->QueryWindowsAuthEnabled();
+    pIISCofigurationData->fBasicAuthEnabled = pConfiguration->QueryBasicAuthEnabled();
+    pIISCofigurationData->fAnonymousAuthEnable = pConfiguration->QueryAnonymousAuthEnabled();
 
     return S_OK;
 }
