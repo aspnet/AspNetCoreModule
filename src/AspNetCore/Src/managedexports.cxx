@@ -400,14 +400,17 @@ http_response_set_known_header(
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
-http_get_authentication_primary_token(
+http_get_authentication_information(
     _In_ IHttpContext* pHttpContext,
+    _Out_ BSTR* pstrAuthType,
     _Out_ VOID** pvToken
 )
 {
-    // We shouldn't be querying the config here, 
+    *pstrAuthType = SysAllocString(pHttpContext->GetUser()->GetAuthenticationType());
     *pvToken = pHttpContext->GetUser()->GetPrimaryToken();
+
     return S_OK;
 }
+
 
 // End of export
