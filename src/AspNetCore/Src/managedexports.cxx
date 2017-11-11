@@ -152,7 +152,6 @@ http_get_application_properties(
 )
 {
     ASPNETCORE_CONFIG* pConfiguration = NULL;
-    IISConfigurationData* pConfigurationData = NULL;
     IN_PROCESS_APPLICATION* pApplication = IN_PROCESS_APPLICATION::GetInstance();
     
     if (pApplication == NULL)
