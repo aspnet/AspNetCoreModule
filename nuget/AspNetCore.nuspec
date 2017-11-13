@@ -18,8 +18,6 @@
     </contentFiles>
   </metadata>
   <files>
-    <file src="..\artifacts\build\AspNetCore\bin\Release\Win32\aspnetcore.dll" target="runtimes\win7\native\aspnetcore_x86.dll" />
-    <file src="..\artifacts\build\AspNetCore\bin\Release\x64\aspnetcore.dll" target="runtimes\win7\native\aspnetcore_x64.dll" />
     <file src="..\artifacts\build\AspNetCore\bin\Release\Win32\aspnetcore.dll" target="contentFiles\any\any\x86\aspnetcore.dll" />
     <file src="..\artifacts\build\AspNetCore\bin\Release\x64\aspnetcore.dll" target="contentFiles\any\any\x64\aspnetcore.dll" />
     <file src="..\artifacts\build\AspNetCore\bin\Release\x64\*.xml"/>
