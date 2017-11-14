@@ -1,11 +1,11 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-#include "precomp.hxx"
+#include"stdafx.h"
 
 // static
 HRESULT
-PATH::SplitUrl(
+UTIL::SplitUrl(
     PCWSTR pszDestinationUrl,
     BOOL *pfSecure,
     STRU *pstrDestination,
@@ -95,7 +95,7 @@ Return Value:
 
 // static
 HRESULT
-PATH::UnEscapeUrl(
+UTIL::UnEscapeUrl(
     PCWSTR      pszUrl,
     DWORD       cchUrl,
     bool        fCopyQuery,
@@ -151,7 +151,7 @@ PATH::UnEscapeUrl(
 
 // static
 HRESULT
-PATH::UnEscapeUrl(
+UTIL::UnEscapeUrl(
     PCWSTR      pszUrl,
     DWORD       cchUrl,
     STRU *      pstrResult
@@ -231,7 +231,7 @@ PATH::UnEscapeUrl(
 }
 
 HRESULT
-PATH::EscapeAbsPath(
+UTIL::EscapeAbsPath(
     IHttpRequest * pRequest,
     STRU * strEscapedUrl
 )
@@ -269,7 +269,7 @@ Finished:
 
 // static
 bool
-PATH::IsValidAttributeNameChar(
+UTIL::IsValidAttributeNameChar(
     WCHAR ch
 )
 {
@@ -282,7 +282,7 @@ PATH::IsValidAttributeNameChar(
 
 // static
 bool
-PATH::FindInMultiString(
+UTIL::FindInMultiString(
     PCWSTR      pszMultiString,
     PCWSTR      pszStringToFind
 )
@@ -301,7 +301,7 @@ PATH::FindInMultiString(
 
 // static
 bool
-PATH::IsValidQueryStringName(
+UTIL::IsValidQueryStringName(
     PCWSTR  pszName
 )
 {
@@ -322,7 +322,7 @@ PATH::IsValidQueryStringName(
 
 // static
 bool
-PATH::IsValidHeaderName(
+UTIL::IsValidHeaderName(
     PCWSTR  pszName
 )
 {
@@ -342,7 +342,7 @@ PATH::IsValidHeaderName(
 }
 
 HRESULT
-PATH::IsPathUnc(
+UTIL::IsPathUnc(
     __in  LPCWSTR       pszPath, 
     __out BOOL *        pfIsUnc 
 )
@@ -373,7 +373,7 @@ Finished:
 }
 
 HRESULT
-PATH::ConvertPathToFullPath(
+UTIL::ConvertPathToFullPath(
     _In_  LPCWSTR   pszPath,
     _In_  LPCWSTR   pszRootPath,
     _Out_ STRU*     pStruFullPath

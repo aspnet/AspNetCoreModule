@@ -6,28 +6,28 @@
 APPLICATION_MANAGER* APPLICATION_MANAGER::sm_pApplicationManager = NULL;
 
 HRESULT
-APPLICATION_MANAGER::GetApplication(
-    _In_ IHttpContext*         pContext,
+APPLICATION_MANAGER::GetApplicationInfo(
+    _In_ IHttpServer*          pServer,
     _In_ ASPNETCORE_CONFIG*    pConfig,
-    _Out_ APPLICATION **       ppApplication
+    _Out_ APPLICATION_INFO **  ppApplicationInfo
 )
 {
-    HRESULT          hr = S_OK;
-    APPLICATION     *pApplication = NULL;
-    APPLICATION_KEY  key;
-    BOOL             fExclusiveLock = FALSE;
-    BOOL             fMixedHostingModelError = FALSE;
-    BOOL             fDuplicatedInProcessApp = FALSE;
-    PCWSTR           pszApplicationId = NULL;
-    LPCWSTR          apsz[1];
+    HRESULT                hr = S_OK;
+    APPLICATION_INFO      *pApplicationInfo = NULL;
+    APPLICATION_INFO_KEY   key;
+    BOOL                   fExclusiveLock = FALSE;
+    BOOL                   fMixedHostingModelError = FALSE;
+    BOOL                   fDuplicatedInProcessApp = FALSE;
+    PCWSTR                 pszApplicationId = NULL;
+    LPCWSTR                apsz[1];
     STACK_STRU ( strEventMsg, 256 );
 
-    *ppApplication = NULL;
-    
-    DBG_ASSERT(pContext != NULL);
-    DBG_ASSERT(pContext->GetApplication() != NULL);
+    *ppApplicationInfo = NULL;
 
-    pszApplicationId = pContext->GetApplication()->GetApplicationId();
+    DBG_ASSERT(pServer != NULL);
+    DBG_ASSERT(pConfig != NULL);
+
+    pszApplicationId = pConfig->QueryApplicationPath()->QueryStr(); // pContext->GetApplication()->GetApplicationId();
 
     hr = key.Initialize(pszApplicationId);
     if (FAILED(hr))
@@ -35,33 +35,31 @@ APPLICATION_MANAGER::GetApplication(
         goto Finished;
     }
 
-    m_pApplicationHash->FindKey(&key, ppApplication);
+    m_pApplicationInfoHash->FindKey(&key, ppApplicationInfo);
 
-    if (*ppApplication == NULL)
+    if (*ppApplicationInfo == NULL)
     {
         switch (pConfig->QueryHostingModel())
         {
         case HOSTING_IN_PROCESS:
-            if (m_pApplicationHash->Count() > 0)
+            if (m_pApplicationInfoHash->Count() > 0)
             {
                 // Only one inprocess app is allowed per IIS worker process
                 fDuplicatedInProcessApp = TRUE;
                 hr = HRESULT_FROM_WIN32(ERROR_APP_INIT_FAILURE);
                 goto Finished;
             }
-            pApplication = new IN_PROCESS_APPLICATION();
             break;
 
         case HOSTING_OUT_PROCESS:
-            pApplication = new OUT_OF_PROCESS_APPLICATION();
             break;
 
         default:
             hr = E_UNEXPECTED;
             goto Finished;
         }
-
-        if (pApplication == NULL)
+        pApplicationInfo = new APPLICATION_INFO(pServer);
+        if (pApplicationInfo == NULL)
         {
             hr = E_OUTOFMEMORY;
             goto Finished;
@@ -69,13 +67,13 @@ APPLICATION_MANAGER::GetApplication(
 
         AcquireSRWLockExclusive(&m_srwLock);
         fExclusiveLock = TRUE;
-        m_pApplicationHash->FindKey(&key, ppApplication);
+        m_pApplicationInfoHash->FindKey(&key, ppApplicationInfo);
 
-        if (*ppApplication != NULL)
+        if (*ppApplicationInfo != NULL)
         {
             // someone else created the application
-            delete pApplication;
-            pApplication = NULL;
+            delete pApplicationInfo;
+            pApplicationInfo = NULL;
             goto Finished;
         }
 
@@ -92,13 +90,13 @@ APPLICATION_MANAGER::GetApplication(
             }
         }
 
-        hr = pApplication->Initialize(this, pConfig);
+        /*hr = pApplicationInfo->Initialize(pConfig);
         if (FAILED(hr))
         {
             goto Finished;
-        }
+        }*/
 
-        hr = m_pApplicationHash->InsertRecord( pApplication );
+        hr = m_pApplicationInfoHash->InsertRecord( pApplicationInfo );
         if (FAILED(hr))
         {
             goto Finished;
@@ -115,10 +113,10 @@ APPLICATION_MANAGER::GetApplication(
         ReleaseSRWLockExclusive(&m_srwLock);
         fExclusiveLock = FALSE;
 
-        pApplication->StartMonitoringAppOffline();
+        pApplicationInfo->StartMonitoringAppOffline();
 
-        *ppApplication = pApplication;
-        pApplication = NULL;
+        *ppApplicationInfo = pApplicationInfo;
+        pApplicationInfo = NULL;
     }
 
 Finished:
@@ -130,10 +128,10 @@ Finished:
 
     if (FAILED(hr))
     {
-        if (pApplication != NULL)
+        if (pApplicationInfo != NULL)
         {
-            pApplication->DereferenceApplication();
-            pApplication = NULL;
+            pApplicationInfo->DereferenceApplicationInfo();
+            pApplicationInfo = NULL;
         }
 
         if (fDuplicatedInProcessApp)
@@ -142,7 +140,7 @@ Finished:
                 ASPNETCORE_EVENT_DUPLICATED_INPROCESS_APP_MSG,
                 pszApplicationId)))
             {
-                apsz[0] = strEventMsg.QueryStr();
+                /*apsz[0] = strEventMsg.QueryStr();
                 if (FORWARDING_HANDLER::QueryEventLog() != NULL)
                 {
                     ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
@@ -154,7 +152,7 @@ Finished:
                         0,
                         apsz,
                         NULL);
-                }
+                }*/
             }
         }
         else if (fMixedHostingModelError)
@@ -165,7 +163,7 @@ Finished:
                 pConfig->QueryHostingModelStr())))
             {
                 apsz[0] = strEventMsg.QueryStr();
-                if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+                /*if (FORWARDING_HANDLER::QueryEventLog() != NULL)
                 {
                     ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
                         EVENTLOG_ERROR_TYPE,
@@ -176,7 +174,7 @@ Finished:
                         0,
                         apsz,
                         NULL);
-                }
+                }*/
             }
         }
         else
@@ -187,7 +185,7 @@ Finished:
                 hr)))
             {
                 apsz[0] = strEventMsg.QueryStr();
-                if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+                /*if (FORWARDING_HANDLER::QueryEventLog() != NULL)
                 {
                     ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
                         EVENTLOG_ERROR_TYPE,
@@ -198,7 +196,7 @@ Finished:
                         0,
                         apsz,
                         NULL);
-                }
+                }*/
             }
         }
     }
@@ -208,20 +206,20 @@ Finished:
 
 HRESULT
 APPLICATION_MANAGER::RecycleApplication(
-    _In_ LPCWSTR pszApplication
+    _In_ LPCWSTR pszApplicationId
 )
 {
     HRESULT          hr = S_OK;
-    APPLICATION_KEY  key;
+    APPLICATION_INFO_KEY  key;
 
-    hr = key.Initialize(pszApplication);
+    hr = key.Initialize(pszApplicationId);
     if (FAILED(hr))
     {
         goto Finished;
     }
     AcquireSRWLockExclusive(&m_srwLock);
-    m_pApplicationHash->DeleteKey(&key);
-    if (m_pApplicationHash->Count() == 0)
+    m_pApplicationInfoHash->DeleteKey(&key);
+    if (m_pApplicationInfoHash->Count() == 0)
     {
         m_hostingModel = HOSTING_UNKNOWN;
     }

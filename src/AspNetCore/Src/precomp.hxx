@@ -57,10 +57,6 @@
 #define ASPNETCORE_EVENT_PROVIDER L"IIS AspNetCore Module"
 #define ASPNETCORE_IISEXPRESS_EVENT_PROVIDER L"IIS Express AspNetCore Module"
 
-#define TIMESPAN_IN_MILLISECONDS(x)  ((x)/((LONGLONG)(10000)))
-#define TIMESPAN_IN_SECONDS(x)       ((TIMESPAN_IN_MILLISECONDS(x))/((LONGLONG)(1000)))
-#define TIMESPAN_IN_MINUTES(x)       ((TIMESPAN_IN_SECONDS(x))/((LONGLONG)(60)))
-
 #ifdef max
 #undef max
 template<typename T> inline T max(T a, T b)
@@ -93,6 +89,7 @@ inline bool IsSpace(char ch)
     }
 }
 
+
 #include <hashfn.h>
 #include <hashtable.h>
 #include "stringa.h"
@@ -104,36 +101,29 @@ inline bool IsSpace(char ch)
 #include "multisz.h"
 #include "multisza.h"
 #include "base64.h"
-#include "sttimer.h"
 #include <listentry.h>
 #include <datetime.h>
 #include <reftrace.h>
 #include <acache.h>
 #include <time.h>
 
-#include "environmentvariablehash.h"
+#include "..\..\CommonLib\environmentvariablehash.h"
+#include "..\..\CommonLib\application.h"
+#include "..\..\CommonLib\aspnetcoreconfig.h"
+#include "..\..\CommonLib\util.h"
+#include "..\..\CommonLib\debugutil.h"
+#include"..\..\CommonLib\requesthandler.h"
 #include "..\aspnetcore_msg.h"
+#include "appoffline.h"
 #include "aspnetcore_event.h"
-#include "aspnetcoreconfig.h"
-#include "serverprocess.h"
-#include "processmanager.h"
 #include "filewatcher.h"
-#include "application.h"
+#include "applicationinfo.h"
 #include "applicationmanager.h"
-#include "inprocessstoredcontext.h"
-#include "inprocessapplication.h"
-#include "outprocessapplication.h"
+#include "globalmodule.h"
 #include "resource.h"
-#include "path.h"
-#include "debugutil.h"
 #include "protocolconfig.h"
-#include "responseheaderhash.h"
-#include "forwarderconnection.h"
-#include "winhttphelper.h"
-#include "websockethandler.h"
-#include "forwardinghandler.h"
 #include "proxymodule.h"
-#include "fx_ver.h"
+
 
 FORCEINLINE
 DWORD
@@ -162,7 +152,12 @@ extern BOOL     g_fAsyncDisconnectAvailable;
 extern BOOL     g_fWinHttpNonBlockingCallbackAvailable;
 extern PVOID    g_pModuleId;
 extern BOOL     g_fWebSocketSupported;
+extern BOOL     g_fAspnetcoreRHAssemblyLoaded;
 extern BOOL     g_fEnableReferenceCountTracing;
 extern DWORD    g_dwActiveServerProcesses;
 extern DWORD    g_OptionalWinHttpFlags;
+extern HMODULE  g_hAspnetCoreRH;
+extern SRWLOCK  g_srwLock;
+extern PFN_ASPNETCORE_CREATE_APPLICATION      g_pfnAspNetCoreCreateApplication;
+extern PFN_ASPNETCORE_CREATE_REQUEST_HANDLER  g_pfnAspNetCoreCreateRequestHandler;
 #pragma warning( error : 4091)

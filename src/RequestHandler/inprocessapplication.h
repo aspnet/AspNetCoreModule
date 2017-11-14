@@ -8,33 +8,16 @@ typedef REQUEST_NOTIFICATION_STATUS(*PFN_REQUEST_HANDLER) (IHttpContext* pHttpCo
 typedef BOOL(*PFN_SHUTDOWN_HANDLER) (void* pvShutdownHandlerContext);
 typedef REQUEST_NOTIFICATION_STATUS(*PFN_MANAGED_CONTEXT_HANDLER)(void *pvManagedHttpContext, HRESULT hrCompletionStatus, DWORD cbCompletion);
 
-#include "application.h"
-
 class IN_PROCESS_APPLICATION : public APPLICATION
 {
 public:
-    IN_PROCESS_APPLICATION();
+    IN_PROCESS_APPLICATION(IHttpServer* pHttpServer, ASPNETCORE_CONFIG  *pConfig);
 
     ~IN_PROCESS_APPLICATION();
 
     __override
-    HRESULT
-    Initialize(_In_ APPLICATION_MANAGER* pApplicationManager,
-               _In_ ASPNETCORE_CONFIG*   pConfiguration);
-
     VOID
-    Recycle(
-        VOID
-    );
-
-    __override
-    VOID OnAppOfflineHandleChange();
-
-    __override
-    REQUEST_NOTIFICATION_STATUS
-    ExecuteRequest(
-        _In_ IHttpContext* pHttpContext
-    );
+    ShutDown();
 
     VOID
     SetCallbackHandles(
@@ -53,8 +36,8 @@ public:
 
     HRESULT
     LoadManagedApplication(
-            VOID
-        );
+        VOID
+    );
 
     REQUEST_NOTIFICATION_STATUS
     OnAsyncCompletion(
@@ -117,7 +100,7 @@ private:
     static
     BOOL
     DirectoryExists(
-    _In_ STRU *pstrPath  //todo: this does not need to be stru, can be PCWSTR
+        _In_ STRU *pstrPath  //todo: this does not need to be stru, can be PCWSTR
     );
 
     static BOOL
@@ -131,5 +114,4 @@ private:
     ExecuteAspNetCoreProcess(
         _In_ LPVOID pContext
     );
-
 };

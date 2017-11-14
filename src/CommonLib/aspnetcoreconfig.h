@@ -34,11 +34,17 @@
 #define MIN_PORT                   1025
 #define MAX_PORT                   48000
 
-#define HEX_TO_ASCII(c) ((CHAR)(((c) < 10) ? ((c) + '0') : ((c) + 'a' - 10)))
+#define TIMESPAN_IN_MILLISECONDS(x)  ((x)/((LONGLONG)(10000)))
+#define TIMESPAN_IN_SECONDS(x)       ((TIMESPAN_IN_MILLISECONDS(x))/((LONGLONG)(1000)))
+#define TIMESPAN_IN_MINUTES(x)       ((TIMESPAN_IN_SECONDS(x))/((LONGLONG)(60)))
 
-extern HTTP_MODULE_ID   g_pModuleId;
-extern IHttpServer *    g_pHttpServer;
-extern BOOL             g_fRecycleProcessCalled;
+//#define HEX_TO_ASCII(c) ((CHAR)(((c) < 10) ? ((c) + '0') : ((c) + 'a' - 10)))
+
+//HTTP_MODULE_ID   g_pModuleId;
+//IHttpServer *    g_pHttpServer;
+//BOOL             g_fRecycleProcessCalled;
+
+#include "stdafx.h"
 
 enum APP_HOSTING_MODEL
 {
@@ -63,8 +69,10 @@ public:
     static
     HRESULT
     GetConfig(
-        _In_  IHttpContext           *pHttpContext,
-        _Out_ ASPNETCORE_CONFIG  **ppAspNetCoreConfig
+        _In_  IHttpServer             *pHttpServer,
+        _In_  HTTP_MODULE_ID           pModuleId,
+        _In_  IHttpContext            *pHttpContext,
+        _Out_ ASPNETCORE_CONFIG     **ppAspNetCoreConfig
     );
 
     ENVIRONMENT_VAR_HASH*
@@ -227,6 +235,7 @@ private:
 
     HRESULT
     Populate(
+        IHttpServer  *pHttpServer,
         IHttpContext *pHttpContext
     );
 

@@ -4,15 +4,17 @@
 
 #pragma once
 
-#include "forwardinghandler.h"
+extern HTTP_MODULE_ID   g_pModuleId;
+extern IHttpServer     *g_pHttpServer;
+extern HMODULE          g_hAspnetCoreRH;
 
-class CProxyModule : public CHttpModule
+class ASPNET_CORE_PROXY_MODULE : public CHttpModule
 {
  public:
 
-    CProxyModule();
+     ASPNET_CORE_PROXY_MODULE();
 
-    ~CProxyModule();
+    ~ASPNET_CORE_PROXY_MODULE();
 
     void * operator new(size_t size, IModuleAllocator * pPlacement)
     {
@@ -44,10 +46,11 @@ class CProxyModule : public CHttpModule
 
  private:
 
-    FORWARDING_HANDLER * m_pHandler;
+    APPLICATION      *m_pApplication;
+    REQUEST_HANDLER  *m_pHandler;
 };
 
-class CProxyModuleFactory : public IHttpModuleFactory
+class ASPNET_CORE_PROXY_MODULE_FACTORY : public IHttpModuleFactory
 {
  public:
     HRESULT
