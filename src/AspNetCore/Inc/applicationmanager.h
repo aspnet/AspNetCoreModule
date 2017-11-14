@@ -5,6 +5,11 @@
 
 #define DEFAULT_HASH_BUCKETS 293
 
+//
+// This class will manage the lifecycle of all Asp.Net Core applciation
+// It should be global singleton.
+// Should always call GetInstance to get the object instance
+//
 class APPLICATION_MANAGER
 {
 public:
@@ -37,15 +42,15 @@ public:
     }
 
     HRESULT
-    GetApplication(
-        _In_ IHttpContext*         pContext,
+    GetApplicationInfo(
+        _In_ IHttpServer*          pServer,
         _In_ ASPNETCORE_CONFIG*    pConfig,
-        _Out_ APPLICATION **       ppApplication
+        _Out_ APPLICATION_INFO **  ppApplicationInfo
     );
 
     HRESULT
     RecycleApplication( 
-        _In_ LPCWSTR pszApplication 
+        _In_ LPCWSTR pszApplicationId
     );
 
     HRESULT
@@ -55,11 +60,11 @@ public:
 
     ~APPLICATION_MANAGER()
     {
-        if(m_pApplicationHash != NULL)
+        if(m_pApplicationInfoHash != NULL)
         {
-            m_pApplicationHash->Clear();
-            delete m_pApplicationHash;
-            m_pApplicationHash = NULL;
+            m_pApplicationInfoHash->Clear();
+            delete m_pApplicationInfoHash;
+            m_pApplicationInfoHash = NULL;
         }
 
         if( m_pFileWatcher!= NULL )
@@ -86,16 +91,16 @@ public:
     {
         HRESULT hr = S_OK;
 
-        if(m_pApplicationHash == NULL)
+        if(m_pApplicationInfoHash == NULL)
         {
-            m_pApplicationHash = new APPLICATION_HASH();
-            if(m_pApplicationHash == NULL)
+            m_pApplicationInfoHash = new APPLICATION_INFO_HASH();
+            if(m_pApplicationInfoHash == NULL)
             {
                 hr = E_OUTOFMEMORY;
                 goto Finished;
             }
 
-            hr = m_pApplicationHash->Initialize(DEFAULT_HASH_BUCKETS);
+            hr = m_pApplicationInfoHash->Initialize(DEFAULT_HASH_BUCKETS);
             if(FAILED(hr))
             {
                 goto Finished;
@@ -122,7 +127,7 @@ private:
     //
     // we currently limit the size of m_pstrErrorInfo to 5000, be careful if you want to change its payload
     // 
-    APPLICATION_MANAGER() : m_pApplicationHash(NULL), m_pFileWatcher(NULL),
+    APPLICATION_MANAGER() : m_pApplicationInfoHash(NULL), m_pFileWatcher(NULL),
         m_pHttp502ErrorPage(NULL), m_hostingModel(HOSTING_UNKNOWN),
         m_pstrErrorInfo(
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\"> \
@@ -153,7 +158,7 @@ private:
     }
 
     FILE_WATCHER               *m_pFileWatcher;
-    APPLICATION_HASH           *m_pApplicationHash;
+    APPLICATION_INFO_HASH      *m_pApplicationInfoHash;
     static APPLICATION_MANAGER *sm_pApplicationManager;
     SRWLOCK                     m_srwLock;
     HTTP_DATA_CHUNK            *m_pHttp502ErrorPage;

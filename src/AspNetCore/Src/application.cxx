@@ -25,12 +25,12 @@ APPLICATION::~APPLICATION()
 HRESULT
 APPLICATION::StartMonitoringAppOffline()
 {
-    HRESULT hr = S_OK;
+   /* HRESULT hr = S_OK;
     if (m_pFileWatcherEntry != NULL)
     {
         hr = m_pFileWatcherEntry->Create(m_pConfiguration->QueryApplicationFullPath()->QueryStr(), L"app_offline.htm", this, NULL);
     }
-    return hr;
+    return hr;*/
 }
 
 VOID

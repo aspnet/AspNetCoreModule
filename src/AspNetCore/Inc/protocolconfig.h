@@ -3,7 +3,7 @@
 
 #pragma once
 
-#include "aspnetcoreconfig.h"
+#include "..\CommonLib\aspnetcoreconfig.h"
 
 class PROTOCOL_CONFIG
 {

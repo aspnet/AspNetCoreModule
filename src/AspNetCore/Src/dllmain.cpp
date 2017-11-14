@@ -12,17 +12,21 @@ BOOL                g_fRecycleProcessCalled = FALSE;
 PCWSTR              g_pszModuleName = NULL;
 HINSTANCE           g_hModule;
 HINSTANCE           g_hWinHttpModule;
+HMODULE             g_hAspnetCoreRH = NULL;
+BOOL                g_fAspnetcoreRHAssemblyLoaded = FALSE;
 BOOL                g_fWebSocketSupported = FALSE;
-
 DWORD               g_dwTlsIndex = TLS_OUT_OF_INDEXES;
 BOOL                g_fEnableReferenceCountTracing = FALSE;
 DWORD               g_dwAspNetCoreDebugFlags = 0;
 BOOL                g_fNsiApiNotSupported = FALSE;
 DWORD               g_dwActiveServerProcesses = 0;
 DWORD               g_OptionalWinHttpFlags = 0; //specify additional WinHTTP options when using WinHttpOpenRequest API.
-
+SRWLOCK             g_srwLock;
 DWORD               g_dwDebugFlags = 0;
 PCSTR               g_szDebugLabel = "ASPNET_CORE_MODULE";
+PFN_ASPNETCORE_CREATE_APPLICATION      g_pfnAspNetCoreCreateApplication;
+PFN_ASPNETCORE_CREATE_REQUEST_HANDLER  g_pfnAspNetCoreCreateRequestHandler;
+
 
 BOOL WINAPI DllMain(HMODULE hModule,
     DWORD  ul_reason_for_call,
@@ -139,7 +143,7 @@ HRESULT
 --*/
 {
     HRESULT                 hr = S_OK;
-    CProxyModuleFactory *   pFactory = NULL;
+    ASPNET_CORE_PROXY_MODULE_FACTORY *   pFactory = NULL;
 
 #ifdef DEBUG
     CREATE_DEBUG_PRINT_OBJECT("Asp.Net Core Module");
@@ -150,6 +154,7 @@ HRESULT
 
     LoadGlobalConfiguration();
 
+    InitializeSRWLock(&g_srwLock);
     //
     // 7.0 is 0,7
     //
@@ -168,7 +173,7 @@ HRESULT
         g_fWebSocketSupported = TRUE;
     }
 
-    hr = WINHTTP_HELPER::StaticInitialize();
+   /* hr = WINHTTP_HELPER::StaticInitialize();
     if (FAILED(hr))
     {
         if (hr == HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND))
@@ -179,7 +184,7 @@ HRESULT
         {
             goto Finished;
         }
-    }
+    }*/
 
     g_pModuleId = pModuleInfo->GetId();
     g_pszModuleName = pModuleInfo->GetName();
@@ -191,20 +196,20 @@ HRESULT
     // Starting in Windows 7, this setting is ignored because WinHTTP
     // uses a thread pool.
     //
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
-    DWORD dwThreadCount = (si.dwNumberOfProcessors * 3 + 1) / 2;
-    WinHttpSetOption(NULL,
-        WINHTTP_OPTION_WORKER_THREAD_COUNT,
-        &dwThreadCount,
-        sizeof(dwThreadCount));
+    //SYSTEM_INFO si;
+    //GetSystemInfo(&si);
+    //DWORD dwThreadCount = (si.dwNumberOfProcessors * 3 + 1) / 2;
+    //WinHttpSetOption(NULL,
+    //    WINHTTP_OPTION_WORKER_THREAD_COUNT,
+    //    &dwThreadCount,
+    //    sizeof(dwThreadCount));
 
     //
     // Create the factory before any static initialization.
-    // The CProxyModuleFactory::Terminate method will clean any
+    // The ASPNET_CORE_PROXY_MODULE_FACTORY::Terminate method will clean any
     // static object initialized.
     //
-    pFactory = new CProxyModuleFactory;
+    pFactory = new ASPNET_CORE_PROXY_MODULE_FACTORY;
 
     if (pFactory == NULL)
     {
@@ -223,18 +228,18 @@ HRESULT
 
     pFactory = NULL;
 
-    g_pResponseHeaderHash = new RESPONSE_HEADER_HASH;
-    if (g_pResponseHeaderHash == NULL)
-    {
-        hr = E_OUTOFMEMORY;
-        goto Finished;
-    }
+    //g_pResponseHeaderHash = new RESPONSE_HEADER_HASH;
+    //if (g_pResponseHeaderHash == NULL)
+    //{
+    //    hr = E_OUTOFMEMORY;
+    //    goto Finished;
+    //}
 
-    hr = g_pResponseHeaderHash->Initialize();
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
+    //hr = g_pResponseHeaderHash->Initialize();
+    //if (FAILED(hr))
+    //{
+    //    goto Finished;
+    //}
 
     hr = ALLOC_CACHE_HANDLER::StaticInitialize();
     if (FAILED(hr))
@@ -242,7 +247,7 @@ HRESULT
         goto Finished;
     }
 
-    hr = FORWARDING_HANDLER::StaticInitialize(g_fEnableReferenceCountTracing);
+   /* hr = FORWARDING_HANDLER::StaticInitialize(g_fEnableReferenceCountTracing);
     if (FAILED(hr))
     {
         goto Finished;
@@ -252,7 +257,7 @@ HRESULT
     if (FAILED(hr))
     {
         goto Finished;
-    }
+    }*/
 
 Finished:
 

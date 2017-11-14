@@ -3,7 +3,7 @@
 
 #pragma once
 
-class PATH
+class UTIL
 {
 public:
 
@@ -81,8 +81,8 @@ public:
 
 private:
 
-    PATH() {}
-    ~PATH() {}
+    UTIL() {}
+    ~UTIL() {}
 
     static
     CHAR 
