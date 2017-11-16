@@ -90,11 +90,11 @@ APPLICATION_MANAGER::GetApplicationInfo(
             }
         }
 
-        /*hr = pApplicationInfo->Initialize(pConfig);
+        hr = pApplicationInfo->Initialize(pConfig, m_pFileWatcher);
         if (FAILED(hr))
         {
             goto Finished;
-        }*/
+        }
 
         hr = m_pApplicationInfoHash->InsertRecord( pApplicationInfo );
         if (FAILED(hr))
