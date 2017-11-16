@@ -4,6 +4,12 @@
 #include "precomp.hxx"
 #include <IPHlpApi.h>
 
+// #ifdef DEBUG
+//    DECLARE_DEBUG_PRINTS_OBJECT();
+//    DECLARE_DEBUG_VARIABLE();
+//    DECLARE_PLATFORM_TYPE();
+//#endif // DEBUG 
+
 HTTP_MODULE_ID      g_pModuleId = NULL;
 IHttpServer *       g_pHttpServer = NULL;
 BOOL                g_fAsyncDisconnectAvailable = FALSE;
@@ -143,7 +149,9 @@ HRESULT
 --*/
 {
     HRESULT                 hr = S_OK;
-    ASPNET_CORE_PROXY_MODULE_FACTORY *   pFactory = NULL;
+    ASPNET_CORE_PROXY_MODULE_FACTORY *  pFactory = NULL;
+    ASPNET_CORE_GLOBAL_MODULE *         pGlobalModule = NULL;
+    APPLICATION_MANAGER *               pApplicationManager = NULL;
 
 #ifdef DEBUG
     CREATE_DEBUG_PRINT_OBJECT("Asp.Net Core Module");
@@ -227,6 +235,35 @@ HRESULT
     }
 
     pFactory = NULL;
+
+    pApplicationManager = APPLICATION_MANAGER::GetInstance();
+    if(pApplicationManager == NULL)
+    {
+        hr = E_OUTOFMEMORY;
+        goto Finished;
+    }
+    
+    hr = pApplicationManager->Initialize();
+    if(FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    pGlobalModule = new ASPNET_CORE_GLOBAL_MODULE(pApplicationManager);
+    if (pGlobalModule == NULL)
+    {
+        hr = E_OUTOFMEMORY;
+        goto Finished;
+    }
+
+    hr = pModuleInfo->SetGlobalNotifications(
+            pGlobalModule,
+            GL_CONFIGURATION_CHANGE | GL_STOP_LISTENING);
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+    pGlobalModule = NULL;
 
     //g_pResponseHeaderHash = new RESPONSE_HEADER_HASH;
     //if (g_pResponseHeaderHash == NULL)

@@ -32,6 +32,7 @@ project.lock.json
 *.obj
 *.tlog
 *.CppClean.log
+*msbuild.log
 
 src/*/Debug/
 src/*/x64/Debug/

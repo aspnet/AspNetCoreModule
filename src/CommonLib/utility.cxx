@@ -5,7 +5,7 @@
 
 // static
 HRESULT
-UTIL::SplitUrl(
+UTILITY::SplitUrl(
     PCWSTR pszDestinationUrl,
     BOOL *pfSecure,
     STRU *pstrDestination,
@@ -95,7 +95,7 @@ Return Value:
 
 // static
 HRESULT
-UTIL::UnEscapeUrl(
+UTILITY::UnEscapeUrl(
     PCWSTR      pszUrl,
     DWORD       cchUrl,
     bool        fCopyQuery,
@@ -151,7 +151,7 @@ UTIL::UnEscapeUrl(
 
 // static
 HRESULT
-UTIL::UnEscapeUrl(
+UTILITY::UnEscapeUrl(
     PCWSTR      pszUrl,
     DWORD       cchUrl,
     STRU *      pstrResult
@@ -231,7 +231,7 @@ UTIL::UnEscapeUrl(
 }
 
 HRESULT
-UTIL::EscapeAbsPath(
+UTILITY::EscapeAbsPath(
     IHttpRequest * pRequest,
     STRU * strEscapedUrl
 )
@@ -269,7 +269,7 @@ Finished:
 
 // static
 bool
-UTIL::IsValidAttributeNameChar(
+UTILITY::IsValidAttributeNameChar(
     WCHAR ch
 )
 {
@@ -282,7 +282,7 @@ UTIL::IsValidAttributeNameChar(
 
 // static
 bool
-UTIL::FindInMultiString(
+UTILITY::FindInMultiString(
     PCWSTR      pszMultiString,
     PCWSTR      pszStringToFind
 )
@@ -301,7 +301,7 @@ UTIL::FindInMultiString(
 
 // static
 bool
-UTIL::IsValidQueryStringName(
+UTILITY::IsValidQueryStringName(
     PCWSTR  pszName
 )
 {
@@ -322,7 +322,7 @@ UTIL::IsValidQueryStringName(
 
 // static
 bool
-UTIL::IsValidHeaderName(
+UTILITY::IsValidHeaderName(
     PCWSTR  pszName
 )
 {
@@ -342,7 +342,7 @@ UTIL::IsValidHeaderName(
 }
 
 HRESULT
-UTIL::IsPathUnc(
+UTILITY::IsPathUnc(
     __in  LPCWSTR       pszPath, 
     __out BOOL *        pfIsUnc 
 )
@@ -373,7 +373,7 @@ Finished:
 }
 
 HRESULT
-UTIL::ConvertPathToFullPath(
+UTILITY::ConvertPathToFullPath(
     _In_  LPCWSTR   pszPath,
     _In_  LPCWSTR   pszRootPath,
     _Out_ STRU*     pStruFullPath

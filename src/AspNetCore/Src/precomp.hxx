@@ -89,7 +89,6 @@ inline bool IsSpace(char ch)
     }
 }
 
-
 #include <hashfn.h>
 #include <hashtable.h>
 #include "stringa.h"
@@ -110,7 +109,7 @@ inline bool IsSpace(char ch)
 #include "..\..\CommonLib\environmentvariablehash.h"
 #include "..\..\CommonLib\application.h"
 #include "..\..\CommonLib\aspnetcoreconfig.h"
-#include "..\..\CommonLib\util.h"
+#include "..\..\CommonLib\utility.h"
 #include "..\..\CommonLib\debugutil.h"
 #include"..\..\CommonLib\requesthandler.h"
 #include "..\aspnetcore_msg.h"

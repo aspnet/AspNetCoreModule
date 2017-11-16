@@ -3,7 +3,7 @@
 
 #pragma once
 
-class UTIL
+class UTILITY
 {
 public:
 
@@ -81,8 +81,8 @@ public:
 
 private:
 
-    UTIL() {}
-    ~UTIL() {}
+    UTILITY() {}
+    ~UTILITY() {}
 
     static
     CHAR 

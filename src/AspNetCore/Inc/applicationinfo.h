@@ -83,10 +83,11 @@ public:
     virtual
     ~APPLICATION_INFO();
 
-//    virtual
-    //HRESULT
-    //Initialize(
-    //    _In_ ASPNETCORE_CONFIG   *pConfiguration) = 0;
+    HRESULT
+    Initialize(
+        _In_ ASPNETCORE_CONFIG   *pConfiguration,
+        _In_ FILE_WATCHER        *pFileWatcher
+    );
 
     VOID
     ReferenceApplicationInfo() const
@@ -172,42 +173,42 @@ public:
     {}
 
     APPLICATION_INFO_KEY *
-        ExtractKey(
-            APPLICATION_INFO *pApplicationInfo
-        )
+    ExtractKey(
+        APPLICATION_INFO *pApplicationInfo
+    )
     {
         return pApplicationInfo->QueryApplicationInfoKey();
     }
 
     DWORD
-        CalcKeyHash(
-            APPLICATION_INFO_KEY *key
-        )
+    CalcKeyHash(
+        APPLICATION_INFO_KEY *key
+    )
     {
         return key->CalcKeyHash();
     }
 
     BOOL
-        EqualKeys(
-            APPLICATION_INFO_KEY *key1,
-            APPLICATION_INFO_KEY *key2
-        )
+    EqualKeys(
+        APPLICATION_INFO_KEY *key1,
+        APPLICATION_INFO_KEY *key2
+    )
     {
         return key1->GetIsEqual(key2);
     }
 
     VOID
-        ReferenceRecord(
-            APPLICATION_INFO *pApplicationInfo
-        )
+    ReferenceRecord(
+        APPLICATION_INFO *pApplicationInfo
+    )
     {
         pApplicationInfo->ReferenceApplicationInfo();
     }
 
     VOID
-        DereferenceRecord(
-            APPLICATION_INFO *pApplicationInfo
-        )
+    DereferenceRecord(
+        APPLICATION_INFO *pApplicationInfo
+    )
     {
         pApplicationInfo->DereferenceApplicationInfo();
     }

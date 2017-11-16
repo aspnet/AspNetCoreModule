@@ -29,6 +29,33 @@ APPLICATION_INFO::~APPLICATION_INFO()
 }
 
 HRESULT
+APPLICATION_INFO::Initialize(
+    _In_ ASPNETCORE_CONFIG   *pConfiguration,
+    _In_ FILE_WATCHER        *pFileWatcher
+)
+{
+    HRESULT hr = S_OK;
+    
+    DBG_ASSERT(pConfiguration);
+    DBG_ASSERT(pFileWatcher);
+
+    m_pConfiguration = pConfiguration;
+
+    if (m_pFileWatcherEntry == NULL)
+    {
+        m_pFileWatcherEntry = new FILE_WATCHER_ENTRY(pFileWatcher);
+        if (m_pFileWatcherEntry == NULL)
+        {
+            hr = E_OUTOFMEMORY;
+        }
+    }
+
+    UpdateAppOfflineFileHandle();
+
+    return hr;
+}
+
+HRESULT
 APPLICATION_INFO::StartMonitoringAppOffline()
 {
     HRESULT hr = S_OK;
@@ -43,7 +70,7 @@ VOID
 APPLICATION_INFO::UpdateAppOfflineFileHandle()
 {
     STRU strFilePath;
-    UTIL::ConvertPathToFullPath(L".\\app_offline.htm", m_pConfiguration->QueryApplicationFullPath()->QueryStr(), &strFilePath);
+    UTILITY::ConvertPathToFullPath(L".\\app_offline.htm", m_pConfiguration->QueryApplicationFullPath()->QueryStr(), &strFilePath);
     APP_OFFLINE_HTM *pOldAppOfflineHtm = NULL;
     APP_OFFLINE_HTM *pNewAppOfflineHtm = NULL;
 
