@@ -134,7 +134,7 @@ APPLICATION_INFO::EnsureApplicationCreated()
     // load assembly and create the application
     if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
     {
-        hr = LoadAssemblyFromLocalBin();
+        hr = LoadAssemblyFromInetsrv();
         if (FAILED(hr))
         {
             goto Finished;
@@ -278,6 +278,7 @@ Finished:
 HRESULT
 APPLICATION_INFO::LoadAssemblyFromLocalBin()
 {
+    // TODO 
     HRESULT hr = S_OK;
     return hr;
 }

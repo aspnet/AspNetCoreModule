@@ -7,6 +7,9 @@ REQUEST_HANDLER::REQUEST_HANDLER(
     : m_cRefs(1)
 {
     //InitializeSRWLock(&m_srwLock);
+    
+    m_pW3Context = pW3Context;
+    m_pApplication = pApplication;
 }
 
 

@@ -48,4 +48,6 @@ public:
 
 protected:
     mutable LONG m_cRefs;
+    IHttpContext* m_pW3Context;
+    APPLICATION* m_pApplication;
 };

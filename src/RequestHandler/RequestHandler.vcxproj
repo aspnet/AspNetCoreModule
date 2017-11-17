@@ -167,8 +167,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="forwardinghandler.h" />
+    <ClInclude Include="fx_ver.h" />
     <ClInclude Include="inprocessapplication.h" />
     <ClInclude Include="inprocesshandler.h" />
+    <ClInclude Include="inprocessstoredcontext.h" />
     <ClInclude Include="outprocessapplication.h" />
     <ClInclude Include="precomp.hxx" />
     <ClInclude Include="resource.h" />
@@ -176,8 +178,10 @@
   <ItemGroup>
     <ClCompile Include="dllmain.cxx" />
     <ClCompile Include="forwardinghandler.cpp" />
+    <ClCompile Include="fx_ver.cxx" />
     <ClCompile Include="inprocessapplication.cpp" />
     <ClCompile Include="inprocesshandler.cpp" />
+    <ClCompile Include="inprocessstoredcontext.cxx" />
     <ClCompile Include="outprocessapplication.cpp" />
   </ItemGroup>
   <ItemGroup>
