@@ -299,7 +299,6 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
         goto Finished;
     }
 
-
     m_hThread = CreateThread(
         NULL,       // default security attributes
         0,          // default stack size
