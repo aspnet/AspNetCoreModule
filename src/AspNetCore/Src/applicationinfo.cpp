@@ -204,6 +204,7 @@ APPLICATION_INFO::LoadAssemblyFromInetsrv()
         // let's still load with full path to avoid security issue
         while (!fDone)
         {
+            // Are you allowed to use stru's like this?
             DWORD dwReturnedSize = GetModuleFileName(NULL, struFileName.QueryStr(), dwSize);
             if (dwReturnedSize == 0)
             {
