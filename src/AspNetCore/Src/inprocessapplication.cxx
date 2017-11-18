@@ -435,6 +435,22 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     hostfxr_main_fn             pProc;
     std::vector<std::wstring>   vVersionFolders;
     bool                        fFound = FALSE;
+    
+    // TODO this probably needs to be a path equivalent check
+    if (!m_pConfiguration->QueryProcessPath()->Equals(L".\dotnet", 1)
+        || !m_pConfiguration->QueryProcessPath()->Equals(L"dotnet", 1))
+    {
+        // then we assume host fxr is in the same folder, as well as the application
+        PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(),
+            m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
+            &strApplicationFullPath);
+        strApplicationFullPath.Append(L"\\hostfxr.dll");
+
+        // load hostfxr
+        hModule = LoadLibraryW(strApplicationFullPath.QueryStr());
+
+        // run hostfxr with the exe as an argument.
+    }
 
     // Get the System PATH value.
     if (!GetEnv(L"PATH", &strFullPath))
