@@ -110,7 +110,6 @@ ASPNETCORE_CONFIG::Populate(
 )
 {
     HRESULT                         hr = S_OK;
-    STACK_STRU(strSiteConfigPath, 256);
     STRU                            strEnvName;
     STRU                            strEnvValue;
     STRU                            strExpandedEnvValue;
@@ -148,7 +147,7 @@ ASPNETCORE_CONFIG::Populate(
     }
 
     pAdminManager = pHttpServer->GetAdminManager();
-    hr = strSiteConfigPath.Copy(pHttpContext->GetApplication()->GetAppConfigPath());
+    hr = m_struConfigPath.Copy(pHttpContext->GetApplication()->GetAppConfigPath());
     if (FAILED(hr))
     {
         goto Finished;
@@ -160,7 +159,7 @@ ASPNETCORE_CONFIG::Populate(
         goto Finished;
     }
 
-    pszPath = strSiteConfigPath.QueryStr();
+    pszPath = m_struConfigPath.QueryStr();
     while (pszPath[dwPosition] != NULL)
     {
         if (pszPath[dwPosition] == '/')
@@ -195,7 +194,7 @@ ASPNETCORE_CONFIG::Populate(
     }
 
     hr = pAdminManager->GetAdminSection(bstrWindowAuthSection,
-        strSiteConfigPath.QueryStr(),
+        m_struConfigPath.QueryStr(),
         &pWindowsAuthenticationElement);
     if (FAILED(hr))
     {
@@ -222,7 +221,7 @@ ASPNETCORE_CONFIG::Populate(
         goto Finished;
     }
     hr = pAdminManager->GetAdminSection(bstrBasicAuthSection,
-        strSiteConfigPath.QueryStr(),
+        m_struConfigPath.QueryStr(),
         &pBasicAuthenticationElement);
     if (FAILED(hr))
     {
@@ -245,7 +244,7 @@ ASPNETCORE_CONFIG::Populate(
         goto Finished;
     }
     hr = pAdminManager->GetAdminSection(bstrAnonymousAuthSection,
-        strSiteConfigPath.QueryStr(),
+        m_struConfigPath.QueryStr(),
         &pAnonymousAuthenticationElement);
     if (FAILED(hr))
     {
@@ -269,7 +268,7 @@ ASPNETCORE_CONFIG::Populate(
         goto Finished;
     }
     hr = pAdminManager->GetAdminSection(bstrAspNetCoreSection,
-        strSiteConfigPath.QueryStr(),
+        m_struConfigPath.QueryStr(),
         &pAspNetCoreElement);
     if (FAILED(hr))
     {

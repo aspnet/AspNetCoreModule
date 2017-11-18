@@ -27,7 +27,7 @@ APPLICATION_MANAGER::GetApplicationInfo(
     DBG_ASSERT(pServer != NULL);
     DBG_ASSERT(pConfig != NULL);
 
-    pszApplicationId = pConfig->QueryApplicationPath()->QueryStr(); // pContext->GetApplication()->GetApplicationId();
+    pszApplicationId = pConfig->QueryConfigPath()->QueryStr(); // pContext->GetApplication()->GetApplicationId();
 
     hr = key.Initialize(pszApplicationId);
     if (FAILED(hr))

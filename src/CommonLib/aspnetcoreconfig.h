@@ -221,6 +221,12 @@ public:
         return &m_struStdoutLogFile;
     }
 
+    STRU*
+    QueryConfigPath()
+    {
+        return &m_struConfigPath;
+    }
+
 private:
 
     //
@@ -251,6 +257,7 @@ private:
     STRU                   m_struApplicationFullPath;
     STRU                   m_strHostingModel;
     STRU                   m_struApplicationVirtualPath;
+    STRU                   m_struConfigPath;
     BOOL                   m_fStdoutLogEnabled;
     BOOL                   m_fForwardWindowsAuthToken;
     BOOL                   m_fDisableStartUpErrorPage;
