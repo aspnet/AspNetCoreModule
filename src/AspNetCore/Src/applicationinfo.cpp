@@ -35,11 +35,16 @@ APPLICATION_INFO::Initialize(
 )
 {
     HRESULT hr = S_OK;
-    
+
     DBG_ASSERT(pConfiguration);
     DBG_ASSERT(pFileWatcher);
 
     m_pConfiguration = pConfiguration;
+    hr = m_applicationInfoKey.Initialize(pConfiguration->QueryConfigPath()->QueryStr());
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
 
     if (m_pFileWatcherEntry == NULL)
     {
@@ -47,11 +52,13 @@ APPLICATION_INFO::Initialize(
         if (m_pFileWatcherEntry == NULL)
         {
             hr = E_OUTOFMEMORY;
+            goto Finished;
         }
     }
 
     UpdateAppOfflineFileHandle();
 
+Finished:
     return hr;
 }
 
