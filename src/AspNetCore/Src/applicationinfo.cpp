@@ -190,7 +190,11 @@ APPLICATION_INFO::LoadAssemblyFromInetsrv()
 
         DWORD dwSize = MAX_PATH;
         BOOL  fDone = FALSE;
-        // Get the path of w3wp.exe which is in the same folder as gobal aspnetcorerh.dll
+        DWORD dwPosition = 0;
+
+        // Though we could call LoadLibrary(L"aspnetcorerh.dll") relying the OS to solve
+        // the path (the targeted dll is the same folder of w3wp.exe/iisexpress)
+        // let's still load with full path to avoid security issue
         while (!fDone)
         {
             DWORD dwReturnedSize = GetModuleFileName(NULL, struFileName.QueryStr(), dwSize);
@@ -198,6 +202,7 @@ APPLICATION_INFO::LoadAssemblyFromInetsrv()
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
                 fDone = TRUE;
+                goto Finished;
             }
             else if ((dwReturnedSize == dwSize) && (GetLastError() == ERROR_INSUFFICIENT_BUFFER))
             {
@@ -209,13 +214,21 @@ APPLICATION_INFO::LoadAssemblyFromInetsrv()
                 fDone = TRUE;
             }
         }
-        hr = struFileName.Append(L"\\aspnetcorerh.dll");
-        if (FAILED(hr))
+
+        if (FAILED(hr = struFileName.SyncWithBuffer()))
+        {
+            goto Finished;
+        }
+        dwPosition = struFileName.LastIndexOf(L'\\', 0);
+        struFileName.QueryStr()[dwPosition] = L'\0';
+
+        if (FAILED(hr = struFileName.SyncWithBuffer()) ||
+            FAILED(hr = struFileName.Append(L"\\aspnetcorerh.dll")))
         {
             goto Finished;
         }
 
-        g_hAspnetCoreRH = GetModuleHandle(struFileName.QueryStr());
+        g_hAspnetCoreRH = LoadLibraryW(struFileName.QueryStr());
         if (g_hAspnetCoreRH == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
@@ -238,8 +251,6 @@ APPLICATION_INFO::LoadAssemblyFromInetsrv()
             goto Finished;
         }
     }
-
-
 
 Finished:
     //

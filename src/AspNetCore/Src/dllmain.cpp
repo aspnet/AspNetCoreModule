@@ -226,9 +226,9 @@ HRESULT
     }
 
     hr = pModuleInfo->SetRequestNotifications(
-        pFactory,
-        RQ_EXECUTE_REQUEST_HANDLER,
-        0);
+                                  pFactory,
+                                  RQ_EXECUTE_REQUEST_HANDLER,
+                                  0);
     if (FAILED(hr))
     {
         goto Finished;
@@ -257,26 +257,13 @@ HRESULT
     }
 
     hr = pModuleInfo->SetGlobalNotifications(
-            pGlobalModule,
-            GL_CONFIGURATION_CHANGE | GL_STOP_LISTENING);
+                                   pGlobalModule,
+                                   GL_CONFIGURATION_CHANGE | GL_STOP_LISTENING);
     if (FAILED(hr))
     {
         goto Finished;
     }
     pGlobalModule = NULL;
-
-    //g_pResponseHeaderHash = new RESPONSE_HEADER_HASH;
-    //if (g_pResponseHeaderHash == NULL)
-    //{
-    //    hr = E_OUTOFMEMORY;
-    //    goto Finished;
-    //}
-
-    //hr = g_pResponseHeaderHash->Initialize();
-    //if (FAILED(hr))
-    //{
-    //    goto Finished;
-    //}
 
     hr = ALLOC_CACHE_HANDLER::StaticInitialize();
     if (FAILED(hr))
@@ -297,6 +284,11 @@ HRESULT
     }*/
 
 Finished:
+    if (pGlobalModule != NULL)
+    {
+        delete pGlobalModule;
+        pGlobalModule = NULL;
+    }
 
     if (pFactory != NULL)
     {

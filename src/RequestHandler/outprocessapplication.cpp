@@ -5,6 +5,7 @@ OUT_OF_PROCESS_APPLICATION::OUT_OF_PROCESS_APPLICATION(
     ASPNETCORE_CONFIG*  pConfig) :
     APPLICATION(pHttpServer, pConfig)
 {
+    m_status = APPLICATION_STATUS::RUNNING;
     //todo
 }
 

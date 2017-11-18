@@ -45,30 +45,23 @@ Return value:
 
     WEBSOCKET_HANDLER::StaticTerminate();*/
 
-    //if (g_pResponseHeaderHash != NULL)
-    //{
-    //    g_pResponseHeaderHash->Clear();
-    //    delete g_pResponseHeaderHash;
-    //    g_pResponseHeaderHash = NULL;
-    //}
-
     ALLOC_CACHE_HANDLER::StaticTerminate();
 
     delete this;
 }
 
 ASPNET_CORE_PROXY_MODULE::ASPNET_CORE_PROXY_MODULE(
-) //: m_pHandler(NULL)
+) : m_pHandler(NULL)
 {
 }
 
 ASPNET_CORE_PROXY_MODULE::~ASPNET_CORE_PROXY_MODULE()
 {
-    //if (m_pHandler != NULL)
-    //{
-    //    m_pHandler->DereferenceForwardingHandler();
-    //    m_pHandler = NULL;
-    //}
+    if (m_pHandler != NULL)
+    {
+        m_pHandler->DereferenceRequestHandler();
+        m_pHandler = NULL;
+    }
 }
 
 __override

@@ -42,7 +42,7 @@ public:
     ) const;
 
     VOID
-    RereferenceRequestHandler(
+    DereferenceRequestHandler(
         VOID
     ) const;
 
