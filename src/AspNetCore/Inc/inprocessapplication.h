@@ -64,7 +64,9 @@ public:
     );
 
     HRESULT
-        RunStandaloneApplication();
+    RunStandaloneApplication(
+        VOID
+    );
 
     static
     IN_PROCESS_APPLICATION*
