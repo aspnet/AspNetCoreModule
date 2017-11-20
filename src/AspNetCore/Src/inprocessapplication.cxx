@@ -438,8 +438,11 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     bool                        fFound = FALSE;
     
     // If the process path isn't dotnet, assume we are a standalone appliction.
-    if (!m_pConfiguration->QueryProcessPath()->Equals(L".\\dotnet", 1)
-        || !m_pConfiguration->QueryProcessPath()->Equals(L"dotnet", 1))
+    // TODO: this should be a path equivalent check
+    if (!(m_pConfiguration->QueryProcessPath()->Equals(L".\\dotnet")
+        || m_pConfiguration->QueryProcessPath()->Equals(L"dotnet")
+        || m_pConfiguration->QueryProcessPath()->Equals(L".\\dotnet.exe")
+        || m_pConfiguration->QueryProcessPath()->Equals(L"dotnet.exe")))
     {
         hr = RunStandaloneApplication();
         goto Finished;
@@ -503,10 +506,12 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         }
         pszDotnetExeLocation = wcstok_s(NULL, L";", &strDelimeterContext);
     }
+
     if (!fFound)
     {
         // could not find dotnet.exe, error out
         hr = ERROR_BAD_ENVIRONMENT;
+        goto Finished;
     }
 
     hr = strDotnetFolderLocation.Append(L"\\host\\fxr");
@@ -719,7 +724,7 @@ IN_PROCESS_APPLICATION::RunStandaloneApplication()
     PCWSTR                      argv[2];
     hostfxr_main_fn             pProc;
 
-    PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(),
+    PATH::ConvertPathToFullPath(m_pConfiguration->QueryProcessPath()->QueryStr(),
         m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
         &struApplicationDllPath);
 
@@ -732,9 +737,13 @@ IN_PROCESS_APPLICATION::RunStandaloneApplication()
     }
 
     struHostfxrPath.QueryStr()[dwPosition] = L'\0';
+    struApplicationDllPath.QueryStr()[dwPosition] = L'\0';
+
     // Whenever we directly modify the stru buffer, we need to call SyncWithBuffer
     if (FAILED(hr = struHostfxrPath.SyncWithBuffer())
-        || FAILED(hr = struHostfxrPath.Append(L"\\hostfxr.dll")))
+        || FAILED(hr = struHostfxrPath.Append(L"\\hostfxr.dll"))
+        || FAILED(hr = struApplicationDllPath.SyncWithBuffer())
+        || FAILED(hr = struApplicationDllPath.Append(L"\\NativeIISSample.dll")))
     {
         goto Finished;
     }
