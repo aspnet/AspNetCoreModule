@@ -63,6 +63,9 @@ public:
         HRESULT                 hrCompletionStatus
     );
 
+    HRESULT
+        RunStandaloneApplication();
+
     static
     IN_PROCESS_APPLICATION*
     GetInstance(

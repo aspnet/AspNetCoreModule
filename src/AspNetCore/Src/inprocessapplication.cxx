@@ -430,26 +430,19 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     PCWSTR                      pszDotnetExeLocation = NULL;
     PCWSTR                      pszDotnetExeString(L"dotnet.exe");
     DWORD                       dwCopyLength;
+    DWORD                       dwPosition;
     HMODULE                     hModule;
     PCWSTR                      argv[2];
     hostfxr_main_fn             pProc;
     std::vector<std::wstring>   vVersionFolders;
     bool                        fFound = FALSE;
     
-    // TODO this probably needs to be a path equivalent check
-    if (!m_pConfiguration->QueryProcessPath()->Equals(L".\dotnet", 1)
+    // If the process path isn't dotnet, assume we are a standalone appliction.
+    if (!m_pConfiguration->QueryProcessPath()->Equals(L".\\dotnet", 1)
         || !m_pConfiguration->QueryProcessPath()->Equals(L"dotnet", 1))
     {
-        // then we assume host fxr is in the same folder, as well as the application
-        PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(),
-            m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
-            &strApplicationFullPath);
-        strApplicationFullPath.Append(L"\\hostfxr.dll");
-
-        // load hostfxr
-        hModule = LoadLibraryW(strApplicationFullPath.QueryStr());
-
-        // run hostfxr with the exe as an argument.
+        hr = RunStandaloneApplication();
+        goto Finished;
     }
 
     // Get the System PATH value.
@@ -698,5 +691,81 @@ IN_PROCESS_APPLICATION::FindHighestDotNetVersion(
     hr = pstrResult->Copy(max_ver.as_str().c_str());
 
     // we check FAILED(hr) outside of function
+    return hr;
+}
+
+//
+// Runs a standalone appliction.
+// The folder structure looks like this:
+// Application/
+//   hostfxr.dll
+//   Application.exe
+//   Application.dll
+//   etc.
+// We get the full path to hostfxr.dll and Application.dll and run hostfxr_main,
+// passing in Application.dll.
+// Assuming we don't need Application.exe as the dll is the actual application.
+//
+HRESULT
+IN_PROCESS_APPLICATION::RunStandaloneApplication()
+{
+    HRESULT     hr = S_OK;
+
+    STRU                        struApplicationDllPath;
+    STRU                        struHostfxrPath;
+    PCWSTR                      pszDotnetExeLocation = NULL;
+    DWORD                       dwPosition;
+    HMODULE                     hModule;
+    PCWSTR                      argv[2];
+    hostfxr_main_fn             pProc;
+
+    PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(),
+        m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
+        &struApplicationDllPath);
+
+    // Remove Application.dll and append hostfxr.dll
+    dwPosition = struApplicationDllPath.LastIndexOf(L'\\', 0);
+    hr = struHostfxrPath.Copy(struApplicationDllPath);
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    struHostfxrPath.QueryStr()[dwPosition] = L'\0';
+    // Whenever we directly modify the stru buffer, we need to call SyncWithBuffer
+    if (FAILED(hr = struHostfxrPath.SyncWithBuffer())
+        || FAILED(hr = struHostfxrPath.Append(L"\\hostfxr.dll")))
+    {
+        goto Finished;
+    }
+
+    // load hostfxr
+    hModule = LoadLibraryW(struHostfxrPath.QueryStr());
+
+    // run hostfxr with the exe as an argument.
+    if (hModule == NULL)
+    {
+        // Error with standalone application.
+        hr = ERROR_BAD_ENVIRONMENT;
+        goto Finished;
+    }
+
+    // Get the entry point for main
+    pProc = (hostfxr_main_fn)GetProcAddress(hModule, "hostfxr_main");
+    if (pProc == NULL)
+    {
+        hr = ERROR_BAD_ENVIRONMENT; // better hresult?
+        goto Finished;
+    }
+
+    argv[0] = struHostfxrPath.QueryStr();
+    argv[1] = struApplicationDllPath.QueryStr();
+
+    s_Application = this;
+
+    m_ProcessExitCode = pProc(2, argv);
+    
+Finished:
+
     return hr;
 }
