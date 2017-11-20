@@ -27,3 +27,22 @@
 #include "forwardinghandler.h"
 #include "inprocessapplication.h"
 #include "outprocessapplication.h"
+#include "fx_ver.h"
+#include "inprocessstoredcontext.h"
+
+
+#ifdef max
+#undef max
+template<typename T> inline T max(T a, T b)
+{
+    return a > b ? a : b;
+}
+#endif
+
+#ifdef min
+#undef min
+template<typename T> inline T min(T a, T b)
+{
+    return a < b ? a : b;
+}
+#endif

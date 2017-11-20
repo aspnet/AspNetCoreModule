@@ -74,6 +74,12 @@
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <OutDir>$(SolutionDir)artifacts\build\$(ProjectName)\bin\$(Configuration)\$(Platform)</OutDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)artifacts\build\$(ProjectName)\bin\$(Configuration)\$(Platform)</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)artifacts\build\$(ProjectName)\bin\$(Configuration)\$(Platform)</OutDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
