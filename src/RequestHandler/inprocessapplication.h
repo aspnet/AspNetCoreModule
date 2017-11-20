@@ -28,6 +28,11 @@ public:
         _In_ VOID* pvShutdownHandlerContext
     );
 
+    VOID
+    Recycle(
+        VOID
+    );
+
     // Executes the .NET Core process
     HRESULT
     ExecuteApplication(
@@ -46,6 +51,12 @@ public:
         HRESULT                 hrCompletionStatus
     );
 
+    REQUEST_NOTIFICATION_STATUS
+    OnExecuteRequest
+    (
+        IHttpContext* pHttpContext
+    );
+
     static
     IN_PROCESS_APPLICATION*
     GetInstance(
@@ -54,7 +65,6 @@ public:
     {
         return s_Application;
     }
-
 
 private:
     // Thread executing the .NET Core process
@@ -80,6 +90,9 @@ private:
     BOOL                            m_fLoadManagedAppError;
     BOOL                            m_fInitialized;
     BOOL                            m_fIsWebSocketsConnection;
+    SRWLOCK                         m_srwLock;
+
+    BOOL                            m_fRecycleProcessCalled;
 
     static IN_PROCESS_APPLICATION*   s_Application;
 
