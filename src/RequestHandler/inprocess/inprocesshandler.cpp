@@ -1,4 +1,4 @@
-#include "precomp.hxx"
+#include "..\precomp.hxx"
 
 IN_PROCESS_HANDLER::IN_PROCESS_HANDLER(
     _In_ IHttpContext *pW3Context,

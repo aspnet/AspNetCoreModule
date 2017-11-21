@@ -3,7 +3,7 @@
 
 #include <cassert>
 #include <sstream>
-#include "precomp.hxx"
+#include "..\precomp.hxx"
 
 fx_ver_t::fx_ver_t(int major, int minor, int patch, const std::wstring& pre, const std::wstring& build)
     : m_major(major)

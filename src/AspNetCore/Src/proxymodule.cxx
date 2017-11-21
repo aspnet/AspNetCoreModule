@@ -151,7 +151,6 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
 
         // Create RequestHandler and process the request
         hr = pApplicationInfo->QueryCreateRequestHandler()(pHttpContext,
-            pConfig,
             pApplication,
             &m_pHandler);
         if (FAILED(hr))

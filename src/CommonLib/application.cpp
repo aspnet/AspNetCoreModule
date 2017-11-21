@@ -4,12 +4,12 @@
 
 APPLICATION::APPLICATION(
     _In_ IHttpServer* pHttpServer,
-    _In_ ASPNETCORE_CONFIG* pConfig)
+    _In_ ASPNETCORE_CONFIG* pConfig) :
+    m_cRefs(1),
+    m_pHttpServer(pHttpServer),
+    m_pConfig(pConfig),
+    m_status(APPLICATION_STATUS::UNKNOWN)
 {
-    //: m_cRefs(1),
-    //    m_status(APPLICATION_STATUS::UNKNOWN)
-    m_pHttpServer = pHttpServer;
-    m_pConfig = pConfig;
 }
 
 APPLICATION::~APPLICATION()
@@ -20,6 +20,12 @@ APPLICATION_STATUS
 APPLICATION::QueryStatus()
 {
     return m_status;
+}
+
+ASPNETCORE_CONFIG*
+APPLICATION::QueryConfig()
+{
+    return m_pConfig;
 }
 
 VOID

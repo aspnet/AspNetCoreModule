@@ -26,6 +26,9 @@ public:
     APPLICATION_STATUS
     QueryStatus();
 
+    ASPNETCORE_CONFIG*
+    QueryConfig();
+
     VOID
     ReferenceApplication()
     const;

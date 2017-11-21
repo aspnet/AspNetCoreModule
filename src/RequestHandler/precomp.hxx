@@ -20,15 +20,36 @@
 
 #include <Shlobj.h>
 #include <httpserv.h>
+#include <winhttp.h>
+#include <httptrace.h>
+#include <cstdlib>
+#include <reftrace.h>
+#include <wchar.h>
+
+#include <iiswebsocket.h>
+//#include "..\IISLib\dbgutil.h"
+//#include "..\IISLib\ahutil.h"
+#include "..\IISLib\multisz.h"
+#include "..\IISLib\multisza.h"
+#include "..\IISLib\base64.h"
 #include "..\CommonLib\requesthandler.h"
 #include "..\CommonLib\aspnetcoreconfig.h"
-#include"..\CommonLib\application.h"
-#include "InProcessHandler.h"
-#include "forwardinghandler.h"
-#include "inprocessapplication.h"
-#include "outprocessapplication.h"
-#include "fx_ver.h"
-#include "inprocessstoredcontext.h"
+#include "..\CommonLib\utility.h"
+#include "..\CommonLib\application.h"
+#include ".\inprocess\InProcessHandler.h"
+#include ".\inprocess\inprocessapplication.h"
+#include ".\inprocess\fx_ver.h"
+#include ".\inprocess\inprocessstoredcontext.h"
+#include ".\outofprocess\protocolconfig.h"
+#include ".\outofprocess\forwarderconnection.h"
+#include ".\outofprocess\serverprocess.h"
+#include ".\outofprocess\processmanager.h"
+#include ".\outofprocess\forwardinghandler.h"
+#include ".\outofprocess\outprocessapplication.h"
+//#include ".\outofprocess\websockethandler.h"
+
+#include ".\outofprocess\sttimer.h"
+
 
 
 #ifdef max
