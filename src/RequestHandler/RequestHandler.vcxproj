@@ -192,6 +192,7 @@
     <ClCompile Include=".\inprocess\inprocesshandler.cpp" />
     <ClCompile Include=".\outofprocess\forwardinghandler.cpp" />
     <ClCompile Include=".\outofprocess\outprocessapplication.cpp" />
+    <ClCompile Include="managedexports.cxx" />
     <ClCompile Include="outofprocess\processmanager.cxx" />
     <ClCompile Include="outofprocess\protocolconfig.cxx" />
     <ClCompile Include="outofprocess\serverprocess.cxx" />

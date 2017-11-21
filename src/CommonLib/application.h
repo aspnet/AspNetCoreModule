@@ -36,9 +36,6 @@ public:
     VOID
     DereferenceApplication()
     const;
-    
-    ASPNETCORE_CONFIG*
-    QueryConfig();
 
 protected:
     mutable LONG            m_cRefs;

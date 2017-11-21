@@ -47,9 +47,3 @@ const
         delete this;
     }
 }
-
-ASPNETCORE_CONFIG*
-APPLICATION::QueryConfig()
-{
-    return m_pConfig;
-}
