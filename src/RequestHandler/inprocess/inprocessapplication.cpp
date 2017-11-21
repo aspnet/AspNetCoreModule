@@ -18,9 +18,11 @@ IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(
     // If so, I don't think there is much to do here.
     DBG_ASSERT(pHttpServer != NULL);
     DBG_ASSERT(pConfig != NULL);
+    InitializeSRWLock(&m_srwLock);
 
     // TODO we can probably initialized as I believe we are the only ones calling recycle.
     m_fInitialized = TRUE;
+    m_status = APPLICATION_STATUS::RUNNING;
 }
 
 IN_PROCESS_APPLICATION::~IN_PROCESS_APPLICATION()
@@ -99,42 +101,36 @@ REQUEST_NOTIFICATION_STATUS
 IN_PROCESS_APPLICATION::OnAsyncCompletion(
     IHttpContext* pHttpContext,
     DWORD           cbCompletion,
-    HRESULT         hrCompletionStatus
+    HRESULT         hrCompletionStatus,
+    IN_PROCESS_HANDLER* pInProcessHandler
 )
 {
     HRESULT hr;
-    IN_PROCESS_STORED_CONTEXT* pInProcessStoredContext = NULL;
     REQUEST_NOTIFICATION_STATUS dwRequestNotificationStatus = RQ_NOTIFICATION_CONTINUE;
 
-    hr = IN_PROCESS_STORED_CONTEXT::GetInProcessStoredContext(pHttpContext, &pInProcessStoredContext);
-    if (FAILED(hr))
-    {
-        // Finish the request as we couldn't get the callback
-        pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 19, hr);
-        return RQ_NOTIFICATION_FINISH_REQUEST;
-    }
-    else if (pInProcessStoredContext->QueryIsManagedRequestComplete())
+    if (pInProcessHandler->QueryIsManagedRequestComplete())
     {
         // means PostCompletion has been called and this is the associated callback.
-        dwRequestNotificationStatus = pInProcessStoredContext->QueryAsyncCompletionStatus();
+        dwRequestNotificationStatus = pInProcessHandler->QueryAsyncCompletionStatus();
         // TODO cleanup whatever disconnect listener there is
         return dwRequestNotificationStatus;
     }
     else
     {
         // Call the managed handler for async completion.
-        return m_AsyncCompletionHandler(pInProcessStoredContext->QueryManagedHttpContext(), hrCompletionStatus, cbCompletion);
+        return m_AsyncCompletionHandler(pInProcessHandler->QueryManagedHttpContext(), hrCompletionStatus, cbCompletion);
     }
 }
 
 REQUEST_NOTIFICATION_STATUS
 IN_PROCESS_APPLICATION::OnExecuteRequest(
-    _In_ IHttpContext* pHttpContext
+    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler
 )
 {
     if (m_RequestHandler != NULL)
     {
-        return m_RequestHandler(pHttpContext, m_RequstHandlerContext);
+        return m_RequestHandler(pHttpContext, pInProcessHandler, m_RequestHandlerContext);
     }
 
     ////
@@ -238,7 +234,7 @@ IN_PROCESS_APPLICATION::SetCallbackHandles(
 )
 {
     m_RequestHandler = request_handler;
-    m_RequstHandlerContext = pvRequstHandlerContext;
+    m_RequestHandlerContext = pvRequstHandlerContext;
     m_ShutdownHandler = shutdown_handler;
     m_ShutdownHandlerContext = pvShutdownHandlerContext;
     m_AsyncCompletionHandler = async_completion_handler;
