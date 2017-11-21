@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\Build\Build.Settings" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -115,7 +116,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;REQUESTHANDLER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;REQUESTHANDLER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>precomp.hxx</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -136,7 +137,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;REQUESTHANDLER_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;REQUESTHANDLER_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderFile>precomp.hxx</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalIncludeDirectories>..\IISLib;..\CommonLib;.\Inc</AdditionalIncludeDirectories>
@@ -172,23 +173,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="forwardinghandler.h" />
-    <ClInclude Include="fx_ver.h" />
-    <ClInclude Include="inprocessapplication.h" />
-    <ClInclude Include="inprocesshandler.h" />
-    <ClInclude Include="inprocessstoredcontext.h" />
-    <ClInclude Include="outprocessapplication.h" />
+    <ClInclude Include="outofprocess\processmanager.h" />
+    <ClInclude Include="outofprocess\protocolconfig.h" />
+    <ClInclude Include="outofprocess\serverprocess.h" />
     <ClInclude Include="precomp.hxx" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include=".\inprocess\fx_ver.h" />
+    <ClInclude Include=".\inprocess\inprocessapplication.h" />
+    <ClInclude Include=".\inprocess\inprocesshandler.h" />
+    <ClInclude Include=".\inprocess\inprocessstoredcontext.h" />
+    <ClInclude Include=".\outofprocess\forwardinghandler.h" />
+    <ClInclude Include=".\outofprocess\outprocessapplication.h" />
+    <ClInclude Include=".\outofprocess\sttimer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cxx" />
-    <ClCompile Include="forwardinghandler.cpp" />
-    <ClCompile Include="fx_ver.cxx" />
-    <ClCompile Include="inprocessapplication.cpp" />
-    <ClCompile Include="inprocesshandler.cpp" />
-    <ClCompile Include="inprocessstoredcontext.cxx" />
-    <ClCompile Include="outprocessapplication.cpp" />
+    <ClCompile Include=".\inprocess\fx_ver.cxx" />
+    <ClCompile Include=".\inprocess\inprocessapplication.cpp" />
+    <ClCompile Include=".\inprocess\inprocesshandler.cpp" />
+    <ClCompile Include=".\inprocess\inprocessstoredcontext.cxx" />
+    <ClCompile Include=".\outofprocess\forwardinghandler.cpp" />
+    <ClCompile Include=".\outofprocess\outprocessapplication.cpp" />
+    <ClCompile Include="outofprocess\processmanager.cxx" />
+    <ClCompile Include="outofprocess\protocolconfig.cxx" />
+    <ClCompile Include="outofprocess\serverprocess.cxx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CommonLib\CommonLib.vcxproj">

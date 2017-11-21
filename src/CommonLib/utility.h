@@ -79,6 +79,12 @@ public:
         _Out_ STRU*     pStrFullPath
     );
 
+    static
+    HRESULT
+    EnsureDirectoryPathExist(
+        _In_  LPCWSTR pszPath
+    );
+
 private:
 
     UTILITY() {}

@@ -384,7 +384,7 @@ UTILITY::ConvertPathToFullPath(
     LPWSTR pszFullPath = NULL;
 
     // if relative path, prefix with root path and then convert to absolute path.
-    if( pszPath[0] == L'.' )
+    if ( pszPath[0] == L'.' )
     {
         hr = strFileFullPath.Copy(pszRootPath);
         if(FAILED(hr))
@@ -403,13 +403,13 @@ UTILITY::ConvertPathToFullPath(
     }
 
     hr = strFileFullPath.Append( pszPath );
-    if(FAILED(hr))
+    if (FAILED(hr))
     {
         goto Finished;
     }
 
     pszFullPath = new WCHAR[ strFileFullPath.QueryCCH() + 1];
-    if( pszFullPath == NULL )
+    if ( pszFullPath == NULL )
     {
         hr = E_OUTOFMEMORY;
         goto Finished;
@@ -425,18 +425,83 @@ UTILITY::ConvertPathToFullPath(
 
     // convert to canonical path
     hr = MakePathCanonicalizationProof( pszFullPath, pStruFullPath );
-    if(FAILED(hr))
+    if (FAILED(hr))
     {
         goto Finished;
     }
 
 Finished:
 
-    if( pszFullPath != NULL )
+    if ( pszFullPath != NULL )
     {
         delete[] pszFullPath;
         pszFullPath = NULL;
     }
 
+    return hr;
+}
+
+HRESULT
+UTILITY::EnsureDirectoryPathExist(
+    _In_  LPCWSTR pszPath
+)
+{
+    HRESULT hr = S_OK;
+    STRU    struPath;
+    DWORD   dwPosition = 0;
+    BOOL    fDone = FALSE;
+    BOOL    fUnc = FALSE;
+
+    struPath.Copy(pszPath);
+    hr = IsPathUnc(pszPath, &fUnc);
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+    if (fUnc)
+    {
+        // "\\?\UNC\"
+        dwPosition = 8;
+    }
+    else if (struPath.IndexOf(L'?', 0) != -1)
+    {
+        // sceanrio "\\?\"
+        dwPosition = 4;
+    }
+    while (!fDone)
+    {
+        dwPosition = struPath.IndexOf(L'\\', dwPosition + 1);
+        if (dwPosition == -1)
+        {
+            // not found '/'
+            fDone = TRUE;
+            goto Finished;
+        }
+        else if (dwPosition ==0)
+        {
+            hr = ERROR_INTERNAL_ERROR;
+            goto Finished;
+        }
+        else if (struPath.QueryStr()[dwPosition-1] == L':')
+        {
+            //  skip volume case 
+            continue;
+        }
+        else
+        {
+            struPath.QueryStr()[dwPosition] = L'\0';
+        }
+
+        if (!CreateDirectory(struPath.QueryStr(), NULL) &&
+            ERROR_ALREADY_EXISTS != GetLastError())
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            fDone = TRUE;
+            goto Finished;
+        }
+        struPath.QueryStr()[dwPosition] = L'\\';
+    }
+
+Finished:
     return hr;
 }

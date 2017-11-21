@@ -15,7 +15,6 @@ typedef
 HRESULT
 (WINAPI * PFN_ASPNETCORE_CREATE_REQUEST_HANDLER)(
     _In_  IHttpContext       *pHttpContext,
-    _In_  ASPNETCORE_CONFIG  *pConfig,
     _In_  APPLICATION        *pApplication,
     _Out_ REQUEST_HANDLER   **pRequestHandler
     );

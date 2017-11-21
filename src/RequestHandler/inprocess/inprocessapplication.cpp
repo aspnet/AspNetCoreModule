@@ -1,4 +1,4 @@
-#include "precomp.hxx"
+#include "..\precomp.hxx"
 
 typedef DWORD(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
 
