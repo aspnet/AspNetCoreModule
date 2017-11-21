@@ -69,7 +69,7 @@ IN_PROCESS_APPLICATION::DirectoryExists(
 }
 
 BOOL
-IN_PROCESS_APPLICATION::GetEnv(
+IN_PROCESS_APPLICATION::GetSystemPathVariable(
     _In_ PCWSTR pszEnvironmentVariable,
     _Out_ STRU *pstrResult
 )
@@ -418,23 +418,13 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     VOID
 )
 {
-    HRESULT     hr = S_OK;
-
-    STRU                        strFullPath;
-    STRU                        strDotnetExeLocation;
-    STRU                        strHostFxrSearchExpression;
-    STRU                        strDotnetFolderLocation;
-    STRU                        strHighestDotnetVersion;
-    STRU                        strApplicationFullPath;
-    PWSTR                       strDelimeterContext = NULL;
-    PCWSTR                      pszDotnetExeLocation = NULL;
-    PCWSTR                      pszDotnetExeString(L"dotnet.exe");
-    DWORD                       dwCopyLength;
-    DWORD                       dwPosition;
-    HMODULE                     hModule;
+    HRESULT                     hr = S_OK;
+    STRU                        struApplicationDllPath;
+    STRU                        struHostfxrPath;
     PCWSTR                      argv[2];
     hostfxr_main_fn             pProc;
-    std::vector<std::wstring>   vVersionFolders;
+    HMODULE                     hModule;
+
     bool                        fFound = FALSE;
     
     // If the process path isn't dotnet, assume we are a standalone appliction.
@@ -444,138 +434,14 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         || m_pConfiguration->QueryProcessPath()->Equals(L".\\dotnet.exe")
         || m_pConfiguration->QueryProcessPath()->Equals(L"dotnet.exe")))
     {
-        hr = RunStandaloneApplication();
-        goto Finished;
+        hr = GetStandaloneApplicationArguments(&struApplicationDllPath, &struHostfxrPath);
     }
-
-    // Get the System PATH value.
-    if (!GetEnv(L"PATH", &strFullPath))
+    else
     {
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
+        hr = GetPortableApplicationArguments(&struApplicationDllPath, &struHostfxrPath);
     }
 
-    // Split on ';', checking to see if dotnet.exe exists in any folders.
-    pszDotnetExeLocation = wcstok_s(strFullPath.QueryStr(), L";", &strDelimeterContext);
-
-    while (pszDotnetExeLocation != NULL)
-    {
-        dwCopyLength = wcsnlen_s(pszDotnetExeLocation, 260);
-        if (dwCopyLength == 0)
-        {
-            continue;
-        }
-
-        // We store both the exe and folder locations as we eventually need to check inside of host\\fxr
-        // which doesn't need the dotnet.exe portion of the string
-        // TODO consider reducing allocations.
-        strDotnetExeLocation.Reset();
-        strDotnetFolderLocation.Reset();
-        hr = strDotnetExeLocation.Copy(pszDotnetExeLocation, dwCopyLength);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        hr = strDotnetFolderLocation.Copy(pszDotnetExeLocation, dwCopyLength);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        if (dwCopyLength > 0 && pszDotnetExeLocation[dwCopyLength - 1] != L'\\')
-        {
-            hr = strDotnetExeLocation.Append(L"\\");
-            if (FAILED(hr))
-            {
-                goto Finished;
-            }
-        }
-
-        hr = strDotnetExeLocation.Append(pszDotnetExeString);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        if (PathFileExists(strDotnetExeLocation.QueryStr()))
-        {
-            // means we found the folder with a dotnet.exe inside of it.
-            fFound = TRUE;
-            break;
-        }
-        pszDotnetExeLocation = wcstok_s(NULL, L";", &strDelimeterContext);
-    }
-
-    if (!fFound)
-    {
-        // could not find dotnet.exe, error out
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    hr = strDotnetFolderLocation.Append(L"\\host\\fxr");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    if (!DirectoryExists(&strDotnetFolderLocation))
-    {
-        // error, not found the folder
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    // Find all folders under host\\fxr\\ for version numbers.
-    hr = strHostFxrSearchExpression.Copy(strDotnetFolderLocation);
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hr = strHostFxrSearchExpression.Append(L"\\*");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    // As we use the logic from core-setup, we are opting to use std here.
-    // TODO remove all uses of std?
-    FindDotNetFolders(strHostFxrSearchExpression.QueryStr(), &vVersionFolders);
-
-    if (vVersionFolders.size() == 0)
-    {
-        // no core framework was found
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    hr = FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-    hr = strDotnetFolderLocation.Append(L"\\");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hr = strDotnetFolderLocation.Append(strHighestDotnetVersion.QueryStr());
-    if (FAILED(hr))
-    {
-        goto Finished;
-
-    }
-
-    hr = strDotnetFolderLocation.Append(L"\\hostfxr.dll");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hModule = LoadLibraryW(strDotnetFolderLocation.QueryStr());
+    hModule = LoadLibraryW(struHostfxrPath.QueryStr());
 
     if (hModule == NULL)
     {
@@ -593,11 +459,8 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     }
 
     // The first argument is mostly ignored
-    argv[0] = strDotnetExeLocation.QueryStr();
-    PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(),
-                                m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
-                                &strApplicationFullPath);
-    argv[1] = strApplicationFullPath.QueryStr();
+    argv[0] = struHostfxrPath.QueryStr();
+    argv[1] = struApplicationDllPath.QueryStr();
 
     // There can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
@@ -624,41 +487,40 @@ Finished:
         LPCWSTR                 apsz[1];
         if (SUCCEEDED(strEventMsg.SafeSnwprintf(
             ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT_MSG,
-            m_pConfiguration->QueryApplicationPath()->QueryStr(),
-            m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
-            m_ProcessExitCode
-        )))
+m_pConfiguration->QueryApplicationPath()->QueryStr(),
+m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
+m_ProcessExitCode
+)))
         {
-            apsz[0] = strEventMsg.QueryStr();
+        apsz[0] = strEventMsg.QueryStr();
 
-            //
-            // not checking return code because if ReportEvent
-            // fails, we cannot do anything.
-            //
-            if (FORWARDING_HANDLER::QueryEventLog() != NULL)
-            {
-                ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
-                    EVENTLOG_ERROR_TYPE,
-                    0,
-                    ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT,
-                    NULL,
-                    1,
-                    0,
-                    apsz,
-                    NULL);
-            }
-            // error. the thread exits after application started
-            // Question: should we shutdown current worker process or keep the application in failure state?
-            // for now, we reccylce to keep the same behavior as that of out-of-process
-            if (m_fManagedAppLoaded)
-            {
-                Recycle();
-            }
+        //
+        // not checking return code because if ReportEvent
+        // fails, we cannot do anything.
+        //
+        if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+        {
+            ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
+                EVENTLOG_ERROR_TYPE,
+                0,
+                ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT,
+                NULL,
+                1,
+                0,
+                apsz,
+                NULL);
+        }
+        // error. the thread exits after application started
+        // Question: should we shutdown current worker process or keep the application in failure state?
+        // for now, we reccylce to keep the same behavior as that of out-of-process
+        if (m_fManagedAppLoaded)
+        {
+            Recycle();
+        }
         }
     }
     return hr;
 }
-
 
 // static
 VOID
@@ -712,69 +574,225 @@ IN_PROCESS_APPLICATION::FindHighestDotNetVersion(
 // Assuming we don't need Application.exe as the dll is the actual application.
 //
 HRESULT
-IN_PROCESS_APPLICATION::RunStandaloneApplication()
+IN_PROCESS_APPLICATION::GetStandaloneApplicationArguments(
+    STRU* struApplicationDllPath,
+    STRU* struHostfxrPath
+)
 {
     HRESULT     hr = S_OK;
 
-    STRU                        struApplicationDllPath;
-    STRU                        struHostfxrPath;
-    PCWSTR                      pszDotnetExeLocation = NULL;
     DWORD                       dwPosition;
-    HMODULE                     hModule;
-    PCWSTR                      argv[2];
-    hostfxr_main_fn             pProc;
+    STRU                        struApplicationExeName;
+    STRU                        struApplicationExePath;
+    STRU                        struApplicationFullPath;
 
-    PATH::ConvertPathToFullPath(m_pConfiguration->QueryProcessPath()->QueryStr(),
+    if (FAILED(hr = struApplicationExeName.Copy(m_pConfiguration->QueryProcessPath()->QueryStr()))
+        || FAILED(struApplicationFullPath.Copy(m_pConfiguration->QueryApplicationFullPath()->QueryStr())))
+    {
+        goto Finished;
+    }
+
+    // Get the full path to the exe and check if it exists
+    PATH::ConvertPathToFullPath(struApplicationExeName.QueryStr(),
+        struApplicationFullPath.QueryStr(),
+        &struApplicationExePath);
+
+    if (!PathFileExists(struApplicationExePath.QueryStr()))
+    {
+        hr = ERROR_FILE_NOT_FOUND;
+        goto Finished;
+    }
+
+    // Append hostfxr.dll and check if it exists
+    if (FAILED(hr = struHostfxrPath->Copy(struApplicationFullPath))
+        || FAILED(hr = struHostfxrPath->Append(L"\\hostfxr.dll")))
+    {
+        goto Finished;
+    }
+
+    if (!PathFileExists(struHostfxrPath->QueryStr()))
+    {
+        hr = ERROR_FILE_NOT_FOUND;
+        goto Finished;
+    }
+
+    dwPosition = struApplicationExeName.LastIndexOf(L'.', 0);
+    if (dwPosition == -1)
+    {
+        hr = ERROR_BAD_ENVIRONMENT;
+        goto Finished;
+    }
+    struApplicationExeName.QueryStr()[dwPosition] = L'\0';
+
+    if (FAILED(hr = struApplicationExeName.SyncWithBuffer())
+        || FAILED(hr = struApplicationExeName.Append(L".dll")))
+    {
+        goto Finished;
+    }
+    if (FAILED(hr = struApplicationDllPath->Copy(struApplicationFullPath))
+        || FAILED(hr = struApplicationDllPath->Append(struApplicationExeName)))
+    {
+        goto Finished;
+    }
+   
+    if (!PathFileExists(struApplicationDllPath->QueryStr()))
+    {
+        hr = ERROR_FILE_NOT_FOUND;
+        goto Finished;
+    }
+
+Finished:
+    return hr;
+}
+
+HRESULT
+IN_PROCESS_APPLICATION::GetPortableApplicationArguments(
+    STRU* struApplicationDllPath,
+    STRU* struHostfxrPath
+)
+{
+    HRESULT hr = S_OK;
+
+    STRU                        struSystemPathVariable;
+    STRU                        strDotnetExeLocation;
+    STRU                        strHostFxrSearchExpression;
+    STRU                        strHighestDotnetVersion;
+    PWSTR                       pwzDelimeterContext = NULL;
+    PCWSTR                      pszDotnetLocation = NULL;
+    PCWSTR                      pszDotnetExeString(L"dotnet.exe");
+    DWORD                       dwCopyLength;
+    DWORD                       dwPosition;
+    BOOL                        fFound = FALSE;
+    std::vector<std::wstring>   vVersionFolders;
+
+    // Get path to applicationDll (arg[0] to hostfxr)
+    hr = PATH::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(),
         m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
-        &struApplicationDllPath);
-
-    // Remove Application.dll and append hostfxr.dll
-    dwPosition = struApplicationDllPath.LastIndexOf(L'\\', 0);
-    hr = struHostfxrPath.Copy(struApplicationDllPath);
+        struApplicationDllPath);
     if (FAILED(hr))
     {
         goto Finished;
     }
 
-    struHostfxrPath.QueryStr()[dwPosition] = L'\0';
-    struApplicationDllPath.QueryStr()[dwPosition] = L'\0';
-
-    // Whenever we directly modify the stru buffer, we need to call SyncWithBuffer
-    if (FAILED(hr = struHostfxrPath.SyncWithBuffer())
-        || FAILED(hr = struHostfxrPath.Append(L"\\hostfxr.dll"))
-        || FAILED(hr = struApplicationDllPath.SyncWithBuffer())
-        || FAILED(hr = struApplicationDllPath.Append(L"\\NativeIISSample.dll")))
+    // Get the System PATH value.
+    if (!GetSystemPathVariable(L"PATH", &struSystemPathVariable))
     {
-        goto Finished;
-    }
-
-    // load hostfxr
-    hModule = LoadLibraryW(struHostfxrPath.QueryStr());
-
-    // run hostfxr with the exe as an argument.
-    if (hModule == NULL)
-    {
-        // Error with standalone application.
         hr = ERROR_BAD_ENVIRONMENT;
         goto Finished;
     }
 
-    // Get the entry point for main
-    pProc = (hostfxr_main_fn)GetProcAddress(hModule, "hostfxr_main");
-    if (pProc == NULL)
+    // Split on ';', checking to see if dotnet.exe exists in any folders.
+    pszDotnetLocation = wcstok_s(struSystemPathVariable.QueryStr(), L";", &pwzDelimeterContext);
+    while (pszDotnetLocation != NULL)
     {
-        hr = ERROR_BAD_ENVIRONMENT; // better hresult?
+        dwCopyLength = wcsnlen_s(pszDotnetLocation, 260);
+
+        // We store both the exe and folder locations as we eventually need to check inside of host\\fxr
+        // which doesn't need the dotnet.exe portion of the string
+        hr = strDotnetExeLocation.Copy(pszDotnetLocation, dwCopyLength);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+
+        if (dwCopyLength > 0 && pszDotnetLocation[dwCopyLength - 1] != L'\\')
+        {
+            hr = strDotnetExeLocation.Append(L"\\");
+            if (FAILED(hr))
+            {
+                goto Finished;
+            }
+        }
+
+        hr = struHostfxrPath->Copy(strDotnetExeLocation);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+
+        hr = strDotnetExeLocation.Append(pszDotnetExeString);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+
+        if (PathFileExists(strDotnetExeLocation.QueryStr()))
+        {
+            // means we found the folder with a dotnet.exe inside of it.
+            fFound = TRUE;
+            break;
+        }
+        pszDotnetLocation = wcstok_s(NULL, L";", &pwzDelimeterContext);
+    }
+
+    if (!fFound)
+    {
+        // could not find dotnet.exe, error out
+        hr = ERROR_BAD_ENVIRONMENT;
         goto Finished;
     }
 
-    argv[0] = struHostfxrPath.QueryStr();
-    argv[1] = struApplicationDllPath.QueryStr();
+    hr = struHostfxrPath->Append(L"\\host\\fxr");
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
 
-    s_Application = this;
+    if (!DirectoryExists(struHostfxrPath))
+    {
+        // error, not found the folder
+        hr = ERROR_BAD_ENVIRONMENT;
+        goto Finished;
+    }
 
-    m_ProcessExitCode = pProc(2, argv);
-    
+    // Find all folders under host\\fxr\\ for version numbers.
+    hr = strHostFxrSearchExpression.Copy(struHostfxrPath);
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    hr = strHostFxrSearchExpression.Append(L"\\*");
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    // As we use the logic from core-setup, we are opting to use std here.
+    // TODO remove all uses of std?
+    FindDotNetFolders(strHostFxrSearchExpression.QueryStr(), &vVersionFolders);
+
+    if (vVersionFolders.size() == 0)
+    {
+        // no core framework was found
+        hr = ERROR_BAD_ENVIRONMENT;
+        goto Finished;
+    }
+
+    hr = FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+    hr = struHostfxrPath->Append(L"\\");
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    hr = struHostfxrPath->Append(strHighestDotnetVersion.QueryStr());
+    if (FAILED(hr))
+    {
+        goto Finished;
+
+    }
+
+    hr = struHostfxrPath->Append(L"\\hostfxr.dll");
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
 Finished:
-
     return hr;
 }

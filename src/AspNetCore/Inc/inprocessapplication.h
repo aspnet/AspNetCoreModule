@@ -64,8 +64,15 @@ public:
     );
 
     HRESULT
-    RunStandaloneApplication(
-        VOID
+    GetStandaloneApplicationArguments(
+        STRU* struApplicationDllPath,
+        STRU* struHostfxrPath
+    );
+
+    HRESULT
+    GetPortableApplicationArguments(
+        STRU* struApplicationDllPath,
+        STRU* struHostfxrPath
     );
 
     static
@@ -126,7 +133,7 @@ private:
     );
 
     static BOOL
-    GetEnv(
+    GetSystemPathVariable(
         _In_ PCWSTR pszEnvironmentVariable,
         _Out_ STRU *pstrResult
     );
