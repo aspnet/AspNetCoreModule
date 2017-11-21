@@ -63,6 +63,18 @@ public:
         HRESULT                 hrCompletionStatus
     );
 
+    HRESULT
+    GetStandaloneApplicationArguments(
+        STRU* struApplicationDllPath,
+        STRU* struHostfxrPath
+    );
+
+    HRESULT
+    GetPortableApplicationArguments(
+        STRU* struApplicationDllPath,
+        STRU* struHostfxrPath
+    );
+
     static
     IN_PROCESS_APPLICATION*
     GetInstance(
@@ -121,7 +133,7 @@ private:
     );
 
     static BOOL
-    GetEnv(
+    GetSystemPathVariable(
         _In_ PCWSTR pszEnvironmentVariable,
         _Out_ STRU *pstrResult
     );
