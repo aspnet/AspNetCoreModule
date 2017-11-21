@@ -19,4 +19,45 @@ public:
         DWORD       cbCompletion,
         HRESULT     hrCompletionStatus
     );
+
+    PVOID
+    QueryManagedHttpContext(
+        VOID
+    );
+
+    VOID
+    SetManangedHttpContext(
+        PVOID pManagedHttpContext
+    );
+
+    IHttpContext*
+    QueryHttpContext(
+        VOID
+    );
+
+    BOOL
+    QueryIsManagedRequestComplete(
+        VOID
+    );
+
+    VOID
+    IndicateManagedRequestComplete(
+        VOID
+    );
+
+    REQUEST_NOTIFICATION_STATUS
+    QueryAsyncCompletionStatus(
+        VOID
+    );
+
+    VOID
+    SetAsyncCompletionStatus(
+        REQUEST_NOTIFICATION_STATUS requestNotificationStatus
+    );
+
+private:
+    PVOID m_pManagedHttpContext;
+    IHttpContext* m_pHttpContext;
+    BOOL m_fManagedRequestComplete;
+    REQUEST_NOTIFICATION_STATUS m_requestNotificationStatus;
 };
