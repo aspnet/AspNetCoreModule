@@ -5,6 +5,7 @@ IN_PROCESS_HANDLER::IN_PROCESS_HANDLER(
     _In_ APPLICATION  *pApplication
 ): REQUEST_HANDLER(pW3Context, pApplication)
 {
+    m_fManagedRequestComplete = FALSE;
 }
 
 IN_PROCESS_HANDLER::~IN_PROCESS_HANDLER()
@@ -44,7 +45,7 @@ IN_PROCESS_HANDLER::OnExecuteRequestHandler()
             L"InProcess Application");
     }*/
     //SetHttpSysDisconnectCallback();
-    return  ((IN_PROCESS_APPLICATION*)m_pApplication)->OnExecuteRequest(m_pW3Context);
+    return  ((IN_PROCESS_APPLICATION*)m_pApplication)->OnExecuteRequest(m_pW3Context, this);
 }
 
 __override
@@ -71,7 +72,62 @@ IN_PROCESS_HANDLER::OnAsyncCompletion(
             return RQ_NOTIFICATION_FINISH_REQUEST;
         }
 
-        return application->OnAsyncCompletion(m_pW3Context, cbCompletion, hrCompletionStatus);
+        return application->OnAsyncCompletion(m_pW3Context, cbCompletion, hrCompletionStatus, this);
     }
 }
 
+PVOID
+IN_PROCESS_HANDLER::QueryManagedHttpContext(
+    VOID
+)
+{
+    return m_pManagedHttpContext;
+}
+
+IHttpContext*
+IN_PROCESS_HANDLER::QueryHttpContext(
+    VOID
+)
+{
+    return m_pHttpContext;
+}
+
+BOOL
+IN_PROCESS_HANDLER::QueryIsManagedRequestComplete(
+    VOID
+)
+{
+    return m_fManagedRequestComplete;
+}
+
+VOID
+IN_PROCESS_HANDLER::IndicateManagedRequestComplete(
+    VOID
+)
+{
+    m_fManagedRequestComplete = TRUE;
+}
+
+REQUEST_NOTIFICATION_STATUS
+IN_PROCESS_HANDLER::QueryAsyncCompletionStatus(
+    VOID
+)
+{
+    return m_requestNotificationStatus;
+}
+
+VOID
+IN_PROCESS_HANDLER::SetAsyncCompletionStatus(
+    REQUEST_NOTIFICATION_STATUS requestNotificationStatus
+)
+{
+    m_requestNotificationStatus = requestNotificationStatus;
+}
+
+VOID
+IN_PROCESS_HANDLER::SetManangedHttpContext(
+    PVOID pManagedHttpContext
+)
+{
+    m_pManagedHttpContext = pManagedHttpContext;
+}

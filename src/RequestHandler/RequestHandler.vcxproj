@@ -75,22 +75,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <TargetName>aspnetcorerh</TargetName>
-    <OutDir>$(SolutionDir)artifacts\build\$(ProjectName)\bin\$(Configuration)\$(Platform)</OutDir>
+    <OutDir>$(SolutionDir)artifacts\build\AspNetCore\bin\$(Configuration)\$(Platform)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <TargetName>aspnetcorerh</TargetName>
-    <OutDir>$(SolutionDir)artifacts\build\$(ProjectName)\bin\$(Configuration)\$(Platform)</OutDir>
+    <OutDir>$(SolutionDir)artifacts\build\AspNetCore\bin\$(Configuration)\$(Platform)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>aspnetcorerh</TargetName>
-    <OutDir>$(SolutionDir)artifacts\build\$(ProjectName)\bin\$(Configuration)\$(Platform)</OutDir>
+    <OutDir>$(SolutionDir)artifacts\build\AspNetCore\bin\$(Configuration)\$(Platform)</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>aspnetcorerh</TargetName>
-    <OutDir>$(SolutionDir)artifacts\build\$(ProjectName)\bin\$(Configuration)\$(Platform)</OutDir>
+    <OutDir>$(SolutionDir)artifacts\build\AspNetCore\bin\$(Configuration)\$(Platform)</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -181,7 +181,6 @@
     <ClInclude Include=".\inprocess\fx_ver.h" />
     <ClInclude Include=".\inprocess\inprocessapplication.h" />
     <ClInclude Include=".\inprocess\inprocesshandler.h" />
-    <ClInclude Include=".\inprocess\inprocessstoredcontext.h" />
     <ClInclude Include=".\outofprocess\forwardinghandler.h" />
     <ClInclude Include=".\outofprocess\outprocessapplication.h" />
     <ClInclude Include=".\outofprocess\sttimer.h" />
@@ -191,7 +190,6 @@
     <ClCompile Include=".\inprocess\fx_ver.cxx" />
     <ClCompile Include=".\inprocess\inprocessapplication.cpp" />
     <ClCompile Include=".\inprocess\inprocesshandler.cpp" />
-    <ClCompile Include=".\inprocess\inprocessstoredcontext.cxx" />
     <ClCompile Include=".\outofprocess\forwardinghandler.cpp" />
     <ClCompile Include=".\outofprocess\outprocessapplication.cpp" />
     <ClCompile Include="outofprocess\processmanager.cxx" />

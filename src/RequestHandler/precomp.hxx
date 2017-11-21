@@ -39,7 +39,6 @@
 #include ".\inprocess\InProcessHandler.h"
 #include ".\inprocess\inprocessapplication.h"
 #include ".\inprocess\fx_ver.h"
-#include ".\inprocess\inprocessstoredcontext.h"
 #include ".\outofprocess\protocolconfig.h"
 #include ".\outofprocess\forwarderconnection.h"
 #include ".\outofprocess\serverprocess.h"
@@ -49,7 +48,6 @@
 //#include ".\outofprocess\websockethandler.h"
 
 #include ".\outofprocess\sttimer.h"
-
 
 
 #ifdef max

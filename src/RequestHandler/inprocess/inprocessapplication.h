@@ -4,7 +4,7 @@
 #pragma once
 
 typedef void(*request_handler_cb) (int error, IHttpContext* pHttpContext, void* pvCompletionContext);
-typedef REQUEST_NOTIFICATION_STATUS(*PFN_REQUEST_HANDLER) (IHttpContext* pHttpContext, void* pvRequstHandlerContext);
+typedef REQUEST_NOTIFICATION_STATUS(*PFN_REQUEST_HANDLER) (IHttpContext* pHttpContext, IN_PROCESS_HANDLER* pInProcessHandler, void* pvRequestHandlerContext);
 typedef BOOL(*PFN_SHUTDOWN_HANDLER) (void* pvShutdownHandlerContext);
 typedef REQUEST_NOTIFICATION_STATUS(*PFN_MANAGED_CONTEXT_HANDLER)(void *pvManagedHttpContext, HRESULT hrCompletionStatus, DWORD cbCompletion);
 
@@ -48,13 +48,15 @@ public:
     OnAsyncCompletion(
         IHttpContext*           pHttpContext,
         DWORD                   cbCompletion,
-        HRESULT                 hrCompletionStatus
+        HRESULT                 hrCompletionStatus,
+        IN_PROCESS_HANDLER*     pInProcessHandler
     );
 
     REQUEST_NOTIFICATION_STATUS
     OnExecuteRequest
     (
-        IHttpContext* pHttpContext
+        IHttpContext* pHttpContext,
+        IN_PROCESS_HANDLER* pInProcessHandler
     );
 
     static
@@ -72,7 +74,7 @@ private:
 
     // The request handler callback from managed code
     PFN_REQUEST_HANDLER             m_RequestHandler;
-    VOID*                           m_RequstHandlerContext;
+    VOID*                           m_RequestHandlerContext;
 
     // The shutdown handler callback from managed code
     PFN_SHUTDOWN_HANDLER            m_ShutdownHandler;
