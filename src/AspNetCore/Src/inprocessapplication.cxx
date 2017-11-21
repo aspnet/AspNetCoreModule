@@ -9,10 +9,10 @@ typedef DWORD(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
 IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
 
 IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION() :
-    m_ProcessExitCode ( 0 ),
-    m_fManagedAppLoaded ( FALSE ),
-    m_fLoadManagedAppError ( FALSE ),
-    m_fInitialized ( FALSE )
+    m_ProcessExitCode(0),
+    m_fManagedAppLoaded(FALSE),
+    m_fLoadManagedAppError(FALSE),
+    m_fInitialized(FALSE)
 {
 }
 
@@ -188,14 +188,14 @@ IN_PROCESS_APPLICATION::Initialize(
     }
 
     m_pInitalizeEvent = CreateEvent(
-                            NULL,   // default security attributes
-                            TRUE,   // manual reset event
-                            FALSE,  // not set
-                            NULL);  // name
+        NULL,   // default security attributes
+        TRUE,   // manual reset event
+        FALSE,  // not set
+        NULL);  // name
     if (m_pInitalizeEvent == NULL)
     {
-       hr =  HRESULT_FROM_WIN32(GetLastError());
-       goto Finished;
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        goto Finished;
     }
     m_fInitialized = TRUE;
 
@@ -426,7 +426,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     HMODULE                     hModule;
 
     bool                        fFound = FALSE;
-    
+
     // If the process path isn't dotnet, assume we are a standalone appliction.
     // TODO: this should be a path equivalent check
     if (!(m_pConfiguration->QueryProcessPath()->Equals(L".\\dotnet")
@@ -452,7 +452,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
 
     // Get the entry point for main
     pProc = (hostfxr_main_fn)GetProcAddress(hModule, "hostfxr_main");
-    if (pProc == NULL) 
+    if (pProc == NULL)
     {
         hr = ERROR_BAD_ENVIRONMENT; // better hrresult?
         goto Finished;
@@ -474,7 +474,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     m_ProcessExitCode = pProc(2, argv);
     if (m_ProcessExitCode != 0)
     {
-        
+
     }
 
 Finished:
@@ -487,36 +487,36 @@ Finished:
         LPCWSTR                 apsz[1];
         if (SUCCEEDED(strEventMsg.SafeSnwprintf(
             ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT_MSG,
-m_pConfiguration->QueryApplicationPath()->QueryStr(),
-m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
-m_ProcessExitCode
-)))
+            m_pConfiguration->QueryApplicationPath()->QueryStr(),
+            m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
+            m_ProcessExitCode
+        )))
         {
-        apsz[0] = strEventMsg.QueryStr();
+            apsz[0] = strEventMsg.QueryStr();
 
-        //
-        // not checking return code because if ReportEvent
-        // fails, we cannot do anything.
-        //
-        if (FORWARDING_HANDLER::QueryEventLog() != NULL)
-        {
-            ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
-                EVENTLOG_ERROR_TYPE,
-                0,
-                ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT,
-                NULL,
-                1,
-                0,
-                apsz,
-                NULL);
-        }
-        // error. the thread exits after application started
-        // Question: should we shutdown current worker process or keep the application in failure state?
-        // for now, we reccylce to keep the same behavior as that of out-of-process
-        if (m_fManagedAppLoaded)
-        {
-            Recycle();
-        }
+            //
+            // not checking return code because if ReportEvent
+            // fails, we cannot do anything.
+            //
+            if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+            {
+                ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
+                    EVENTLOG_ERROR_TYPE,
+                    0,
+                    ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT,
+                    NULL,
+                    1,
+                    0,
+                    apsz,
+                    NULL);
+            }
+            // error. the thread exits after application started
+            // Question: should we shutdown current worker process or keep the application in failure state?
+            // for now, we reccylce to keep the same behavior as that of out-of-process
+            if (m_fManagedAppLoaded)
+            {
+                Recycle();
+            }
         }
     }
     return hr;
@@ -634,7 +634,7 @@ IN_PROCESS_APPLICATION::GetStandaloneApplicationArguments(
     {
         goto Finished;
     }
-   
+
     if (!PathFileExists(struApplicationDllPath->QueryStr()))
     {
         hr = ERROR_FILE_NOT_FOUND;
