@@ -16,13 +16,11 @@
 #include <windows.h>
 #include <atlbase.h>
 #include <pdh.h>
-#include <vector>
 
 #include <Shlobj.h>
 #include <httpserv.h>
 #include <winhttp.h>
 #include <httptrace.h>
-#include <cstdlib>
 #include <reftrace.h>
 #include <wchar.h>
 
@@ -38,7 +36,6 @@
 #include "..\CommonLib\application.h"
 #include ".\inprocess\InProcessHandler.h"
 #include ".\inprocess\inprocessapplication.h"
-#include ".\inprocess\fx_ver.h"
 #include ".\outofprocess\protocolconfig.h"
 #include ".\outofprocess\forwarderconnection.h"
 #include ".\outofprocess\serverprocess.h"

@@ -178,7 +178,6 @@
     <ClInclude Include="outofprocess\serverprocess.h" />
     <ClInclude Include="precomp.hxx" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include=".\inprocess\fx_ver.h" />
     <ClInclude Include=".\inprocess\inprocessapplication.h" />
     <ClInclude Include=".\inprocess\inprocesshandler.h" />
     <ClInclude Include=".\outofprocess\forwardinghandler.h" />
@@ -187,7 +186,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cxx" />
-    <ClCompile Include=".\inprocess\fx_ver.cxx" />
     <ClCompile Include=".\inprocess\inprocessapplication.cpp" />
     <ClCompile Include=".\inprocess\inprocesshandler.cpp" />
     <ClCompile Include=".\outofprocess\forwardinghandler.cpp" />

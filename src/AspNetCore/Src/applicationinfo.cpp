@@ -117,7 +117,6 @@ APPLICATION_INFO::UpdateAppOfflineFileHandle()
     }
 }
 
-
 HRESULT
 APPLICATION_INFO::EnsureApplicationCreated()
 {
@@ -125,15 +124,18 @@ APPLICATION_INFO::EnsureApplicationCreated()
     BOOL    fLocked = FALSE;
     APPLICATION* pApplication = NULL;
     STACK_STRU(struFileName, 300);  // >MAX_PATH
-
+    STRU        hostFxrDllLocation;
     if (m_pApplication != NULL)
     {
         goto Finished;
     }
 
+
     // load assembly and create the application
     if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
     {
+        // First find hostfxr location.
+
         hr = LoadAssemblyFromInetsrv();
         if (FAILED(hr))
         {
@@ -204,7 +206,6 @@ APPLICATION_INFO::LoadAssemblyFromInetsrv()
         // let's still load with full path to avoid security issue
         while (!fDone)
         {
-            // Are you allowed to use stru's like this?
             DWORD dwReturnedSize = GetModuleFileName(NULL, struFileName.QueryStr(), dwSize);
             if (dwReturnedSize == 0)
             {
@@ -231,11 +232,10 @@ APPLICATION_INFO::LoadAssemblyFromInetsrv()
         struFileName.QueryStr()[dwPosition] = L'\0';
 
         if (FAILED(hr = struFileName.SyncWithBuffer()) ||
-            FAILED(hr = struFileName.Append(L"\\aspnetcorerh.dll")))
+            FAILED(hr = struFileName.Append(g_pwzAspnetcoreRequestHandlerName)))
         {
             goto Finished;
         }
-
         g_hAspnetCoreRH = LoadLibraryW(struFileName.QueryStr());
         if (g_hAspnetCoreRH == NULL)
         {
@@ -277,10 +277,41 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::LoadAssemblyFromLocalBin()
+APPLICATION_INFO::LoadAssemblyForInProcess()
 {
-    // TODO 
+    // We will have to determine if we are a standalone application or runtime here.
+    // This logic either needs to be propagated or copied in the request handler to load the application
     HRESULT hr = S_OK;
+    BOOL    fLocked = FALSE;
+    STRU    struApplicationFullPath;
+    STRU    struhostFxrDllLocation;
+
+    if (!g_fAspnetcoreRHAssemblyLoaded)
+    {
+        AcquireSRWLockExclusive(&g_srwLock);
+        fLocked = TRUE;
+        // Instead of loading host fxr from from the request handler, we will load it here.
+        // However, we need to expose a function on hostfxr to find the latest version of the request handler dll.
+
+        // UTILITY::FindHostFxrDll(&struhostFxrDllLocation);
+
+        // Check that hostfxr version is 2.1+
+        // Find the corresponding request handler dll from hostfxr.dll
+        // This will require a change to hostfxr
+    }
+
+Finished:
+    //
+    // Question: we remember the load failure so that we will not try again.
+    // User needs to check whether the fuction pointer is NULL 
+    //
+    g_fAspnetcoreRHAssemblyLoaded = TRUE;
+    m_pfnAspNetCoreCreateApplication = g_pfnAspNetCoreCreateApplication;
+    m_pfnAspNetCoreCreateRequestHandler = g_pfnAspNetCoreCreateRequestHandler;
+
+    if (fLocked)
+    {
+        ReleaseSRWLockExclusive(&g_srwLock);
+    }
     return hr;
 }
-

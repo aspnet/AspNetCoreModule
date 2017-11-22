@@ -85,17 +85,41 @@ public:
         _In_  LPCWSTR pszPath
     );
 
+    static
+    HRESULT
+    FindHighestDotNetVersion(
+        _In_ std::vector<std::wstring> vFolders,
+        _Out_ STRU *pstrResult
+    );
+
+    static
+    BOOL
+    DirectoryExists(
+        _In_ STRU *pstrPath
+    );
+
+    static
+    BOOL
+    GetEnv(
+        _In_ PCWSTR pszEnvironmentVariable,
+        _Out_ STRU *pstrResult
+    );
+
+    static
+    VOID
+    FindDotNetFolders(
+        _In_ PCWSTR pszPath,
+        _Out_ std::vector<std::wstring> *pvFolders
+    );
+
+    static
+    HRESULT
+    FindHostFxrDll(
+        STRU* hostFxrDllLocation
+    );
+
 private:
 
     UTILITY() {}
     ~UTILITY() {}
-
-    static
-    CHAR 
-    ToHexDigit(
-        UINT nDigit
-    )
-    {
-        return static_cast<CHAR>(nDigit > 9 ? nDigit - 10 + 'A' : nDigit + '0');
-    }
 };

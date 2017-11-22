@@ -505,3 +505,253 @@ UTILITY::EnsureDirectoryPathExist(
 Finished:
     return hr;
 }
+
+HRESULT
+UTILITY::FindHighestDotNetVersion(
+    _In_ std::vector<std::wstring> vFolders,
+    _Out_ STRU *pstrResult
+)
+{
+    HRESULT hr = S_OK;
+    fx_ver_t max_ver(-1, -1, -1);
+    for (const auto& dir : vFolders)
+    {
+        fx_ver_t fx_ver(-1, -1, -1);
+        if (fx_ver_t::parse(dir, &fx_ver, false))
+        {
+            // TODO using max instead of std::max works
+            max_ver = max(max_ver, fx_ver);
+        }
+    }
+
+    hr = pstrResult->Copy(max_ver.as_str().c_str());
+
+    // we check FAILED(hr) outside of function
+    return hr;
+}
+
+BOOL
+UTILITY::DirectoryExists(
+    _In_ STRU *pstrPath
+)
+{
+    WIN32_FILE_ATTRIBUTE_DATA data;
+
+    if (pstrPath->IsEmpty())
+    {
+        return false;
+    }
+
+    return GetFileAttributesExW(pstrPath->QueryStr(), GetFileExInfoStandard, &data);
+}
+
+BOOL
+UTILITY::GetEnv(
+    _In_ PCWSTR pszEnvironmentVariable,
+    _Out_ STRU *pstrResult
+)
+{
+    DWORD dwLength;
+    PWSTR pszBuffer = NULL;
+    BOOL fSucceeded = FALSE;
+
+    if (pszEnvironmentVariable == NULL)
+    {
+        goto Finished;
+    }
+    pstrResult->Reset();
+    dwLength = GetEnvironmentVariableW(pszEnvironmentVariable, NULL, 0);
+
+    if (dwLength == 0)
+    {
+        goto Finished;
+    }
+
+    pszBuffer = new WCHAR[dwLength];
+    if (GetEnvironmentVariableW(pszEnvironmentVariable, pszBuffer, dwLength) == 0)
+    {
+        goto Finished;
+    }
+
+    pstrResult->Copy(pszBuffer);
+
+    fSucceeded = TRUE;
+
+Finished:
+    if (pszBuffer != NULL) {
+        delete[] pszBuffer;
+    }
+    return fSucceeded;
+}
+
+VOID
+UTILITY::FindDotNetFolders(
+    _In_ PCWSTR pszPath,
+    _Out_ std::vector<std::wstring> *pvFolders
+)
+{
+    HANDLE handle = NULL;
+    WIN32_FIND_DATAW data = { 0 };
+
+    handle = FindFirstFileExW(pszPath, FindExInfoStandard, &data, FindExSearchNameMatch, NULL, 0);
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        return;
+    }
+
+    do
+    {
+        std::wstring folder(data.cFileName);
+        pvFolders->push_back(folder);
+    } while (FindNextFileW(handle, &data));
+
+    FindClose(handle);
+}
+
+HRESULT
+UTILITY::FindHostFxrDll(
+    STRU* struHostFxrDllLocation
+)
+{
+    HRESULT     hr = S_OK;
+
+    STRU                        strFullPath;
+    STRU                        strDotnetExeLocation;
+    STRU                        strHostFxrSearchExpression;
+    STRU                        strHighestDotnetVersion;
+    PWSTR                       strDelimeterContext = NULL;
+    PCWSTR                      pszDotnetExeLocation = NULL;
+    PCWSTR                      pszDotnetExeString(L"dotnet.exe");
+    DWORD                       dwCopyLength;
+    std::vector<std::wstring>   vVersionFolders;
+    bool                        fFound = FALSE;
+
+    // Get the System PATH value.
+    if (!UTILITY::GetEnv(L"PATH", &strFullPath))
+    {
+        hr = ERROR_BAD_ENVIRONMENT;
+        goto Finished;
+    }
+
+    // Split on ';', checking to see if dotnet.exe exists in any folders.
+    pszDotnetExeLocation = wcstok_s(strFullPath.QueryStr(), L";", &strDelimeterContext);
+
+    while (pszDotnetExeLocation != NULL)
+    {
+        dwCopyLength = wcsnlen_s(pszDotnetExeLocation, 260);
+        if (dwCopyLength == 0)
+        {
+            continue;
+        }
+
+        // We store both the exe and folder locations as we eventually need to check inside of host\\fxr
+        // which doesn't need the dotnet.exe portion of the string
+        // TODO consider reducing allocations.
+        strDotnetExeLocation.Reset();
+        struHostFxrDllLocation->Reset();
+        hr = strDotnetExeLocation.Copy(pszDotnetExeLocation, dwCopyLength);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+
+        hr = struHostFxrDllLocation->Copy(pszDotnetExeLocation, dwCopyLength);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+
+        if (dwCopyLength > 0 && pszDotnetExeLocation[dwCopyLength - 1] != L'\\')
+        {
+            hr = strDotnetExeLocation.Append(L"\\");
+            if (FAILED(hr))
+            {
+                goto Finished;
+            }
+        }
+
+        hr = strDotnetExeLocation.Append(pszDotnetExeString);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+
+        if (PathFileExists(strDotnetExeLocation.QueryStr()))
+        {
+            // means we found the folder with a dotnet.exe inside of it.
+            fFound = TRUE;
+            break;
+        }
+        pszDotnetExeLocation = wcstok_s(NULL, L";", &strDelimeterContext);
+    }
+    if (!fFound)
+    {
+        // could not find dotnet.exe, error out
+        hr = ERROR_BAD_ENVIRONMENT;
+    }
+
+    hr = struHostFxrDllLocation->Append(L"\\host\\fxr");
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    if (!UTILITY::DirectoryExists(struHostFxrDllLocation))
+    {
+        // error, not found the folder
+        hr = ERROR_BAD_ENVIRONMENT;
+        goto Finished;
+    }
+
+    // Find all folders under host\\fxr\\ for version numbers.
+    hr = strHostFxrSearchExpression.Copy(struHostFxrDllLocation);
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    hr = strHostFxrSearchExpression.Append(L"\\*");
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    // As we use the logic from core-setup, we are opting to use std here.
+    // TODO remove all uses of std?
+    UTILITY::FindDotNetFolders(strHostFxrSearchExpression.QueryStr(), &vVersionFolders);
+
+    if (vVersionFolders.size() == 0)
+    {
+        // no core framework was found
+        hr = ERROR_BAD_ENVIRONMENT;
+        goto Finished;
+    }
+
+    hr = UTILITY::FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+    hr = struHostFxrDllLocation->Append(L"\\");
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    hr = struHostFxrDllLocation->Append(strHighestDotnetVersion.QueryStr());
+    if (FAILED(hr))
+    {
+        goto Finished;
+
+    }
+
+    hr = struHostFxrDllLocation->Append(L"\\hostfxr.dll");
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+Finished:
+    return hr;
+}
+

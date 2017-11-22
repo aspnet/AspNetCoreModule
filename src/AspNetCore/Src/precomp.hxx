@@ -157,6 +157,7 @@ extern DWORD    g_dwActiveServerProcesses;
 extern DWORD    g_OptionalWinHttpFlags;
 extern HMODULE  g_hAspnetCoreRH;
 extern SRWLOCK  g_srwLock;
+extern PCWSTR   g_pwzAspnetcoreRequestHandlerName;
 extern PFN_ASPNETCORE_CREATE_APPLICATION      g_pfnAspNetCoreCreateApplication;
 extern PFN_ASPNETCORE_CREATE_REQUEST_HANDLER  g_pfnAspNetCoreCreateRequestHandler;
 #pragma warning( error : 4091)

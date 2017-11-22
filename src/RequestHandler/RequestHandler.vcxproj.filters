@@ -2,9 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="dllmain.cxx" />
-    <ClCompile Include=".\inprocess\fx_ver.cxx">
-      <Filter>InProcess</Filter>
-    </ClCompile>
     <ClCompile Include=".\outofprocess\forwardinghandler.cpp">
       <Filter>OutOfProcess</Filter>
     </ClCompile>
@@ -34,9 +31,6 @@
     <ClInclude Include="precomp.hxx" />
     <ClInclude Include="resource.h" />
     <ClInclude Include=".\outofprocess\sttimer.h" />
-    <ClInclude Include=".\inprocess\fx_ver.h">
-      <Filter>InProcess</Filter>
-    </ClInclude>
     <ClInclude Include=".\outofprocess\forwardinghandler.h">
       <Filter>OutOfProcess</Filter>
     </ClInclude>

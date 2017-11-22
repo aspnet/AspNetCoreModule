@@ -147,7 +147,7 @@ public:
 private:
 
     HRESULT LoadAssemblyFromInetsrv();
-    HRESULT LoadAssemblyFromLocalBin();
+    HRESULT LoadAssemblyForInProcess();
 
     mutable LONG            m_cRefs;
     APPLICATION_INFO_KEY    m_applicationInfoKey;

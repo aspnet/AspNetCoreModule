@@ -165,6 +165,7 @@
     <ClInclude Include="aspnetcoreconfig.h" />
     <ClInclude Include="debugutil.h" />
     <ClInclude Include="environmentvariablehash.h" />
+    <ClInclude Include="fx_ver.h" />
     <ClInclude Include="requesthandler.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -173,6 +174,7 @@
   <ItemGroup>
     <ClCompile Include="application.cpp" />
     <ClCompile Include="aspnetcoreconfig.cxx" />
+    <ClCompile Include="fx_ver.cxx" />
     <ClCompile Include="requesthandler.cxx" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
