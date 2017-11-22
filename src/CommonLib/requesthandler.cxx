@@ -1,5 +1,6 @@
 #include "stdafx.h"
-#include "requesthandler.h"
+
+HANDLE   REQUEST_HANDLER::sm_hEventLog = NULL;
 
 REQUEST_HANDLER::REQUEST_HANDLER(
     _In_ IHttpContext *pW3Context,
@@ -39,3 +40,21 @@ REQUEST_HANDLER::DereferenceRequestHandler(
         delete this;
     }
 }
+
+// static 
+HRESULT
+REQUEST_HANDLER::StaticInitialize(
+    IHttpServer* pServer
+)
+{
+    if (pServer->IsCommandLineLaunch())
+    {
+        sm_hEventLog = RegisterEventSource(NULL, ASPNETCORE_IISEXPRESS_EVENT_PROVIDER);
+    }
+    else
+    {
+        sm_hEventLog = RegisterEventSource(NULL, ASPNETCORE_EVENT_PROVIDER);
+    }
+    return S_OK;
+}
+

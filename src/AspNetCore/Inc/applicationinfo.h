@@ -145,9 +145,10 @@ public:
     }
 
 private:
-
-    HRESULT LoadAssemblyFromInetsrv();
-    HRESULT LoadAssemblyFromLocalBin();
+    HRESULT LoadRequestHandlerAssembly();
+    HRESULT LoadAssemblyFromInetsrv(STRU* struFilename);
+    HRESULT LoadAssemblyFromLocalBin(STRU* struFilename);
+    HRESULT GetRequestHandlerFromRuntimeStore(STRU* struFilename);
 
     mutable LONG            m_cRefs;
     APPLICATION_INFO_KEY    m_applicationInfoKey;

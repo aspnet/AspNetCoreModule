@@ -57,7 +57,6 @@ public:
 
 private:
     PVOID m_pManagedHttpContext;
-    IHttpContext* m_pHttpContext;
     BOOL m_fManagedRequestComplete;
     REQUEST_NOTIFICATION_STATUS m_requestNotificationStatus;
 };

@@ -2,13 +2,15 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #pragma once
+
+#include "stdafx.h"
+#include "application.h"
+
 //#ifdef REQUESTHANDLER_EXPORTS
 //#  define EXPORT __declspec(dllexport)
 //#else
 //#  define EXPORT __declspec(dllimport)
 //#endif
-#include "stdafx.h"
-#include "application.h"
 //
 // Abstract class
 //
@@ -46,8 +48,22 @@ public:
         VOID
     ) const;
 
+    static
+    HANDLE
+    QueryEventLog()
+    {
+        return sm_hEventLog;
+    }
+
+    static
+    HRESULT
+    StaticInitialize(
+        IHttpServer* pServer
+    );
+
 protected:
-    mutable LONG m_cRefs;
-    IHttpContext* m_pW3Context;
-    APPLICATION* m_pApplication;
+    mutable LONG    m_cRefs;
+    IHttpContext*   m_pW3Context;
+    APPLICATION*    m_pApplication;
+    static HANDLE   sm_hEventLog;
 };

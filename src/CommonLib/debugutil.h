@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #pragma once
-
 #define ASPNETCORE_DEBUG_FLAG_INFO          0x00000001
 #define ASPNETCORE_DEBUG_FLAG_WARNING       0x00000002
 #define ASPNETCORE_DEBUG_FLAG_ERROR         0x00000004

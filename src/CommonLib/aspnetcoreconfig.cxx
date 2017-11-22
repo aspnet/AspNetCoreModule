@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #include "stdafx.h"
-#include "aspnetcoreconfig.h"
+
 ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
 {
     if (m_pEnvironmentVariables != NULL)
@@ -24,7 +24,7 @@ ASPNETCORE_CONFIG::GetConfig(
     HRESULT                 hr = S_OK;
     IHttpApplication       *pHttpApplication = pHttpContext->GetApplication();
     ASPNETCORE_CONFIG      *pAspNetCoreConfig = NULL;
-
+    STRU                    struHostFxrPath;
     if (ppAspNetCoreConfig == NULL)
     {
         hr = E_INVALIDARG;
@@ -88,7 +88,14 @@ ASPNETCORE_CONFIG::GetConfig(
             goto Finished;
         }
     }
-
+    if (pAspNetCoreConfig->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS) {
+        // Find the hostfxrPath here for config.
+        if (FAILED(hr = HOSTFXR_UTILITY::FindHostFxrDll(pAspNetCoreConfig, &struHostFxrPath, &pAspNetCoreConfig->m_fIsStandAloneApplication))
+            || FAILED(hr = pAspNetCoreConfig->QueryHostfxrPath()->Copy(struHostFxrPath)))
+        {
+            goto Finished;
+        }
+    }
     *ppAspNetCoreConfig = pAspNetCoreConfig;
     pAspNetCoreConfig = NULL;
 

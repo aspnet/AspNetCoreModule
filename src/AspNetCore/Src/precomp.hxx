@@ -52,11 +52,8 @@
 //
 #ifndef WINHTTP_OPTION_ASSURED_NON_BLOCKING_CALLBACKS
 #define WINHTTP_OPTION_ASSURED_NON_BLOCKING_CALLBACKS 111
+
 #endif
-
-#define ASPNETCORE_EVENT_PROVIDER L"IIS AspNetCore Module"
-#define ASPNETCORE_IISEXPRESS_EVENT_PROVIDER L"IIS Express AspNetCore Module"
-
 #ifdef max
 #undef max
 template<typename T> inline T max(T a, T b)
@@ -114,7 +111,6 @@ inline bool IsSpace(char ch)
 #include"..\..\CommonLib\requesthandler.h"
 #include "..\aspnetcore_msg.h"
 #include "appoffline.h"
-#include "aspnetcore_event.h"
 #include "filewatcher.h"
 #include "applicationinfo.h"
 #include "applicationmanager.h"
@@ -157,6 +153,7 @@ extern DWORD    g_dwActiveServerProcesses;
 extern DWORD    g_OptionalWinHttpFlags;
 extern HMODULE  g_hAspnetCoreRH;
 extern SRWLOCK  g_srwLock;
+extern PCWSTR   g_pwzAspnetcoreRequestHandlerName;
 extern PFN_ASPNETCORE_CREATE_APPLICATION      g_pfnAspNetCoreCreateApplication;
 extern PFN_ASPNETCORE_CREATE_REQUEST_HANDLER  g_pfnAspNetCoreCreateRequestHandler;
 #pragma warning( error : 4091)

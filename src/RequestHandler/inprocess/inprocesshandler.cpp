@@ -20,9 +20,11 @@ IN_PROCESS_HANDLER::OnExecuteRequestHandler()
     // First get the in process Application
     HRESULT hr;
     hr = ((IN_PROCESS_APPLICATION*)m_pApplication)->LoadManagedApplication();
+
     if (FAILED(hr))
     {
-        /*_com_error err(hr);
+        // TODO remove com_error?
+        _com_error err(hr);
         if (ANCMEvents::ANCM_START_APPLICATION_FAIL::IsEnabled(m_pW3Context->GetTraceContext()))
         {
             ANCMEvents::ANCM_START_APPLICATION_FAIL::RaiseEvent(
@@ -31,21 +33,21 @@ IN_PROCESS_HANDLER::OnExecuteRequestHandler()
                 err.ErrorMessage());
         }
 
-        fInternalError = TRUE;
-        goto Failure;*/
+        //fInternalError = TRUE;
         return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
     }
 
     // FREB log
-   /* if (ANCMEvents::ANCM_START_APPLICATION_SUCCESS::IsEnabled(m_pW3Context->GetTraceContext()))
+    if (ANCMEvents::ANCM_START_APPLICATION_SUCCESS::IsEnabled(m_pW3Context->GetTraceContext()))
     {
         ANCMEvents::ANCM_START_APPLICATION_SUCCESS::RaiseEvent(
             m_pW3Context->GetTraceContext(),
             NULL,
             L"InProcess Application");
-    }*/
+    }
+
     //SetHttpSysDisconnectCallback();
-    return  ((IN_PROCESS_APPLICATION*)m_pApplication)->OnExecuteRequest(m_pW3Context, this);
+    return ((IN_PROCESS_APPLICATION*)m_pApplication)->OnExecuteRequest(m_pW3Context, this);
 }
 
 __override
@@ -84,20 +86,20 @@ IN_PROCESS_HANDLER::QueryManagedHttpContext(
     return m_pManagedHttpContext;
 }
 
-IHttpContext*
-IN_PROCESS_HANDLER::QueryHttpContext(
-    VOID
-)
-{
-    return m_pHttpContext;
-}
-
 BOOL
 IN_PROCESS_HANDLER::QueryIsManagedRequestComplete(
     VOID
 )
 {
     return m_fManagedRequestComplete;
+}
+
+IHttpContext*
+IN_PROCESS_HANDLER::QueryHttpContext(
+    VOID
+)
+{
+    return m_pW3Context;
 }
 
 VOID

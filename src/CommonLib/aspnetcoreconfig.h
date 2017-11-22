@@ -44,8 +44,6 @@
 //IHttpServer *    g_pHttpServer;
 //BOOL             g_fRecycleProcessCalled;
 
-#include "stdafx.h"
-
 enum APP_HOSTING_MODEL
 {
     HOSTING_UNKNOWN = 0,
@@ -53,15 +51,16 @@ enum APP_HOSTING_MODEL
     HOSTING_OUT_PROCESS
 };
 
+class ENVIRONMENT_VAR_HASH; // type forward
 class ASPNETCORE_CONFIG : IHttpStoredContext
 {
 public:
 
     virtual
-    ~ASPNETCORE_CONFIG();
+        ~ASPNETCORE_CONFIG();
 
     VOID
-    CleanupStoredContext()
+        CleanupStoredContext()
     {
         delete this;
     }
@@ -75,104 +74,96 @@ public:
         _Out_ ASPNETCORE_CONFIG     **ppAspNetCoreConfig
     );
 
-    ENVIRONMENT_VAR_HASH*
-    QueryEnvironmentVariables(
-        VOID
-    )
-    {
-        return m_pEnvironmentVariables;
-    }
-
     DWORD
-    QueryRapidFailsPerMinute(
-        VOID
-    )
+        QueryRapidFailsPerMinute(
+            VOID
+        )
     {
         return m_dwRapidFailsPerMinute;
     }
 
     DWORD
-    QueryStartupTimeLimitInMS(
-        VOID
-    )
+        QueryStartupTimeLimitInMS(
+            VOID
+        )
     {
         return m_dwStartupTimeLimitInMS;
     }
 
     DWORD
-    QueryShutdownTimeLimitInMS(
-        VOID
-    )
+        QueryShutdownTimeLimitInMS(
+            VOID
+        )
     {
         return m_dwShutdownTimeLimitInMS;
     }
 
     DWORD
-    QueryProcessesPerApplication(
-        VOID
-    )
+        QueryProcessesPerApplication(
+            VOID
+        )
     {
         return m_dwProcessesPerApplication;
     }
 
     DWORD
-    QueryRequestTimeoutInMS(
-        VOID
-    )
+        QueryRequestTimeoutInMS(
+            VOID
+        )
     {
         return m_dwRequestTimeoutInMS;
     }
 
     STRU*
-    QueryArguments(
-        VOID
-    )
+        QueryArguments(
+            VOID
+        )
     {
         return &m_struArguments;
     }
 
     STRU*
-    QueryApplicationPath(
-        VOID
-    )
+        QueryApplicationPath(
+            VOID
+        )
     {
         return &m_struApplication;
     }
 
     STRU*
-    QueryApplicationFullPath(
-        VOID
-    )
+        QueryApplicationFullPath(
+            VOID
+        )
     {
         return &m_struApplicationFullPath;
     }
 
     STRU*
-    QueryApplicationVirtualPath(
-        VOID
-    )
+        QueryApplicationVirtualPath(
+            VOID
+        )
     {
         return &m_struApplicationVirtualPath;
     }
 
     STRU*
-    QueryProcessPath(
-        VOID
-    )
+        QueryProcessPath(
+            VOID
+        )
     {
         return &m_struProcessPath;
     }
 
     APP_HOSTING_MODEL
-    QueryHostingModel(
+        QueryHostingModel(
             VOID
-    )
+        )
     {
         return m_hostingModel;
     }
 
     STRU*
-    QueryHostingModelStr(
+        QueryHostingModelStr(
             VOID
         )
     {
@@ -180,51 +171,73 @@ public:
     }
 
     BOOL
-    QueryStdoutLogEnabled()
+        QueryStdoutLogEnabled()
     {
         return m_fStdoutLogEnabled;
     }
 
     BOOL
-    QueryForwardWindowsAuthToken()
+        QueryForwardWindowsAuthToken()
     {
         return m_fForwardWindowsAuthToken;
     }
 
     BOOL
-    QueryWindowsAuthEnabled()
+        QueryWindowsAuthEnabled()
     {
         return m_fWindowsAuthEnabled;
     }
 
     BOOL
-    QueryBasicAuthEnabled()
+        QueryBasicAuthEnabled()
     {
         return m_fBasicAuthEnabled;
     }
 
     BOOL
-    QueryAnonymousAuthEnabled()
+        QueryAnonymousAuthEnabled()
     {
         return m_fAnonymousAuthEnabled;
     }
 
     BOOL
-    QueryDisableStartUpErrorPage()
+        QueryDisableStartUpErrorPage()
     {
         return m_fDisableStartUpErrorPage;
     }
 
     STRU*
-    QueryStdoutLogFile()
+        QueryStdoutLogFile()
     {
         return &m_struStdoutLogFile;
     }
 
     STRU*
-    QueryConfigPath()
+        QueryConfigPath()
     {
         return &m_struConfigPath;
+    }
+
+    STRU*
+        QueryHostfxrPath()
+    {
+        return &m_struHostFxrPath;
+    }
+
+    ENVIRONMENT_VAR_HASH*
+        QueryEnvironmentVariables(
+            VOID
+        )
+    {
+        return m_pEnvironmentVariables;
+    }
+
+    BOOL 
+        QueryIsStandAloneApplication(
+            VOID
+        )
+    {
+        return m_fIsStandAloneApplication;
     }
 
 private:
@@ -258,12 +271,14 @@ private:
     STRU                   m_strHostingModel;
     STRU                   m_struApplicationVirtualPath;
     STRU                   m_struConfigPath;
+    STRU                   m_struHostFxrPath;
     BOOL                   m_fStdoutLogEnabled;
     BOOL                   m_fForwardWindowsAuthToken;
     BOOL                   m_fDisableStartUpErrorPage;
     BOOL                   m_fWindowsAuthEnabled;
     BOOL                   m_fBasicAuthEnabled;
     BOOL                   m_fAnonymousAuthEnabled;
+    BOOL                   m_fIsStandAloneApplication;
     APP_HOSTING_MODEL      m_hostingModel;
     ENVIRONMENT_VAR_HASH*  m_pEnvironmentVariables;
 };

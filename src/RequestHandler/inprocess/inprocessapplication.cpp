@@ -1,7 +1,5 @@
 #include "..\precomp.hxx"
 
-typedef DWORD(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
-
 IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
 
 IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(
@@ -130,13 +128,13 @@ IN_PROCESS_APPLICATION::OnExecuteRequest(
 {
     if (m_RequestHandler != NULL)
     {
-        return m_RequestHandler(pHttpContext, pInProcessHandler, m_RequestHandlerContext);
+        return m_RequestHandler(pInProcessHandler, m_RequestHandlerContext);
     }
 
     ////
     //// return error as the application did not register callback
     ////
-    //if (ANCMEvents::ANCM_EXECUTE_REQUEST_FAIL::IsEnabled(pHttpContext->GetTraceContext()))
+    //if (ANCMEvents::ANCM_EXECUTE_sREQUEST_FAIL::IsEnabled(pHttpContext->GetTraceContext()))
     //{
     //    ANCMEvents::ANCM_EXECUTE_REQUEST_FAIL::RaiseEvent(pHttpContext->GetTraceContext(),
     //        NULL,
@@ -144,84 +142,6 @@ IN_PROCESS_APPLICATION::OnExecuteRequest(
     //}
     pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
     return RQ_NOTIFICATION_FINISH_REQUEST;
-}
-
-BOOL
-IN_PROCESS_APPLICATION::DirectoryExists(
-    _In_ STRU *pstrPath
-)
-{
-    WIN32_FILE_ATTRIBUTE_DATA data;
-
-    if (pstrPath->IsEmpty())
-    {
-        return false;
-    }
-
-    return GetFileAttributesExW(pstrPath->QueryStr(), GetFileExInfoStandard, &data);
-}
-
-BOOL
-IN_PROCESS_APPLICATION::GetEnv(
-    _In_ PCWSTR pszEnvironmentVariable,
-    _Out_ STRU *pstrResult
-)
-{
-    DWORD dwLength;
-    PWSTR pszBuffer = NULL;
-    BOOL fSucceeded = FALSE;
-
-    if (pszEnvironmentVariable == NULL)
-    {
-        goto Finished;
-    }
-    pstrResult->Reset();
-    dwLength = GetEnvironmentVariableW(pszEnvironmentVariable, NULL, 0);
-
-    if (dwLength == 0)
-    {
-        goto Finished;
-    }
-
-    pszBuffer = new WCHAR[dwLength];
-    if (GetEnvironmentVariableW(pszEnvironmentVariable, pszBuffer, dwLength) == 0)
-    {
-        goto Finished;
-    }
-
-    pstrResult->Copy(pszBuffer);
-
-    fSucceeded = TRUE;
-
-Finished:
-    if (pszBuffer != NULL) {
-        delete[] pszBuffer;
-    }
-    return fSucceeded;
-}
-
-VOID
-IN_PROCESS_APPLICATION::FindDotNetFolders(
-    _In_ PCWSTR pszPath,
-    _Out_ std::vector<std::wstring> *pvFolders
-)
-{
-    HANDLE handle = NULL;
-    WIN32_FIND_DATAW data = { 0 };
-
-    handle = FindFirstFileExW(pszPath, FindExInfoStandard, &data, FindExSearchNameMatch, NULL, 0);
-    if (handle == INVALID_HANDLE_VALUE)
-    {
-        return;
-    }
-
-    do
-    {
-        std::wstring folder(data.cFileName);
-        pvFolders->push_back(folder);
-    } while (FindNextFileW(handle, &data));
-
-    FindClose(handle);
 }
 
 VOID
@@ -241,30 +161,6 @@ IN_PROCESS_APPLICATION::SetCallbackHandles(
 
     // Initialization complete
     SetEvent(m_pInitalizeEvent);
-}
-
-HRESULT
-IN_PROCESS_APPLICATION::FindHighestDotNetVersion(
-    _In_ std::vector<std::wstring> vFolders,
-    _Out_ STRU *pstrResult
-)
-{
-    HRESULT hr = S_OK;
-    fx_ver_t max_ver(-1, -1, -1);
-    for (const auto& dir : vFolders)
-    {
-        fx_ver_t fx_ver(-1, -1, -1);
-        if (fx_ver_t::parse(dir, &fx_ver, false))
-        {
-            // TODO using max instead of std::max works
-            max_ver = max(max_ver, fx_ver);
-        }
-    }
-
-    hr = pstrResult->Copy(max_ver.as_str().c_str());
-
-    // we check FAILED(hr) outside of function
-    return hr;
 }
 
 // Will be called by the inprocesshandler
@@ -369,32 +265,31 @@ Finished:
         // following request or block the activation at all
         m_fLoadManagedAppError = FALSE; // m_hThread != NULL ?
 
-        // TODO
-        //if (SUCCEEDED(strEventMsg.SafeSnwprintf(
-        //    ASPNETCORE_EVENT_LOAD_CLR_FALIURE_MSG,
-        //    m_pConfiguration->QueryApplicationPath()->QueryStr(),
-        //    m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
-        //    hr)))
-        //{
-        //    apsz[0] = strEventMsg.QueryStr();
+        if (SUCCEEDED(strEventMsg.SafeSnwprintf(
+            ASPNETCORE_EVENT_LOAD_CLR_FALIURE_MSG,
+            m_pConfig->QueryApplicationPath()->QueryStr(),
+            m_pConfig->QueryApplicationFullPath()->QueryStr(),
+            hr)))
+        {
+            apsz[0] = strEventMsg.QueryStr();
 
-        //    //
-        //    // not checking return code because if ReportEvent
-        //    // fails, we cannot do anything.
-        //    //
-        //    if (FORWARDING_HANDLER::QueryEventLog() != NULL)
-        //    {
-        //        ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
-        //            EVENTLOG_ERROR_TYPE,
-        //            0,
-        //            ASPNETCORE_EVENT_LOAD_CLR_FALIURE,
-        //            NULL,
-        //            1,
-        //            0,
-        //            apsz,
-        //            NULL);
-        //    }
-        //}
+            //
+            // not checking return code because if ReportEvent
+            // fails, we cannot do anything.
+            //
+            if (REQUEST_HANDLER::QueryEventLog() != NULL)
+            {
+                ReportEventW(REQUEST_HANDLER::QueryEventLog(),
+                    EVENTLOG_ERROR_TYPE,
+                    0,
+                    ASPNETCORE_EVENT_LOAD_CLR_FALIURE,
+                    NULL,
+                    1,
+                    0,
+                    apsz,
+                    NULL);
+            }
+        }
     }
     return hr;
 }
@@ -415,156 +310,24 @@ IN_PROCESS_APPLICATION::ExecuteAspNetCoreProcess(
     //
 }
 
-
+// Need to pass the path to hostfxr here.
 HRESULT
 IN_PROCESS_APPLICATION::ExecuteApplication(
-    VOID
 )
 {
     HRESULT     hr = S_OK;
 
-    STRU                        strFullPath;
-    STRU                        strDotnetExeLocation;
-    STRU                        strHostFxrSearchExpression;
-    STRU                        strDotnetFolderLocation;
-    STRU                        strHighestDotnetVersion;
-    STRU                        strApplicationFullPath;
+    STRU                        struApplicationFullPath;
+    STRU                        struHostFxrDllLocation;
     PWSTR                       strDelimeterContext = NULL;
     PCWSTR                      pszDotnetExeLocation = NULL;
-    PCWSTR                      pszDotnetExeString(L"dotnet.exe");
-    DWORD                       dwCopyLength;
     HMODULE                     hModule;
     PCWSTR                      argv[2];
     hostfxr_main_fn             pProc;
-    std::vector<std::wstring>   vVersionFolders;
     bool                        fFound = FALSE;
+    DWORD                       dwPosition;
 
-    // Get the System PATH value.
-    if (!GetEnv(L"PATH", &strFullPath))
-    {
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    // Split on ';', checking to see if dotnet.exe exists in any folders.
-    pszDotnetExeLocation = wcstok_s(strFullPath.QueryStr(), L";", &strDelimeterContext);
-
-    while (pszDotnetExeLocation != NULL)
-    {
-        dwCopyLength = wcsnlen_s(pszDotnetExeLocation, 260);
-        if (dwCopyLength == 0)
-        {
-            continue;
-        }
-
-        // We store both the exe and folder locations as we eventually need to check inside of host\\fxr
-        // which doesn't need the dotnet.exe portion of the string
-        // TODO consider reducing allocations.
-        strDotnetExeLocation.Reset();
-        strDotnetFolderLocation.Reset();
-        hr = strDotnetExeLocation.Copy(pszDotnetExeLocation, dwCopyLength);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        hr = strDotnetFolderLocation.Copy(pszDotnetExeLocation, dwCopyLength);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        if (dwCopyLength > 0 && pszDotnetExeLocation[dwCopyLength - 1] != L'\\')
-        {
-            hr = strDotnetExeLocation.Append(L"\\");
-            if (FAILED(hr))
-            {
-                goto Finished;
-            }
-        }
-
-        hr = strDotnetExeLocation.Append(pszDotnetExeString);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        if (PathFileExists(strDotnetExeLocation.QueryStr()))
-        {
-            // means we found the folder with a dotnet.exe inside of it.
-            fFound = TRUE;
-            break;
-        }
-        pszDotnetExeLocation = wcstok_s(NULL, L";", &strDelimeterContext);
-    }
-    if (!fFound)
-    {
-        // could not find dotnet.exe, error out
-        hr = ERROR_BAD_ENVIRONMENT;
-    }
-
-    hr = strDotnetFolderLocation.Append(L"\\host\\fxr");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    if (!DirectoryExists(&strDotnetFolderLocation))
-    {
-        // error, not found the folder
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    // Find all folders under host\\fxr\\ for version numbers.
-    hr = strHostFxrSearchExpression.Copy(strDotnetFolderLocation);
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hr = strHostFxrSearchExpression.Append(L"\\*");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    // As we use the logic from core-setup, we are opting to use std here.
-    // TODO remove all uses of std?
-    FindDotNetFolders(strHostFxrSearchExpression.QueryStr(), &vVersionFolders);
-
-    if (vVersionFolders.size() == 0)
-    {
-        // no core framework was found
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    hr = FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-    hr = strDotnetFolderLocation.Append(L"\\");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hr = strDotnetFolderLocation.Append(strHighestDotnetVersion.QueryStr());
-    if (FAILED(hr))
-    {
-        goto Finished;
-
-    }
-
-    hr = strDotnetFolderLocation.Append(L"\\hostfxr.dll");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hModule = LoadLibraryW(strDotnetFolderLocation.QueryStr());
+    hModule = LoadLibraryW(m_pConfig->QueryHostfxrPath()->QueryStr());
 
     if (hModule == NULL)
     {
@@ -580,13 +343,51 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         hr = ERROR_BAD_ENVIRONMENT; // better hrresult?
         goto Finished;
     }
+    struHostFxrDllLocation.Copy(m_pConfig->QueryHostfxrPath());
+    argv[0] = struHostFxrDllLocation.QueryStr();
 
-    // The first argument is mostly ignored
-    argv[0] = strDotnetExeLocation.QueryStr();
-    UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
-        m_pConfig->QueryApplicationFullPath()->QueryStr(),
-        &strApplicationFullPath);
-    argv[1] = strApplicationFullPath.QueryStr();
+    if (m_pConfig->QueryIsStandAloneApplication())
+    {
+        // Arguments will be empty here. Change .exe to .dll for the application path. 
+        // Get the full path to the exe and check if it exists
+        UTILITY::ConvertPathToFullPath(m_pConfig->QueryProcessPath()->QueryStr(),
+            m_pConfig->QueryApplicationFullPath()->QueryStr(),
+            &struApplicationFullPath);
+
+        if (!PathFileExists(struApplicationFullPath.QueryStr()))
+        {
+            hr = ERROR_FILE_NOT_FOUND;
+            goto Finished;
+        }
+
+        dwPosition = struApplicationFullPath.LastIndexOf(L'.', 0);
+        if (dwPosition == -1)
+        {
+            hr = ERROR_BAD_ENVIRONMENT;
+            goto Finished;
+        }
+        struApplicationFullPath.QueryStr()[dwPosition] = L'\0';
+
+        if (FAILED(hr = struApplicationFullPath.SyncWithBuffer())
+            || FAILED(hr = struApplicationFullPath.Append(L".dll")))
+        {
+            goto Finished;
+        }
+
+        if (!PathFileExists(struApplicationFullPath.QueryStr()))
+        {
+            hr = ERROR_FILE_NOT_FOUND;
+            goto Finished;
+        }
+    }
+    else
+    {
+        UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
+            m_pConfig->QueryApplicationFullPath()->QueryStr(),
+            &struApplicationFullPath);
+    }
+   
+    argv[1] = struApplicationFullPath.QueryStr();
 
     // There can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
@@ -596,13 +397,8 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // We set a static so that managed code can call back into this instance and
     // set the callbacks
     s_Application = this;
-
-    m_ProcessExitCode = pProc(2, argv);
-    if (m_ProcessExitCode != 0)
-    {
-
-    }
-
+    
+    RunDotnetApplication(argv, pProc);
 Finished:
     //
     // this method is called by the background thread and should never exit unless shutdown
@@ -646,4 +442,34 @@ Finished:
         }
     }
     return hr;
+}
+
+//
+// Calls hostfxr_main with the hostfxr and application as arguments.
+// Method should be called with only 
+// Need to have __try / __except in methods that require unwinding.
+// 
+HRESULT
+IN_PROCESS_APPLICATION::RunDotnetApplication(PCWSTR* argv, hostfxr_main_fn pProc)
+{
+    HRESULT hr = S_OK;
+    __try
+    {
+        m_ProcessExitCode = pProc(2, argv);
+    }
+    __except (FilterException(GetExceptionCode(), GetExceptionInformation()))
+    {
+        // TODO Log error message here.
+        hr = E_FAIL;
+    }
+    return hr;
+}
+
+// static
+INT
+IN_PROCESS_APPLICATION::FilterException(unsigned int code, struct _EXCEPTION_POINTERS *ep)
+{
+    // We assume that any exception is a failure as the applicaiton didn't start.
+    // TODO, log error based on exception code.
+    return EXCEPTION_EXECUTE_HANDLER;
 }

@@ -113,6 +113,7 @@ CreateApplication(
 {
     HRESULT      hr = S_OK;
     APPLICATION *pApplication = NULL;
+    REQUEST_HANDLER::StaticInitialize(pServer);
 
     if (pConfig->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
     {

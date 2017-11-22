@@ -173,12 +173,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="aspnetcore_event.h" />
     <ClInclude Include="outofprocess\processmanager.h" />
     <ClInclude Include="outofprocess\protocolconfig.h" />
     <ClInclude Include="outofprocess\serverprocess.h" />
     <ClInclude Include="precomp.hxx" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include=".\inprocess\fx_ver.h" />
     <ClInclude Include=".\inprocess\inprocessapplication.h" />
     <ClInclude Include=".\inprocess\inprocesshandler.h" />
     <ClInclude Include=".\outofprocess\forwardinghandler.h" />
@@ -187,7 +187,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cxx" />
-    <ClCompile Include=".\inprocess\fx_ver.cxx" />
     <ClCompile Include=".\inprocess\inprocessapplication.cpp" />
     <ClCompile Include=".\inprocess\inprocesshandler.cpp" />
     <ClCompile Include=".\outofprocess\forwardinghandler.cpp" />
@@ -196,6 +195,23 @@
     <ClCompile Include="outofprocess\processmanager.cxx" />
     <ClCompile Include="outofprocess\protocolconfig.cxx" />
     <ClCompile Include="outofprocess\serverprocess.cxx" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="aspnetcore_msg.mc">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">mc %(FullPath)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compiling Event Messages ...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(Filename).rc;%(Filename).h;MSG0409.bin</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">mc %(FullPath)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compiling Event Messages ...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename).rc;%(Filename).h;MSG0409.bin</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">mc %(FullPath)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Compiling Event Messages ...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(Filename).rc;%(Filename).h;MSG0409.bin</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">mc %(FullPath)</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compiling Event Messages ...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).rc;%(Filename).h;MSG0409.bin</Outputs>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CommonLib\CommonLib.vcxproj">
@@ -209,6 +225,7 @@
     <ResourceCompile Include="RequestHandler.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="aspnetcore_msg.mc" />
     <None Include="Source.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

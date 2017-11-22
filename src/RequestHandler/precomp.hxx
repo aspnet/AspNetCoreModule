@@ -16,19 +16,22 @@
 #include <windows.h>
 #include <atlbase.h>
 #include <pdh.h>
-#include <vector>
 
 #include <Shlobj.h>
 #include <httpserv.h>
 #include <winhttp.h>
 #include <httptrace.h>
-#include <cstdlib>
 #include <reftrace.h>
 #include <wchar.h>
+#include <comdef.h>
+
 
 #include <iiswebsocket.h>
 //#include "..\IISLib\dbgutil.h"
 //#include "..\IISLib\ahutil.h"
+#include "resource.h"
+#include "aspnetcore_event.h"
+#include "aspnetcore_msg.h"
 #include "..\IISLib\multisz.h"
 #include "..\IISLib\multisza.h"
 #include "..\IISLib\base64.h"
@@ -38,7 +41,6 @@
 #include "..\CommonLib\application.h"
 #include ".\inprocess\InProcessHandler.h"
 #include ".\inprocess\inprocessapplication.h"
-#include ".\inprocess\fx_ver.h"
 #include ".\outofprocess\protocolconfig.h"
 #include ".\outofprocess\forwarderconnection.h"
 #include ".\outofprocess\serverprocess.h"
