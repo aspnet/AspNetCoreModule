@@ -1,6 +1,5 @@
 #include "..\precomp.hxx"
 
-
 IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
 
 IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(
@@ -266,32 +265,31 @@ Finished:
         // following request or block the activation at all
         m_fLoadManagedAppError = FALSE; // m_hThread != NULL ?
 
-        // TODO
-        //if (SUCCEEDED(strEventMsg.SafeSnwprintf(
-        //    ASPNETCORE_EVENT_LOAD_CLR_FALIURE_MSG,
-        //    m_pConfiguration->QueryApplicationPath()->QueryStr(),
-        //    m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
-        //    hr)))
-        //{
-        //    apsz[0] = strEventMsg.QueryStr();
+        if (SUCCEEDED(strEventMsg.SafeSnwprintf(
+            ASPNETCORE_EVENT_LOAD_CLR_FALIURE_MSG,
+            m_pConfig->QueryApplicationPath()->QueryStr(),
+            m_pConfig->QueryApplicationFullPath()->QueryStr(),
+            hr)))
+        {
+            apsz[0] = strEventMsg.QueryStr();
 
-        //    //
-        //    // not checking return code because if ReportEvent
-        //    // fails, we cannot do anything.
-        //    //
-        //    if (FORWARDING_HANDLER::QueryEventLog() != NULL)
-        //    {
-        //        ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
-        //            EVENTLOG_ERROR_TYPE,
-        //            0,
-        //            ASPNETCORE_EVENT_LOAD_CLR_FALIURE,
-        //            NULL,
-        //            1,
-        //            0,
-        //            apsz,
-        //            NULL);
-        //    }
-        //}
+            //
+            // not checking return code because if ReportEvent
+            // fails, we cannot do anything.
+            //
+            if (REQUEST_HANDLER::QueryEventLog() != NULL)
+            {
+                ReportEventW(REQUEST_HANDLER::QueryEventLog(),
+                    EVENTLOG_ERROR_TYPE,
+                    0,
+                    ASPNETCORE_EVENT_LOAD_CLR_FALIURE,
+                    NULL,
+                    1,
+                    0,
+                    apsz,
+                    NULL);
+            }
+        }
     }
     return hr;
 }

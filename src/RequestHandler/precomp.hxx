@@ -23,10 +23,16 @@
 #include <httptrace.h>
 #include <reftrace.h>
 #include <wchar.h>
+#include <comdef.h>
+
 
 #include <iiswebsocket.h>
 //#include "..\IISLib\dbgutil.h"
 //#include "..\IISLib\ahutil.h"
+#include "resource.h"
+#include "aspnetcore_event.h"
+#include "aspnetcore_msg.h"
+
 #include "..\IISLib\multisz.h"
 #include "..\IISLib\multisza.h"
 #include "..\IISLib\base64.h"

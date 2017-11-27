@@ -46,8 +46,22 @@ public:
         VOID
     ) const;
 
+    static
+    HANDLE
+    QueryEventLog()
+    {
+        return sm_hEventLog;
+    }
+
+    static
+    HRESULT
+    StaticInitialize(
+        IHttpServer* pServer
+    );
+
 protected:
-    mutable LONG m_cRefs;
-    IHttpContext* m_pW3Context;
-    APPLICATION* m_pApplication;
+    mutable LONG    m_cRefs;
+    IHttpContext*   m_pW3Context;
+    APPLICATION*    m_pApplication;
+    static HANDLE   sm_hEventLog;
 };

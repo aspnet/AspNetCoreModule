@@ -52,12 +52,14 @@
     <ClInclude Include="outofprocess\serverprocess.h">
       <Filter>OutOfProcess</Filter>
     </ClInclude>
+    <ClInclude Include="aspnetcore_event.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RequestHandler.rc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Source.def" />
+    <None Include="aspnetcore_msg.mc" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="InProcess">

@@ -52,11 +52,8 @@
 //
 #ifndef WINHTTP_OPTION_ASSURED_NON_BLOCKING_CALLBACKS
 #define WINHTTP_OPTION_ASSURED_NON_BLOCKING_CALLBACKS 111
+
 #endif
-
-#define ASPNETCORE_EVENT_PROVIDER L"IIS AspNetCore Module"
-#define ASPNETCORE_IISEXPRESS_EVENT_PROVIDER L"IIS Express AspNetCore Module"
-
 #ifdef max
 #undef max
 template<typename T> inline T max(T a, T b)
@@ -112,9 +109,7 @@ inline bool IsSpace(char ch)
 #include "..\..\CommonLib\utility.h"
 #include "..\..\CommonLib\debugutil.h"
 #include"..\..\CommonLib\requesthandler.h"
-#include "..\aspnetcore_msg.h"
 #include "appoffline.h"
-#include "aspnetcore_event.h"
 #include "filewatcher.h"
 #include "applicationinfo.h"
 #include "applicationmanager.h"
