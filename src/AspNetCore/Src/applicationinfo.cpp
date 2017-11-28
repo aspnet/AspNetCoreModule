@@ -130,26 +130,7 @@ APPLICATION_INFO::EnsureApplicationCreated()
         goto Finished;
     }
 
-
-    // load assembly and create the application
-    if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
-    {
-        // First find hostfxr location.
-
-        hr = LoadAssemblyFromInetsrv();
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-    }
-    else
-    {
-        hr = LoadAssemblyFromInetsrv();
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-    }
+    LoadRequestHandlerAssembly();
 
     if (m_pApplication == NULL)
     {
@@ -182,7 +163,7 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::LoadAssemblyFromInetsrv()
+APPLICATION_INFO::LoadRequestHandlerAssembly()
 {
     HRESULT hr = S_OK;
     BOOL    fLocked = FALSE;
@@ -196,46 +177,34 @@ APPLICATION_INFO::LoadAssemblyFromInetsrv()
         {
             goto Finished;
         }
-
-        DWORD dwSize = MAX_PATH;
-        BOOL  fDone = FALSE;
-        DWORD dwPosition = 0;
-
-        // Though we could call LoadLibrary(L"aspnetcorerh.dll") relying the OS to solve
-        // the path (the targeted dll is the same folder of w3wp.exe/iisexpress)
-        // let's still load with full path to avoid security issue
-        while (!fDone)
+        // load assembly and create the application
+        if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
         {
-            DWORD dwReturnedSize = GetModuleFileName(NULL, struFileName.QueryStr(), dwSize);
-            if (dwReturnedSize == 0)
+            // First find hostfxr location.
+            if (m_pConfiguration->QueryIsStandAloneApplication())
             {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-                fDone = TRUE;
-                goto Finished;
-            }
-            else if ((dwReturnedSize == dwSize) && (GetLastError() == ERROR_INSUFFICIENT_BUFFER))
-            {
-                dwSize *= 2; // smaller buffer. increase the buffer and retry
-                struFileName.Resize(dwSize + 20); // aspnetcorerh.dll
+                hr = LoadAssemblyFromLocalBin(&struFileName);
             }
             else
             {
-                fDone = TRUE;
+                hr = LoadAssemblyFromInetsrv(&struFileName);
+                //hr = GetRequestHandlerFromRuntimeStore(&struFileName);
+            }
+
+            if (FAILED(hr))
+            {
+                goto Finished;
+            }
+        }
+        else
+        {
+            hr = LoadAssemblyFromInetsrv(&struFileName);
+            if (FAILED(hr))
+            {
+                goto Finished;
             }
         }
 
-        if (FAILED(hr = struFileName.SyncWithBuffer()))
-        {
-            goto Finished;
-        }
-        dwPosition = struFileName.LastIndexOf(L'\\', 0);
-        struFileName.QueryStr()[dwPosition] = L'\0';
-
-        if (FAILED(hr = struFileName.SyncWithBuffer()) ||
-            FAILED(hr = struFileName.Append(g_pwzAspnetcoreRequestHandlerName)))
-        {
-            goto Finished;
-        }
         g_hAspnetCoreRH = LoadLibraryW(struFileName.QueryStr());
         if (g_hAspnetCoreRH == NULL)
         {
@@ -275,43 +244,73 @@ Finished:
     }
     return hr;
 }
-
 HRESULT
-APPLICATION_INFO::LoadAssemblyForInProcess()
+APPLICATION_INFO::LoadAssemblyFromInetsrv(STRU* struFilename)
 {
-    // We will have to determine if we are a standalone application or runtime here.
-    // This logic either needs to be propagated or copied in the request handler to load the application
     HRESULT hr = S_OK;
-    BOOL    fLocked = FALSE;
-    STRU    struApplicationFullPath;
-    STRU    struhostFxrDllLocation;
+    DWORD dwSize = MAX_PATH;
+    BOOL  fDone = FALSE;
+    DWORD dwPosition = 0;
 
-    if (!g_fAspnetcoreRHAssemblyLoaded)
+    // Though we could call LoadLibrary(L"aspnetcorerh.dll") relying the OS to solve
+    // the path (the targeted dll is the same folder of w3wp.exe/iisexpress)
+    // let's still load with full path to avoid security issue
+    while (!fDone)
     {
-        AcquireSRWLockExclusive(&g_srwLock);
-        fLocked = TRUE;
-        // Instead of loading host fxr from from the request handler, we will load it here.
-        // However, we need to expose a function on hostfxr to find the latest version of the request handler dll.
+        DWORD dwReturnedSize = GetModuleFileName(NULL, struFilename->QueryStr(), dwSize);
+        if (dwReturnedSize == 0)
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            fDone = TRUE;
+            goto Finished;
+        }
+        else if ((dwReturnedSize == dwSize) && (GetLastError() == ERROR_INSUFFICIENT_BUFFER))
+        {
+            dwSize *= 2; // smaller buffer. increase the buffer and retry
+            struFilename->Resize(dwSize + 20); // aspnetcorerh.dll
+        }
+        else
+        {
+            fDone = TRUE;
+        }
+    }
 
-        // UTILITY::FindHostFxrDll(&struhostFxrDllLocation);
+    if (FAILED(hr = struFilename->SyncWithBuffer()))
+    {
+        goto Finished;
+    }
+    dwPosition = struFilename->LastIndexOf(L'\\', 0);
+    struFilename->QueryStr()[dwPosition] = L'\0';
 
-        // Check that hostfxr version is 2.1+
-        // Find the corresponding request handler dll from hostfxr.dll
-        // This will require a change to hostfxr
+    if (FAILED(hr = struFilename->SyncWithBuffer()) ||
+        FAILED(hr = struFilename->Append(g_pwzAspnetcoreRequestHandlerName)))
+    {
+        goto Finished;
     }
 
 Finished:
-    //
-    // Question: we remember the load failure so that we will not try again.
-    // User needs to check whether the fuction pointer is NULL 
-    //
-    g_fAspnetcoreRHAssemblyLoaded = TRUE;
-    m_pfnAspNetCoreCreateApplication = g_pfnAspNetCoreCreateApplication;
-    m_pfnAspNetCoreCreateRequestHandler = g_pfnAspNetCoreCreateRequestHandler;
+    return hr;
+}
 
-    if (fLocked)
-    {
-        ReleaseSRWLockExclusive(&g_srwLock);
-    }
+HRESULT
+APPLICATION_INFO::GetRequestHandlerFromRuntimeStore(STRU* struFilename)
+{
+    // TODO call into hostfxr to find the runtime store. 
+    HRESULT hr = S_OK;
+
+Finished:
+    return hr;
+}
+
+HRESULT
+APPLICATION_INFO::LoadAssemblyFromLocalBin(STRU* struFilename)
+{
+    HRESULT hr = S_OK;
+
+    hr = UTILITY::ConvertPathToFullPath(g_pwzAspnetcoreRequestHandlerName,
+        m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
+        struFilename);
+Finished:
+   
     return hr;
 }
