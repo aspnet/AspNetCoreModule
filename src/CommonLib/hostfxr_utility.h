@@ -10,7 +10,8 @@ public:
     HRESULT
     FindHostFxrDll(
         ASPNETCORE_CONFIG *pConfig,
-        STRU* struHostFxrDllLocation
+        STRU* struHostFxrDllLocation,
+        BOOL* fStandAlone
     );
 
     static

@@ -317,7 +317,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
 {
     HRESULT     hr = S_OK;
 
-    STRU                        strApplicationFullPath;
+    STRU                        struApplicationFullPath;
     STRU                        struHostFxrDllLocation;
     PWSTR                       strDelimeterContext = NULL;
     PCWSTR                      pszDotnetExeLocation = NULL;
@@ -325,7 +325,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     PCWSTR                      argv[2];
     hostfxr_main_fn             pProc;
     bool                        fFound = FALSE;
-
+    DWORD                       dwPosition;
 
     hModule = LoadLibraryW(m_pConfig->QueryHostfxrPath()->QueryStr());
 
@@ -345,10 +345,49 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     }
     struHostFxrDllLocation.Copy(m_pConfig->QueryHostfxrPath());
     argv[0] = struHostFxrDllLocation.QueryStr();
-    UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
-        m_pConfig->QueryApplicationFullPath()->QueryStr(),
-        &strApplicationFullPath);
-    argv[1] = strApplicationFullPath.QueryStr();
+
+    if (m_pConfig->QueryIsStandAloneApplication())
+    {
+        // Arguments will be empty here. Change .exe to .dll for the application path. 
+        // Get the full path to the exe and check if it exists
+        UTILITY::ConvertPathToFullPath(m_pConfig->QueryProcessPath()->QueryStr(),
+            m_pConfig->QueryApplicationFullPath()->QueryStr(),
+            &struApplicationFullPath);
+
+        if (!PathFileExists(struApplicationFullPath.QueryStr()))
+        {
+            hr = ERROR_FILE_NOT_FOUND;
+            goto Finished;
+        }
+
+        dwPosition = struApplicationFullPath.LastIndexOf(L'.', 0);
+        if (dwPosition == -1)
+        {
+            hr = ERROR_BAD_ENVIRONMENT;
+            goto Finished;
+        }
+        struApplicationFullPath.QueryStr()[dwPosition] = L'\0';
+
+        if (FAILED(hr = struApplicationFullPath.SyncWithBuffer())
+            || FAILED(hr = struApplicationFullPath.Append(L".dll")))
+        {
+            goto Finished;
+        }
+
+        if (!PathFileExists(struApplicationFullPath.QueryStr()))
+        {
+            hr = ERROR_FILE_NOT_FOUND;
+            goto Finished;
+        }
+    }
+    else
+    {
+        UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
+            m_pConfig->QueryApplicationFullPath()->QueryStr(),
+            &struApplicationFullPath);
+    }
+   
+    argv[1] = struApplicationFullPath.QueryStr();
 
     // There can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the

@@ -12,7 +12,8 @@ HOSTFXR_UTILITY::~HOSTFXR_UTILITY()
 HRESULT
 HOSTFXR_UTILITY::FindHostFxrDll(
     ASPNETCORE_CONFIG *pConfig,
-    STRU* struHostFxrDllLocation
+    STRU* struHostFxrDllLocation,
+    BOOL* fStandAlone
 )
 {
     HRESULT hr = S_OK;
@@ -26,10 +27,12 @@ HOSTFXR_UTILITY::FindHostFxrDll(
     {
         // hostfxr is in the same folder, parse and use it.
         hr = GetStandaloneHostfxrLocation(struHostFxrDllLocation, pConfig);
+        *fStandAlone = TRUE;
     }
     else
     {
         hr = GetPortableHostfxrLocation(struHostFxrDllLocation, pConfig);
+        fStandAlone = FALSE;
     }
 
     return hr;
@@ -156,7 +159,7 @@ HOSTFXR_UTILITY::GetPortableHostfxrLocation(
         goto Finished;
     }
 
-    hr = struHostfxrPath->Append(L"\\host\\fxr");
+    hr = struHostfxrPath->Append(L"host\\fxr");
     if (FAILED(hr))
     {
         goto Finished;

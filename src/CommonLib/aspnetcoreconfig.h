@@ -232,6 +232,14 @@ public:
         return m_pEnvironmentVariables;
     }
 
+    BOOL 
+        QueryIsStandAloneApplication(
+            VOID
+        )
+    {
+        return m_fIsStandAloneApplication;
+    }
+
 private:
 
     //
@@ -270,6 +278,7 @@ private:
     BOOL                   m_fWindowsAuthEnabled;
     BOOL                   m_fBasicAuthEnabled;
     BOOL                   m_fAnonymousAuthEnabled;
+    BOOL                   m_fIsStandAloneApplication;
     APP_HOSTING_MODEL      m_hostingModel;
     ENVIRONMENT_VAR_HASH*  m_pEnvironmentVariables;
 };
