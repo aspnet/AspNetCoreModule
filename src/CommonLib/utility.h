@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #pragma once
-#include "aspnetcoreconfig.h"
 
 class UTILITY
 {
@@ -113,29 +112,8 @@ public:
         _Out_ std::vector<std::wstring> *pvFolders
     );
 
-    //static
-    //HRESULT
-    //    FindHostFxrDll(
-    //        ASPNETCORE_CONFIG *pConfig,
-    //        STRU* struHostFxrDllLocation
-    //    );
-
 private:
 
     UTILITY() {}
     ~UTILITY() {}
-
-    //static
-    //    HRESULT
-    //    GetPortableHostfxrLocation(
-    //        STRU* struHostfxrPath,
-    //        ASPNETCORE_CONFIG *pConfig
-    //    );
-
-    //static
-    //    HRESULT
-    //    GetStandaloneHostfxrLocation(
-    //        STRU* struHostfxrPath,
-    //        ASPNETCORE_CONFIG *pConfig
-    //    );
 };

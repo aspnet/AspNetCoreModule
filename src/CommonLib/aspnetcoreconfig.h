@@ -44,6 +44,7 @@
 //IHttpServer *    g_pHttpServer;
 //BOOL             g_fRecycleProcessCalled;
 
+#include "stdafx.h"
 
 enum APP_HOSTING_MODEL
 {

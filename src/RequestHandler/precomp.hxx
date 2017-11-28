@@ -32,7 +32,6 @@
 #include "resource.h"
 #include "aspnetcore_event.h"
 #include "aspnetcore_msg.h"
-
 #include "..\IISLib\multisz.h"
 #include "..\IISLib\multisza.h"
 #include "..\IISLib\base64.h"

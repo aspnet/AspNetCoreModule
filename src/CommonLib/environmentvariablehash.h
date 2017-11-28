@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #pragma once
+#include "stdafx.h"
 //
 // The key used for hash-table lookups, consists of the port on which the http process is created.
 //

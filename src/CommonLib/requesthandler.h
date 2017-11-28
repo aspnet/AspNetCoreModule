@@ -2,6 +2,10 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #pragma once
+
+#include "stdafx.h"
+#include "application.h"
+
 //#ifdef REQUESTHANDLER_EXPORTS
 //#  define EXPORT __declspec(dllexport)
 //#else

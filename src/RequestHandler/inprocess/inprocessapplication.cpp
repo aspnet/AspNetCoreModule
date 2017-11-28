@@ -327,7 +327,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     bool                        fFound = FALSE;
 
 
-    hModule = LoadLibraryW(m_pConfig->QueryHostFxrPath()->QueryStr());
+    hModule = LoadLibraryW(m_pConfig->QueryHostfxrPath()->QueryStr());
 
     if (hModule == NULL)
     {
@@ -344,7 +344,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         goto Finished;
     }
 
-    argv[0] = m_pConfig->QueryHostFxrPath()->QueryStr();
+    argv[0] = m_pConfig->QueryHostfxrPath()->QueryStr();
     UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
         m_pConfig->QueryApplicationFullPath()->QueryStr(),
         &strApplicationFullPath);
@@ -420,6 +420,7 @@ IN_PROCESS_APPLICATION::RunDotnetApplication(PCWSTR* argv, hostfxr_main_fn pProc
     }
     __except (FilterException(GetExceptionCode(), GetExceptionInformation()))
     {
+        // TODO Log error message here.
         hr = E_FAIL;
     }
     return hr;

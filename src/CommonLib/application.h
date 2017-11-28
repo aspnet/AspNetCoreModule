@@ -1,4 +1,6 @@
 #pragma once
+#include "stdafx.h"
+#include "aspnetcoreconfig.h"
 
 enum APPLICATION_STATUS
 {
