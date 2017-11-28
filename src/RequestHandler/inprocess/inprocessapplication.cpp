@@ -313,7 +313,6 @@ IN_PROCESS_APPLICATION::ExecuteAspNetCoreProcess(
 // Need to pass the path to hostfxr here.
 HRESULT
 IN_PROCESS_APPLICATION::ExecuteApplication(
-    VOID
 )
 {
     HRESULT     hr = S_OK;
@@ -327,9 +326,8 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     hostfxr_main_fn             pProc;
     bool                        fFound = FALSE;
 
-    UTILITY::FindHostFxrDll(&struHostFxrDllLocation);
 
-    hModule = LoadLibraryW(struHostFxrDllLocation.QueryStr());
+    hModule = LoadLibraryW(m_pConfig->QueryHostFxrPath()->QueryStr());
 
     if (hModule == NULL)
     {
@@ -346,7 +344,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         goto Finished;
     }
 
-    argv[0] = struHostFxrDllLocation.QueryStr();
+    argv[0] = m_pConfig->QueryHostFxrPath()->QueryStr();
     UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
         m_pConfig->QueryApplicationFullPath()->QueryStr(),
         &strApplicationFullPath);
