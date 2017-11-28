@@ -4,7 +4,7 @@
 #pragma once
 
 typedef void(*request_handler_cb) (int error, IHttpContext* pHttpContext, void* pvCompletionContext);
-typedef REQUEST_NOTIFICATION_STATUS(*PFN_REQUEST_HANDLER) (IHttpContext* pHttpContext, IN_PROCESS_HANDLER* pInProcessHandler, void* pvRequestHandlerContext);
+typedef REQUEST_NOTIFICATION_STATUS(*PFN_REQUEST_HANDLER) (IN_PROCESS_HANDLER* pInProcessHandler, void* pvRequestHandlerContext);
 typedef BOOL(*PFN_SHUTDOWN_HANDLER) (void* pvShutdownHandlerContext);
 typedef REQUEST_NOTIFICATION_STATUS(*PFN_MANAGED_CONTEXT_HANDLER)(void *pvManagedHttpContext, HRESULT hrCompletionStatus, DWORD cbCompletion);
 typedef DWORD(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);

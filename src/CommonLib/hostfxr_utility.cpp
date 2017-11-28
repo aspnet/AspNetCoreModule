@@ -55,31 +55,10 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrLocation(
 {
     HRESULT     hr = S_OK;
 
-    DWORD                       dwPosition;
-    STRU                        struApplicationExeName;
-    STRU                        struApplicationExePath;
-    STRU                        struApplicationFullPath;
-
-    if (FAILED(hr = struApplicationExeName.Copy(pConfig->QueryProcessPath()->QueryStr()))
-        || FAILED(hr = struApplicationFullPath.Copy(pConfig->QueryApplicationFullPath()->QueryStr())))
-    {
-        goto Finished;
-    }
-
     // Get the full path to the exe and check if it exists
-    UTILITY::ConvertPathToFullPath(struApplicationExeName.QueryStr(),
-        struApplicationFullPath.QueryStr(),
-        &struApplicationExePath);
-
-    if (!PathFileExists(struApplicationExePath.QueryStr()))
-    {
-        hr = ERROR_FILE_NOT_FOUND;
-        goto Finished;
-    }
-
-    // Append hostfxr.dll and check if it exists
-    if (FAILED(hr = struHostfxrPath->Copy(struApplicationFullPath))
-        || FAILED(hr = struHostfxrPath->Append(L"\\hostfxr.dll")))
+    if (FAILED(hr = UTILITY::ConvertPathToFullPath(L"\\hostfxr.dll",
+        pConfig->QueryApplicationFullPath()->QueryStr(),
+        struHostfxrPath)))
     {
         goto Finished;
     }

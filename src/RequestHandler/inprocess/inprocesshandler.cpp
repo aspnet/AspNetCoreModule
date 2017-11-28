@@ -86,20 +86,20 @@ IN_PROCESS_HANDLER::QueryManagedHttpContext(
     return m_pManagedHttpContext;
 }
 
-IHttpContext*
-IN_PROCESS_HANDLER::QueryHttpContext(
-    VOID
-)
-{
-    return m_pHttpContext;
-}
-
 BOOL
 IN_PROCESS_HANDLER::QueryIsManagedRequestComplete(
     VOID
 )
 {
     return m_fManagedRequestComplete;
+}
+
+IHttpContext*
+IN_PROCESS_HANDLER::QueryHttpContext(
+    VOID
+)
+{
+    return m_pW3Context;
 }
 
 VOID

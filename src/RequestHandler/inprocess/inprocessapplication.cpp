@@ -128,7 +128,7 @@ IN_PROCESS_APPLICATION::OnExecuteRequest(
 {
     if (m_RequestHandler != NULL)
     {
-        return m_RequestHandler(pHttpContext, pInProcessHandler, m_RequestHandlerContext);
+        return m_RequestHandler(pInProcessHandler, m_RequestHandlerContext);
     }
 
     ////
@@ -343,8 +343,8 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         hr = ERROR_BAD_ENVIRONMENT; // better hrresult?
         goto Finished;
     }
-
-    argv[0] = m_pConfig->QueryHostfxrPath()->QueryStr();
+    struHostFxrDllLocation.Copy(m_pConfig->QueryHostfxrPath());
+    argv[0] = struHostFxrDllLocation.QueryStr();
     UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
         m_pConfig->QueryApplicationFullPath()->QueryStr(),
         &strApplicationFullPath);
