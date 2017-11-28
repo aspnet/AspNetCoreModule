@@ -1,6 +1,4 @@
 #include "stdafx.h"
-#include "hostfxr_utility.h"
-#include "aspnetcoreconfig.h"
 
 HOSTFXR_UTILITY::HOSTFXR_UTILITY()
 {

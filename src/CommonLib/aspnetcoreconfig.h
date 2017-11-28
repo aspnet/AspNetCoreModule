@@ -44,8 +44,6 @@
 //IHttpServer *    g_pHttpServer;
 //BOOL             g_fRecycleProcessCalled;
 
-#include "stdafx.h"
-
 enum APP_HOSTING_MODEL
 {
     HOSTING_UNKNOWN = 0,
@@ -53,6 +51,7 @@ enum APP_HOSTING_MODEL
     HOSTING_OUT_PROCESS
 };
 
+class ENVIRONMENT_VAR_HASH; // type forward
 class ASPNETCORE_CONFIG : IHttpStoredContext
 {
 public:

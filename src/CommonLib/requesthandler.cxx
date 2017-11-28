@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "requesthandler.h"
 
 HANDLE   REQUEST_HANDLER::sm_hEventLog = NULL;
 

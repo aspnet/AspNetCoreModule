@@ -2,7 +2,6 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #include "stdafx.h"
-#include "aspnetcoreconfig.h"
 
 ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
 {

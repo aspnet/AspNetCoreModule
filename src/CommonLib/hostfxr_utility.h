@@ -1,6 +1,5 @@
 #pragma once
 
-#include "aspnetcoreconfig.h"
 class HOSTFXR_UTILITY
 {
 public:
