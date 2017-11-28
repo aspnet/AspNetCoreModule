@@ -1,6 +1,6 @@
 #include "stdafx.h"
-#include "application.h"
 #include "aspnetcoreconfig.h"
+#include "application.h"
 
 APPLICATION::APPLICATION(
     _In_ IHttpServer* pHttpServer,

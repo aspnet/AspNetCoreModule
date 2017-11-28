@@ -104,8 +104,8 @@ inline bool IsSpace(char ch)
 #include <time.h>
 
 #include "..\..\CommonLib\environmentvariablehash.h"
-#include "..\..\CommonLib\application.h"
 #include "..\..\CommonLib\aspnetcoreconfig.h"
+#include "..\..\CommonLib\application.h"
 #include "..\..\CommonLib\utility.h"
 #include "..\..\CommonLib\debugutil.h"
 #include"..\..\CommonLib\requesthandler.h"

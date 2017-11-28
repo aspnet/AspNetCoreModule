@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "aspnetcoreconfig.h"
+
 ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
 {
     if (m_pEnvironmentVariables != NULL)
@@ -90,11 +91,11 @@ ASPNETCORE_CONFIG::GetConfig(
     }
     if (pAspNetCoreConfig->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS) {
         // Find the hostfxrPath here for config.
-        if (FAILED(hr = UTILITY::FindHostFxrDll(pAspNetCoreConfig, &struHostFxrPath))
+       /* if (FAILED(hr = UTILITY::FindHostFxrDll(pAspNetCoreConfig, &struHostFxrPath))
             || FAILED(hr = pAspNetCoreConfig->QueryHostfxrPath()->Copy(struHostFxrPath)))
         {
             goto Finished;
-        }
+        }*/
     }
     *ppAspNetCoreConfig = pAspNetCoreConfig;
     pAspNetCoreConfig = NULL;

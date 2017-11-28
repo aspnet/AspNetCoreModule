@@ -44,7 +44,6 @@
 //IHttpServer *    g_pHttpServer;
 //BOOL             g_fRecycleProcessCalled;
 
-#include "stdafx.h"
 
 enum APP_HOSTING_MODEL
 {
@@ -67,21 +66,13 @@ public:
     }
 
     static
-        HRESULT
-        GetConfig(
-            _In_  IHttpServer             *pHttpServer,
-            _In_  HTTP_MODULE_ID           pModuleId,
-            _In_  IHttpContext            *pHttpContext,
-            _Out_ ASPNETCORE_CONFIG     **ppAspNetCoreConfig
-        );
-
-    ENVIRONMENT_VAR_HASH*
-        QueryEnvironmentVariables(
-            VOID
-        )
-    {
-        return m_pEnvironmentVariables;
-    }
+    HRESULT
+    GetConfig(
+        _In_  IHttpServer             *pHttpServer,
+        _In_  HTTP_MODULE_ID           pModuleId,
+        _In_  IHttpContext            *pHttpContext,
+        _Out_ ASPNETCORE_CONFIG     **ppAspNetCoreConfig
+    );
 
     DWORD
         QueryRapidFailsPerMinute(
@@ -231,6 +222,14 @@ public:
         QueryHostfxrPath()
     {
         return &m_struHostFxrPath;
+    }
+
+    ENVIRONMENT_VAR_HASH*
+        QueryEnvironmentVariables(
+            VOID
+        )
+    {
+        return m_pEnvironmentVariables;
     }
 
 private:

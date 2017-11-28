@@ -7,8 +7,6 @@
 //#else
 //#  define EXPORT __declspec(dllimport)
 //#endif
-#include "stdafx.h"
-#include "application.h"
 //
 // Abstract class
 //
