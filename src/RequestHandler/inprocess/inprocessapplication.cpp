@@ -131,15 +131,15 @@ IN_PROCESS_APPLICATION::OnExecuteRequest(
         return m_RequestHandler(pInProcessHandler, m_RequestHandlerContext);
     }
 
-    ////
-    //// return error as the application did not register callback
-    ////
-    //if (ANCMEvents::ANCM_EXECUTE_sREQUEST_FAIL::IsEnabled(pHttpContext->GetTraceContext()))
-    //{
-    //    ANCMEvents::ANCM_EXECUTE_REQUEST_FAIL::RaiseEvent(pHttpContext->GetTraceContext(),
-    //        NULL,
-    //        E_APPLICATION_ACTIVATION_EXEC_FAILURE);
-    //}
+    //
+    // return error as the application did not register callback
+    //
+    if (ANCMEvents::ANCM_EXECUTE_REQUEST_FAIL::IsEnabled(pHttpContext->GetTraceContext()))
+    {
+        ANCMEvents::ANCM_EXECUTE_REQUEST_FAIL::RaiseEvent(pHttpContext->GetTraceContext(),
+            NULL,
+            E_APPLICATION_ACTIVATION_EXEC_FAILURE);
+    }
     pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
     return RQ_NOTIFICATION_FINISH_REQUEST;
 }
