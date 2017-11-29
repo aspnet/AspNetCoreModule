@@ -225,7 +225,6 @@
     <ResourceCompile Include="RequestHandler.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="aspnetcore_msg.mc" />
     <None Include="Source.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
