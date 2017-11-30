@@ -124,6 +124,9 @@ private:
     );
 
     static
+    HRESULT LogEventViewer(PCWSTR message);
+
+    static
     BOOL
     DirectoryExists(
     _In_ STRU *pstrPath  //todo: this does not need to be stru, can be PCWSTR

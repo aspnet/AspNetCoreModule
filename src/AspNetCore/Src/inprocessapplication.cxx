@@ -340,7 +340,6 @@ IN_PROCESS_APPLICATION::LoadManagedApplication()
         // Cannot load more than once even there was a failure
         goto Finished;
     }
-
     AcquireSRWLockExclusive(&m_srwLock);
     fLocked = TRUE;
     if (m_fManagedAppLoaded || m_fLoadManagedAppError)
@@ -377,7 +376,7 @@ IN_PROCESS_APPLICATION::LoadManagedApplication()
     // Wait on either the thread to complete or the event to be set
     dwResult = WaitForMultipleObjects(2, pHandles, FALSE, dwTimeout);
 
-    // It all timed out
+    // It all timed outs
     if (dwResult == WAIT_TIMEOUT)
     {
         // do we need kill the backend thread
@@ -396,6 +395,8 @@ IN_PROCESS_APPLICATION::LoadManagedApplication()
         hr = E_APPLICATION_ACTIVATION_EXEC_FAILURE;
         goto Finished;
     }
+    LogEventViewer(L"Loaded Managed Application");
+
 
     m_fManagedAppLoaded = TRUE;
 
@@ -594,6 +595,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         goto Finished;
     }
 
+    LogEventViewer(L"Called ExecuteApplication");
     // Split on ';', checking to see if dotnet.exe exists in any folders.
     pszDotnetExeLocation = wcstok_s(strFullPath.QueryStr(), L";", &strDelimeterContext);
 
@@ -650,6 +652,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         // could not find dotnet.exe, error out
         hr = ERROR_BAD_ENVIRONMENT;
     }
+    LogEventViewer(L"Found dotnet on path.");
 
     hr = strDotnetFolderLocation.Append(L"\\host\\fxr");
     if (FAILED(hr))
@@ -721,6 +724,9 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         goto Finished;
     }
 
+    LogEventViewer(L"Loaded hostfxr.");
+
+
     // Get the entry point for main
     pProc = (hostfxr_main_fn)GetProcAddress(hModule, "hostfxr_main");
     if (pProc == NULL) 
@@ -744,6 +750,8 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // We set a static so that managed code can call back into this instance and
     // set the callbacks
     s_Application = this;
+
+    LogEventViewer(L"Calling application.");
 
     m_ProcessExitCode = pProc(2, argv);
     if (m_ProcessExitCode != 0)
@@ -834,4 +842,34 @@ IN_PROCESS_APPLICATION::FindHighestDotNetVersion(
 
     // we check FAILED(hr) outside of function
     return hr;
+}
+
+HRESULT
+IN_PROCESS_APPLICATION::LogEventViewer(PCWSTR message)
+{
+    STRU                        struMessage;
+    PCWSTR                      apsz[1];
+
+    if (SUCCEEDED(struMessage.SafeSnwprintf(message)))
+    {
+        apsz[0] = struMessage.QueryStr();
+
+        //
+        // not checking return code because if ReportEvent
+        // fails, we cannot do anything.
+        //
+        if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+        {
+            ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
+                EVENTLOG_ERROR_TYPE,
+                0,
+                ASPNETCORE_EVENT_LOAD_CLR_FALIURE,
+                NULL,
+                1,
+                0,
+                apsz,
+                NULL);
+        }
+    }
+    return S_OK;
 }
