@@ -1,7 +1,7 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-#include "precomp.hxx"
+#include "..\precomp.hxx"
 
 FORWARDER_CONNECTION::FORWARDER_CONNECTION(
     VOID
@@ -23,7 +23,7 @@ FORWARDER_CONNECTION::Initialize(
         goto Finished;
     }
 
-    m_hConnection = WinHttpConnect(FORWARDING_HANDLER::sm_hSession,
+    m_hConnection = WinHttpConnect(g_hWinhttpSession,
                                    L"127.0.0.1",
                                    (USHORT) dwPort,
                                    0);

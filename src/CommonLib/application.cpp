@@ -28,6 +28,12 @@ APPLICATION::QueryConfig()
     return m_pConfig;
 }
 
+IHttpServer*
+APPLICATION::QueryHttpServer()
+{
+    return m_pHttpServer;
+}
+
 VOID
 APPLICATION::ReferenceApplication()
 const

@@ -6,9 +6,17 @@
 BOOL                g_fNsiApiNotSupported = FALSE;
 BOOL                g_fWebSocketSupported = FALSE;
 BOOL                g_fEnableReferenceCountTracing = FALSE;
+BOOL                g_fOutOfProcessInitialize = FALSE;
+BOOL                g_fOutOfProcessInitializeError = FALSE;
+BOOL                g_fWinHttpNonBlockingCallbackAvailable = FALSE;
 DWORD               g_OptionalWinHttpFlags = 0;
 DWORD               g_dwAspNetCoreDebugFlags = 0;
 DWORD               g_dwDebugFlags = 0;
+DWORD               g_dwTlsIndex = TLS_OUT_OF_INDEXES;
+SRWLOCK             g_srwLockRH;
+HINTERNET           g_hWinhttpSession = NULL;
+IHttpServer *       g_pHttpServer = NULL;
+HINSTANCE           g_hWinHttpModule;
 
 VOID
 InitializeGlobalConfiguration(
@@ -16,7 +24,6 @@ InitializeGlobalConfiguration(
 )
 {
     HKEY hKey;
-    OSVERSIONINFO osvi;
 
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
         L"SOFTWARE\\Microsoft\\IIS Extensions\\IIS AspNetCore Module\\Parameters",
@@ -85,6 +92,136 @@ InitializeGlobalConfiguration(
 
 }
 
+//
+// Global initialization routine for OutOfProcess
+//
+HRESULT
+EnsureOutOfProcessInitializtion( IHttpServer* pServer)
+{
+
+    DBG_ASSERT(pServer);
+
+    HRESULT hr = S_OK;
+    BOOL    fLocked = FALSE;
+
+    g_pHttpServer = pServer;
+
+    if (g_fOutOfProcessInitializeError)
+    {
+        hr = E_NOT_VALID_STATE;
+        goto Finished;
+    }
+    if (!g_fOutOfProcessInitialize)
+    {
+        AcquireSRWLockExclusive(&g_srwLockRH);
+        fLocked = TRUE;
+        if (g_fOutOfProcessInitializeError)
+        {
+            hr = E_NOT_VALID_STATE;
+            goto Finished;
+        }
+
+        if (g_fOutOfProcessInitialize)
+        {
+            // Done by another thread
+            goto Finished;
+        }
+
+        // Initialze some global variables here
+        InitializeGlobalConfiguration();
+
+        g_hWinHttpModule = GetModuleHandle(TEXT("winhttp.dll"));
+
+        hr = WINHTTP_HELPER::StaticInitialize();
+        if (FAILED(hr))
+        {
+            if (hr == HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND))
+            {
+                g_fWebSocketSupported = FALSE;
+            }
+            else
+            {
+                goto Finished;
+            }
+        }
+
+        g_hWinhttpSession = WinHttpOpen(L"",
+            WINHTTP_ACCESS_TYPE_NO_PROXY,
+            WINHTTP_NO_PROXY_NAME,
+            WINHTTP_NO_PROXY_BYPASS,
+            WINHTTP_FLAG_ASYNC);
+        if (g_hWinhttpSession == NULL)
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            goto Finished;
+        }
+
+        //
+        // Don't set non-blocking callbacks WINHTTP_OPTION_ASSURED_NON_BLOCKING_CALLBACKS, 
+        // as we will call WinHttpQueryDataAvailable to get response on the same thread
+        // that we received callback from Winhttp on completing sending/forwarding the request
+        // 
+
+        //
+        // Setup the callback function
+        //
+        if (WinHttpSetStatusCallback(g_hWinhttpSession,
+            FORWARDING_HANDLER::OnWinHttpCompletion,
+            (WINHTTP_CALLBACK_FLAG_ALL_COMPLETIONS |
+                WINHTTP_CALLBACK_STATUS_SENDING_REQUEST),
+            NULL) == WINHTTP_INVALID_STATUS_CALLBACK)
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            goto Finished;
+        }
+
+        //
+        // Make sure we see the redirects (rather than winhttp doing it
+        // automatically)
+        //
+        DWORD dwRedirectOption = WINHTTP_OPTION_REDIRECT_POLICY_NEVER;
+        if (!WinHttpSetOption(g_hWinhttpSession,
+            WINHTTP_OPTION_REDIRECT_POLICY,
+            &dwRedirectOption,
+            sizeof(dwRedirectOption)))
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            goto Finished;
+        }
+
+        g_dwTlsIndex = TlsAlloc();
+        if (g_dwTlsIndex == TLS_OUT_OF_INDEXES)
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            goto Finished;
+        }
+
+
+        hr = FORWARDING_HANDLER::StaticInitialize(g_fEnableReferenceCountTracing);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+
+        hr = WEBSOCKET_HANDLER::StaticInitialize(g_fEnableReferenceCountTracing);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+    }
+
+Finished:
+    if (FAILED(hr))
+    {
+        g_fOutOfProcessInitializeError = TRUE;
+    }
+    if (fLocked)
+    {
+        ReleaseSRWLockExclusive(&g_srwLockRH);
+    }
+    return hr;
+}
+
 BOOL APIENTRY DllMain(HMODULE hModule,
     DWORD  ul_reason_for_call,
     LPVOID lpReserved
@@ -94,8 +231,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     {
     case DLL_PROCESS_ATTACH:
         DisableThreadLibraryCalls(hModule);
-        // Initialze some global variables here
-        InitializeGlobalConfiguration();
+        InitializeSRWLock(&g_srwLockRH);
         break;
     default:
         break;
@@ -117,10 +253,27 @@ CreateApplication(
     if (pConfig->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
     {
         pApplication = new IN_PROCESS_APPLICATION(pServer, pConfig);
+        if (pApplication == NULL)
+        {
+            hr = HRESULT_FROM_WIN32(ERROR_OUTOFMEMORY);
+            goto Finished;
+        }
     }
     else if (pConfig->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_OUT_PROCESS)
     {
+        hr = EnsureOutOfProcessInitializtion(pServer);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+
         pApplication = new OUT_OF_PROCESS_APPLICATION(pServer, pConfig);
+        if (pApplication == NULL)
+        {
+            hr = HRESULT_FROM_WIN32(ERROR_OUTOFMEMORY);
+            goto Finished;
+        }
+
         hr = ((OUT_OF_PROCESS_APPLICATION*)pApplication)->Initialize();
         if (FAILED(hr))
         {
@@ -135,15 +288,7 @@ CreateApplication(
         goto Finished;
     }
 
-    if (pApplication == NULL)
-    {
-        hr = HRESULT_FROM_WIN32(ERROR_OUTOFMEMORY);
-        goto Finished;
-    }
-    else
-    {
-        *ppApplication = pApplication;
-    }
+    *ppApplication = pApplication;
 
 Finished:
     return hr;
@@ -153,6 +298,7 @@ HRESULT
 __stdcall
 CreateRequestHandler(
     _In_  IHttpContext       *pHttpContext,
+    _In_  HTTP_MODULE_ID     *pModuleId,
     _In_  APPLICATION        *pApplication,
     _Out_ REQUEST_HANDLER   **pRequestHandler
 )
@@ -164,11 +310,11 @@ CreateRequestHandler(
 
     if (pConfig->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
     {
-        pHandler = new IN_PROCESS_HANDLER(pHttpContext, pApplication);
+        pHandler = new IN_PROCESS_HANDLER(pHttpContext, pModuleId, pApplication);
     }
     else if (pConfig->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_OUT_PROCESS)
     {
-        pHandler = new FORWARDING_HANDLER(pHttpContext, pApplication);
+        pHandler = new FORWARDING_HANDLER(pHttpContext, pModuleId, pApplication);
     }
     else
     {
@@ -185,4 +331,3 @@ CreateRequestHandler(
     }
     return hr;
 }
-

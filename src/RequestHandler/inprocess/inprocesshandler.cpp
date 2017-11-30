@@ -1,9 +1,10 @@
 #include "..\precomp.hxx"
 
 IN_PROCESS_HANDLER::IN_PROCESS_HANDLER(
-    _In_ IHttpContext *pW3Context,
-    _In_ APPLICATION  *pApplication
-): REQUEST_HANDLER(pW3Context, pApplication)
+    _In_ IHttpContext   *pW3Context,
+    _In_ HTTP_MODULE_ID *pModuleId,
+    _In_ APPLICATION    *pApplication
+): REQUEST_HANDLER(pW3Context, pModuleId, pApplication)
 {
     m_fManagedRequestComplete = FALSE;
 }
@@ -74,6 +75,14 @@ IN_PROCESS_HANDLER::OnAsyncCompletion(
 
         return application->OnAsyncCompletion(m_pW3Context, cbCompletion, hrCompletionStatus, this);
     }
+}
+
+VOID
+IN_PROCESS_HANDLER::TerminateRequest(
+    bool    fClientInitiated
+)
+{
+    //todo
 }
 
 PVOID

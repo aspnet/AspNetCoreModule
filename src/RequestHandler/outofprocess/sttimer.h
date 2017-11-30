@@ -1,6 +1,8 @@
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
+#pragma once
+
 #ifndef _STTIMER_H
 #define _STTIMER_H
 

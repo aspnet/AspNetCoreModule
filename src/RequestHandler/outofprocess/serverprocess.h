@@ -43,7 +43,8 @@ public:
         _In_ BOOL                  fStdoutLogEnabled,
         _In_ STRU                 *pstruStdoutLogFile,
         _In_ STRU                 *pszAppPhysicalPath,
-        _In_ STRU                 *pszAppPath
+        _In_ STRU                 *pszAppPath,
+        _In_ STRU                 *pszAppVirtualPath
         );
 
 
@@ -69,41 +70,40 @@ public:
         VOID
     );
 
-    DWORD 
+    DWORD
     GetPort()
     {
         return m_dwPort;
     }
 
-    //VOID
-    //ReferenceServerProcess(
-    //    VOID
-    //)
-    //{
-    //    InterlockedIncrement(&m_cRefs);
-    //}
+    VOID
+    ReferenceServerProcess(
+        VOID
+    )
+    {
+        InterlockedIncrement(&m_cRefs);
+    }
 
-    //VOID
-    //DereferenceServerProcess(
-    //    VOID
-    //)
-    //{
-    //    _ASSERT(m_cRefs != 0 );
-    //    
-    //    if (InterlockedDecrement(&m_cRefs) == 0)
-    //    {
-    //        delete this;
-    //    }
-    //}
+    VOID
+    DereferenceServerProcess(
+        VOID
+    )
+    {
+        _ASSERT(m_cRefs != 0 );
+        if (InterlockedDecrement(&m_cRefs) == 0)
+        {
+            delete this;
+        }
+    }
 
     virtual 
     ~SERVER_PROCESS();
 
-//    HRESULT 
-//    HandleProcessExit(
-//        VOID
-//    );
-//
+    HRESULT 
+    HandleProcessExit(
+        VOID
+    );
+
     FORWARDER_CONNECTION*
     QueryWinHttpConnection(
         VOID
@@ -112,55 +112,37 @@ public:
         return m_pForwarderConnection;
     }
 
-//    static
-//    VOID
-//    CALLBACK
-//    TimerCallback(
-//        _In_ PTP_CALLBACK_INSTANCE Instance,
-//        _In_ PVOID Context,
-//        _In_ PTP_TIMER Timer
-//    );
-//
-//    LPCWSTR
-//    QueryPortStr()
-//    {
-//        return m_struPort.QueryStr();
-//    }
-//
-//    LPCWSTR
-//    QueryFullLogPath()
-//    {
-//        return m_struFullLogFile.QueryStr();
-//    }
-//
+    static
+    VOID
+    CALLBACK
+    TimerCallback(
+        _In_ PTP_CALLBACK_INSTANCE Instance,
+        _In_ PVOID Context,
+        _In_ PTP_TIMER Timer
+    );
+
     LPCSTR
     QueryGuid()
     {
         return m_straGuid.QueryStr();
     }
-//
-//    DWORD
-//    QueryProcessGroupId()
-//    {
-//        return m_dwProcessId;
-//    }
-//
-//    VOID
-//    SendSignal( 
-//        VOID
-//    );
-//
-//private:
-//
-//    BOOL 
-//    IsDebuggerIsAttached(
-//        VOID
-//    );
-//
-//    HRESULT
-//    StopAllProcessesInJobObject(
-//        VOID
-//    );
+
+    VOID
+    SendSignal( 
+        VOID
+    );
+
+private:
+
+    BOOL 
+    IsDebuggerIsAttached(
+        VOID
+    );
+
+    HRESULT
+    StopAllProcessesInJobObject(
+        VOID
+    );
 
     HRESULT
     SetupStdHandles(
@@ -174,54 +156,53 @@ public:
         _Out_ BOOL      * pfReady
     );
 
-//    HRESULT 
-//    RegisterProcessWait(
-//        _In_ PHANDLE phWaitHandle,
-//        _In_ HANDLE  hProcessToWaitOn
-//    );
-//
-//    HRESULT 
-//    GetChildProcessHandles(
-//        VOID
-//    );
+    HRESULT 
+    RegisterProcessWait(
+        _In_ PHANDLE phWaitHandle,
+        _In_ HANDLE  hProcessToWaitOn
+    );
+
+    HRESULT 
+    GetChildProcessHandles(
+        VOID
+    );
 
     HRESULT
     SetupListenPort(
         ENVIRONMENT_VAR_HASH    *pEnvironmentVarTable
     );
 
-//    HRESULT
-//    SetupAppPath(
-//        ENVIRONMENT_VAR_HASH*   pEnvironmentVarTable
-//    );
-//
-//    HRESULT
-//    SetupAppToken(
-//        ENVIRONMENT_VAR_HASH*   pEnvironmentVarTable
-//    );
+    HRESULT
+    SetupAppPath(
+        ENVIRONMENT_VAR_HASH*   pEnvironmentVarTable
+    );
+
+    HRESULT
+    SetupAppToken(
+        ENVIRONMENT_VAR_HASH*   pEnvironmentVarTable
+    );
 
     HRESULT
     InitEnvironmentVariablesTable(
         ENVIRONMENT_VAR_HASH**   pEnvironmentVarTable
     );
-//
-//    HRESULT
-//    OutputEnvironmentVariables(
-//        MULTISZ*                pmszOutput,
-//        ENVIRONMENT_VAR_HASH*   pEnvironmentVarTable
-//    );
-//
-//    HRESULT
-//    SetupCommandLine(
-//        STRU*    pstrCommandLine
-//    );
-//
-//    HRESULT
-//    PostStartCheck(
-//        const STRU* const pStruCommandline,
-//        STRU*             pStruErrorMessage
-//    );
-//
+
+    HRESULT
+    OutputEnvironmentVariables(
+        MULTISZ*                pmszOutput,
+        ENVIRONMENT_VAR_HASH*   pEnvironmentVarTable
+    );
+
+    HRESULT
+    SetupCommandLine(
+        STRU*    pstrCommandLine
+    );
+
+    HRESULT
+    PostStartCheck(
+        VOID
+    );
+
     HRESULT
     GetRandomPort(
         DWORD*    pdwPickedPort,
@@ -249,27 +230,27 @@ public:
 //    Finished:
 //        return digits;
 //    }
-//
-//    static
-//    VOID
-//    SendShutDownSignal(
-//        LPVOID lpParam
-//        );
-//
-//    VOID
-//    SendShutDownSignalInternal(
-//        VOID
-//    );
-//
-//    HRESULT
-//    SendShutdownHttpMessage(
-//        VOID
-//    );
-//
-//    VOID
-//    TerminateBackendProcess(
-//        VOID
-//    );
+
+    static
+    VOID
+    SendShutDownSignal(
+        LPVOID lpParam
+        );
+
+    VOID
+    SendShutDownSignalInternal(
+        VOID
+    );
+
+    HRESULT
+    SendShutdownHttpMessage(
+        VOID
+    );
+
+    VOID
+    TerminateBackendProcess(
+        VOID
+    );
 
     FORWARDER_CONNECTION   *m_pForwarderConnection;
     BOOL                    m_fStdoutLogEnabled;
@@ -277,18 +258,19 @@ public:
     BOOL                    m_fBasicAuthEnabled;
     BOOL                    m_fAnonymousAuthEnabled;
 
-    //STTIMER                 m_Timer;
+    STTIMER                 m_Timer;
     SOCKET                  m_socket;
 
     STRU                    m_struLogFile;
     STRU                    m_struFullLogFile;
     STRU                    m_ProcessPath;
     STRU                    m_Arguments;
-    STRU                    m_struAppPath;
-    STRU                    m_struAppFullPath;
+    STRU                    m_struAppVirtualPath;  // e.g., '/' for site
+    STRU                    m_struAppFullPath;     // e.g.,  /LM/W3SVC/4/ROOT/Inproc
+    STRU                    m_struPhysicalPath;    // e.g., c:/test/mysite
     STRU                    m_struPort;
-    STRU                    m_struRootApplicationPath;
-    STRU                    m_struPhysicalPath;
+    STRU                    m_struCommandLine;
+
     volatile LONG           m_lStopping;
     volatile BOOL           m_fReady;
     mutable LONG            m_cRefs;

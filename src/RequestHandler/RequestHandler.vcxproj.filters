@@ -29,11 +29,22 @@
     <ClCompile Include="outofprocess\serverprocess.cxx">
       <Filter>OutOfProcess</Filter>
     </ClCompile>
+    <ClCompile Include="outofprocess\forwarderconnection.cxx">
+      <Filter>OutOfProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="outofprocess\responseheaderhash.cxx">
+      <Filter>OutOfProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="outofprocess\websockethandler.cxx">
+      <Filter>OutOfProcess</Filter>
+    </ClCompile>
+    <ClCompile Include="outofprocess\winhttphelper.cxx">
+      <Filter>OutOfProcess</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precomp.hxx" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include=".\outofprocess\sttimer.h" />
     <ClInclude Include=".\inprocess\fx_ver.h">
       <Filter>InProcess</Filter>
     </ClInclude>
@@ -58,9 +69,26 @@
     <ClInclude Include="outofprocess\serverprocess.h">
       <Filter>OutOfProcess</Filter>
     </ClInclude>
+    <ClInclude Include="outofprocess\forwarderconnection.h">
+      <Filter>OutOfProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="outofprocess\responseheaderhash.h">
+      <Filter>OutOfProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="outofprocess\websockethandler.h">
+      <Filter>OutOfProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="outofprocess\winhttphelper.h">
+      <Filter>OutOfProcess</Filter>
+    </ClInclude>
+    <ClInclude Include=".\outofprocess\sttimer.h">
+      <Filter>OutOfProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="disconnectcontext.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RequestHandler.rc" />
+    <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Source.def" />

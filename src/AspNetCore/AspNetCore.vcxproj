@@ -167,7 +167,6 @@
     <ClInclude Include="Inc\resource.h" />
     <ClInclude Include="Inc\applicationmanager.h" />
     <ClInclude Include="Inc\filewatcher.h" />
-    <ClInclude Include="Inc\protocolconfig.h" />
     <ClInclude Include="Inc\proxymodule.h" />
     <ClInclude Include="Src\precomp.hxx" />
   </ItemGroup>
@@ -177,7 +176,6 @@
     <ClCompile Include="Src\dllmain.cpp" />
     <ClCompile Include="Src\filewatcher.cxx" />
     <ClCompile Include="src\globalmodule.cpp" />
-    <ClCompile Include="Src\protocolconfig.cxx" />
     <ClCompile Include="Src\proxymodule.cxx" />
   </ItemGroup>
   <Target Name="CreateVersionHeader" BeforeTargets="PrepareForBuild">

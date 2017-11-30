@@ -373,7 +373,7 @@ Finished:
         //if (SUCCEEDED(strEventMsg.SafeSnwprintf(
         //    ASPNETCORE_EVENT_LOAD_CLR_FALIURE_MSG,
         //    m_pConfiguration->QueryApplicationPath()->QueryStr(),
-        //    m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
+        //    m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(),
         //    hr)))
         //{
         //    apsz[0] = strEventMsg.QueryStr();
@@ -584,7 +584,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // The first argument is mostly ignored
     argv[0] = strDotnetExeLocation.QueryStr();
     UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
-        m_pConfig->QueryApplicationFullPath()->QueryStr(),
+        m_pConfig->QueryApplicationPhysicalPath()->QueryStr(),
         &strApplicationFullPath);
     argv[1] = strApplicationFullPath.QueryStr();
 
@@ -614,7 +614,7 @@ Finished:
         //if (SUCCEEDED(strEventMsg.SafeSnwprintf(
         //    ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT_MSG,
         //    m_pConfiguration->QueryApplicationPath()->QueryStr(),
-        //    m_pConfiguration->QueryApplicationFullPath()->QueryStr(),
+        //    m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(),
         //    m_ProcessExitCode
         //)))
         //{

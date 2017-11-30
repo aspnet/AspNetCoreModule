@@ -13,20 +13,20 @@ public:
     virtual 
     ~PROCESS_MANAGER();
 
-    //VOID
-    //ReferenceProcessManager() const
-    //{
-    //    InterlockedIncrement(&m_cRefs);
-    //}
+    VOID
+    ReferenceProcessManager() const
+    {
+        InterlockedIncrement(&m_cRefs);
+    }
 
-    //VOID
-    //DereferenceProcessManager() const
-    //{
-    //    if (InterlockedDecrement(&m_cRefs) == 0)
-    //    {
-    //        delete this;
-    //    }
-    //}
+    VOID
+    DereferenceProcessManager() const
+    {
+        if (InterlockedDecrement(&m_cRefs) == 0)
+        {
+            delete this;
+        }
+    }
 
     HRESULT 
     GetProcess(
@@ -48,7 +48,7 @@ public:
     VOID
     SendShutdownSignal()
     {
-        /*AcquireSRWLockExclusive( &m_srwLock );
+        AcquireSRWLockExclusive( &m_srwLock );
 
         for(DWORD i = 0; i < m_dwProcessesPerApplication; ++i )
         {
@@ -61,7 +61,7 @@ public:
             }
         }
 
-        ReleaseSRWLockExclusive( &m_srwLock );*/
+        ReleaseSRWLockExclusive( &m_srwLock );
     }
 
     VOID 
@@ -69,22 +69,22 @@ public:
         SERVER_PROCESS* pServerProcess
     )
     {
-       /* AcquireSRWLockExclusive( &m_srwLock );
+        AcquireSRWLockExclusive( &m_srwLock );
 
         ShutdownProcessNoLock( pServerProcess );
 
-        ReleaseSRWLockExclusive( &m_srwLock );*/
+        ReleaseSRWLockExclusive( &m_srwLock );
     }
 
     VOID 
     ShutdownAllProcesses(
     )
     {
-       /* AcquireSRWLockExclusive( &m_srwLock );
+        AcquireSRWLockExclusive( &m_srwLock );
 
         ShutdownAllProcessesNoLock();
 
-        ReleaseSRWLockExclusive( &m_srwLock );*/
+        ReleaseSRWLockExclusive( &m_srwLock );
     }
 
     VOID 
@@ -132,42 +132,42 @@ private:
         return m_cRapidFailCount > dwRapidFailsPerMinute;
     }
 
-    //VOID 
-    //ShutdownProcessNoLock(
-    //    SERVER_PROCESS* pServerProcess
-    //)
-    //{
-    //    for(DWORD i = 0; i < m_dwProcessesPerApplication; ++i )
-    //    {
-    //        if( m_ppServerProcessList != NULL && 
-    //            m_ppServerProcessList[i] != NULL && 
-    //            m_ppServerProcessList[i]->GetPort() == pServerProcess->GetPort() )
-    //        {
-    //            // shutdown pServerProcess if not already shutdown.
-    //            m_ppServerProcessList[i]->StopProcess();
-    //            m_ppServerProcessList[i]->DereferenceServerProcess();
-    //            m_ppServerProcessList[i] = NULL;
-    //        }
-    //    }
-    //}
+    VOID 
+    ShutdownProcessNoLock(
+        SERVER_PROCESS* pServerProcess
+    )
+    {
+        for(DWORD i = 0; i < m_dwProcessesPerApplication; ++i )
+        {
+            if( m_ppServerProcessList != NULL && 
+                m_ppServerProcessList[i] != NULL && 
+                m_ppServerProcessList[i]->GetPort() == pServerProcess->GetPort() )
+            {
+                // shutdown pServerProcess if not already shutdown.
+                m_ppServerProcessList[i]->StopProcess();
+                m_ppServerProcessList[i]->DereferenceServerProcess();
+                m_ppServerProcessList[i] = NULL;
+            }
+        }
+    }
 
-    //VOID 
-    //ShutdownAllProcessesNoLock(
-    //    VOID
-    //)
-    //{
-    //    for(DWORD i = 0; i < m_dwProcessesPerApplication; ++i )
-    //    {
-    //        if( m_ppServerProcessList != NULL &&
-    //            m_ppServerProcessList[i] != NULL )
-    //        {
-    //            // shutdown pServerProcess if not already shutdown.
-    //            m_ppServerProcessList[i]->SendSignal();
-    //            m_ppServerProcessList[i]->DereferenceServerProcess();
-    //            m_ppServerProcessList[i] = NULL;
-    //        }
-    //    }
-    //}
+    VOID 
+    ShutdownAllProcessesNoLock(
+        VOID
+    )
+    {
+        for(DWORD i = 0; i < m_dwProcessesPerApplication; ++i )
+        {
+            if( m_ppServerProcessList != NULL &&
+                m_ppServerProcessList[i] != NULL )
+            {
+                // shutdown pServerProcess if not already shutdown.
+                m_ppServerProcessList[i]->SendSignal();
+                m_ppServerProcessList[i]->DereferenceServerProcess();
+                m_ppServerProcessList[i] = NULL;
+            }
+        }
+    }
 
     volatile LONG                     m_cRapidFailCount;
     DWORD                             m_dwRapidFailTickStart;

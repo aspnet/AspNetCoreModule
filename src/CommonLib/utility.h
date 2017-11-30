@@ -85,6 +85,13 @@ public:
         _In_  LPCWSTR pszPath
     );
 
+    static
+    HRESULT
+    RevomeStaleFiles(
+        _In_  LPCWSTR pszDirPath,
+        _In_  DWORD dwNumberOfKeptFiles
+    );
+
 private:
 
     UTILITY() {}

@@ -3,13 +3,13 @@
 
 REQUEST_HANDLER::REQUEST_HANDLER(
     _In_ IHttpContext *pW3Context,
+    _In_ HTTP_MODULE_ID  *pModuleId,
     _In_ APPLICATION  *pApplication)
     : m_cRefs(1)
 {
-    //InitializeSRWLock(&m_srwLock);
-    
     m_pW3Context = pW3Context;
     m_pApplication = pApplication;
+    m_pModuleId = *pModuleId;
 }
 
 

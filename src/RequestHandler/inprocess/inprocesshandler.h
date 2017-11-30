@@ -4,25 +4,32 @@ class IN_PROCESS_HANDLER : public REQUEST_HANDLER
 {
 public:
     IN_PROCESS_HANDLER(
-        _In_ IHttpContext *pW3Context,
-        _In_ APPLICATION  *pApplication);
+        _In_ IHttpContext   *pW3Context,
+        _In_ HTTP_MODULE_ID *pModuleId,
+        _In_ APPLICATION    *pApplication);
 
     ~IN_PROCESS_HANDLER();
 
     __override
-    REQUEST_NOTIFICATION_STATUS
-    OnExecuteRequestHandler();
+        REQUEST_NOTIFICATION_STATUS
+        OnExecuteRequestHandler();
 
     __override
-    REQUEST_NOTIFICATION_STATUS
-    OnAsyncCompletion(
-        DWORD       cbCompletion,
-        HRESULT     hrCompletionStatus
+        REQUEST_NOTIFICATION_STATUS
+        OnAsyncCompletion(
+            DWORD       cbCompletion,
+            HRESULT     hrCompletionStatus
+        );
+
+    __override
+    VOID
+    TerminateRequest(
+        bool    fClientInitiated
     );
 
     PVOID
     QueryManagedHttpContext(
-        VOID
+         VOID
     );
 
     VOID

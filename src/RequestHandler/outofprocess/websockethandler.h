@@ -3,6 +3,7 @@
 
 #pragma once
 
+extern IHttpServer *    g_pHttpServer;
 class FORWARDING_HANDLER;
 
 class WEBSOCKET_HANDLER
@@ -215,6 +216,6 @@ private:
     static
     SRWLOCK             sm_RequestsListLock;
 
-    //static
-    //TRACE_LOG *         sm_pTraceLog;
+    static
+    TRACE_LOG *         sm_pTraceLog;
 };

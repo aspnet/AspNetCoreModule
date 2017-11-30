@@ -12,7 +12,12 @@ OUT_OF_PROCESS_APPLICATION::OUT_OF_PROCESS_APPLICATION(
 
 OUT_OF_PROCESS_APPLICATION::~OUT_OF_PROCESS_APPLICATION()
 {
-    // todo
+    if (m_pProcessManager != NULL)
+    {
+        m_pProcessManager->ShutdownAllProcesses();
+        m_pProcessManager->DereferenceProcessManager();
+        m_pProcessManager = NULL;
+    }
 }
 
 HRESULT
@@ -52,5 +57,11 @@ __override
 VOID
 OUT_OF_PROCESS_APPLICATION::ShutDown()
 {
+    if (m_pProcessManager != NULL)
+    {
+        m_pProcessManager->ShutdownAllProcesses();
+        m_pProcessManager->DereferenceProcessManager();
+        m_pProcessManager = NULL;
+    }
     //todo
 }

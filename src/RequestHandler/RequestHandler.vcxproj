@@ -173,9 +173,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="disconnectcontext.h" />
+    <ClInclude Include="outofprocess\forwarderconnection.h" />
     <ClInclude Include="outofprocess\processmanager.h" />
     <ClInclude Include="outofprocess\protocolconfig.h" />
+    <ClInclude Include="outofprocess\responseheaderhash.h" />
     <ClInclude Include="outofprocess\serverprocess.h" />
+    <ClInclude Include="outofprocess\websockethandler.h" />
+    <ClInclude Include="outofprocess\winhttphelper.h" />
     <ClInclude Include="precomp.hxx" />
     <ClInclude Include="resource.h" />
     <ClInclude Include=".\inprocess\fx_ver.h" />
@@ -193,9 +198,13 @@
     <ClCompile Include=".\outofprocess\forwardinghandler.cpp" />
     <ClCompile Include=".\outofprocess\outprocessapplication.cpp" />
     <ClCompile Include="managedexports.cxx" />
+    <ClCompile Include="outofprocess\forwarderconnection.cxx" />
     <ClCompile Include="outofprocess\processmanager.cxx" />
     <ClCompile Include="outofprocess\protocolconfig.cxx" />
+    <ClCompile Include="outofprocess\responseheaderhash.cxx" />
     <ClCompile Include="outofprocess\serverprocess.cxx" />
+    <ClCompile Include="outofprocess\websockethandler.cxx" />
+    <ClCompile Include="outofprocess\winhttphelper.cxx" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CommonLib\CommonLib.vcxproj">
@@ -207,6 +216,7 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RequestHandler.rc" />
+    <ResourceCompile Include="Resource.rc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Source.def" />

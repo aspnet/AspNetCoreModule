@@ -45,10 +45,8 @@ WEBSOCKET_HANDLER::WEBSOCKET_HANDLER() :
     _fIndicateCompletionToIis(FALSE),
     _fReceivedCloseMsg(FALSE)
 {
-    //DebugPrintf (ASPNETCORE_DEBUG_FLAG_INFO, "WEBSOCKET_HANDLER::WEBSOCKET_HANDLER");
-
+    DebugPrintf (ASPNETCORE_DEBUG_FLAG_INFO, "WEBSOCKET_HANDLER::WEBSOCKET_HANDLER");
     InitializeCriticalSectionAndSpinCount(&_RequestLock, 1000);
-
     InsertRequest();
 }
 
@@ -57,7 +55,7 @@ WEBSOCKET_HANDLER::Terminate(
     VOID
     )
 {
-    //DebugPrintf (ASPNETCORE_DEBUG_FLAG_INFO, "WEBSOCKET_HANDLER::Terminate");
+    DebugPrintf (ASPNETCORE_DEBUG_FLAG_INFO, "WEBSOCKET_HANDLER::Terminate");
 
     RemoveRequest();
     _fCleanupInProgress = TRUE;
@@ -103,7 +101,6 @@ WEBSOCKET_HANDLER::StaticInitialize(
         // If tracing is enabled, keep track of all websocket requests
         // for debugging purposes.
         //
-
         InitializeListHead (&sm_RequestsListHead);
         sm_pTraceLog = CreateRefTraceLog( 10000, 0 );
     }
@@ -137,9 +134,7 @@ WEBSOCKET_HANDLER::InsertRequest(
     if (g_fEnableReferenceCountTracing)
     {
         AcquireSRWLockExclusive(&sm_RequestsListLock);
-
         InsertTailList(&sm_RequestsListHead, &_listEntry);
-
         ReleaseSRWLockExclusive( &sm_RequestsListLock);
     }
 }
@@ -153,9 +148,7 @@ WEBSOCKET_HANDLER::RemoveRequest(
     if (g_fEnableReferenceCountTracing)
     {
         AcquireSRWLockExclusive(&sm_RequestsListLock);
-
         RemoveEntryList(&_listEntry);
-
         ReleaseSRWLockExclusive( &sm_RequestsListLock);
     }
 }
@@ -166,7 +159,6 @@ WEBSOCKET_HANDLER::IncrementOutstandingIo(
     )
 {
     InterlockedIncrement(&_dwOutstandingIo);
-
     if (sm_pTraceLog)
     {
         WriteRefTraceLog(sm_pTraceLog, _dwOutstandingIo, this);
@@ -213,8 +205,8 @@ WEBSOCKET_HANDLER::IndicateCompletionToIIS(
 
 --*/
 {
-    /*DebugPrintf (ASPNETCORE_DEBUG_FLAG_INFO,
-            "WEBSOCKET_HANDLER::IndicateCompletionToIIS");*/
+    DebugPrintf (ASPNETCORE_DEBUG_FLAG_INFO,
+            "WEBSOCKET_HANDLER::IndicateCompletionToIIS");
 
     _pHandler->SetStatus(FORWARDER_DONE);
 
@@ -254,14 +246,12 @@ Routine Description:
     _pHandler = pHandler;
 
     EnterCriticalSection(&_RequestLock);
-
     DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
         "WEBSOCKET_HANDLER::ProcessRequest");
 
     //
     // Cache the points to IHttpContext3
     //
-
     hr = HttpGetExtendedInterface(g_pHttpServer, 
             pHttpContext, 
             &_pHttpContext);
@@ -285,7 +275,6 @@ Routine Description:
     //
     // Get Handle to Winhttp's websocket context.
     //
-
     _hWebSocketRequest = WINHTTP_HELPER::sm_pfnWinHttpWebSocketCompleteUpgrade(
         hRequest,
         (DWORD_PTR) pHandler);
@@ -331,7 +320,6 @@ Routine Description:
     //
     // Initiate Read on IIS
     //
-
     hr = DoIisWebSocketReceive();
     if (FAILED(hr))
     {
@@ -374,7 +362,6 @@ Routine Description:
 --*/
 {
     HRESULT hr = S_OK;
-
     DWORD   dwBufferSize = RECEIVE_BUFFER_SIZE;
     BOOL    fUtf8Encoded;
     BOOL    fFinalFragment;
@@ -398,10 +385,8 @@ Routine Description:
     if (FAILED(hr))
     {
         DecrementOutstandingIo();
-
         DebugPrintf(ASPNETCORE_DEBUG_FLAG_ERROR,
             "WEBSOCKET_HANDLER::DoIisWebSocketSend failed with %08x", hr);
-
     }
 
     return hr;
@@ -438,12 +423,9 @@ Routine Description:
     if (dwError != NO_ERROR)
     {
         DecrementOutstandingIo();
-
         hr = HRESULT_FROM_WIN32(dwError);
-
         DebugPrintf(ASPNETCORE_DEBUG_FLAG_ERROR,
             "WEBSOCKET_HANDLER::DoWinHttpWebSocketReceive failed with %08x", hr);
-
     }
 
     return hr;
@@ -463,7 +445,6 @@ Routine Description:
 --*/
 {
     HRESULT hr = S_OK;
-
     BOOL    fUtf8Encoded = FALSE;
     BOOL    fFinalFragment = FALSE;
     BOOL    fClose = FALSE;
@@ -498,7 +479,6 @@ Routine Description:
         //
         // Convert close reason to WCHAR
         //
-
         hr = strCloseReason.CopyA((PCSTR)&_WinHttpReceiveBuffer,
             dwReceived);
         if (FAILED(hr))
@@ -517,7 +497,6 @@ Routine Description:
         //
         // Send close to IIS.
         //
-
         hr = _pWebSocketContext->SendConnectionClose(
             TRUE,
             uStatus,
@@ -542,7 +521,6 @@ Routine Description:
         //
         // Do the Send.
         //
-
         hr = _pWebSocketContext->WriteFragment(
                 &_WinHttpReceiveBuffer,
                 &cbData,
@@ -552,7 +530,6 @@ Routine Description:
                 OnWriteIoCompletion,
                 this,
                 NULL);
-
     }
 
     if (FAILED(hr))
@@ -598,7 +575,6 @@ Routine Description:
         //
         // Get Close status from IIS.
         //
-
         hr = _pWebSocketContext->GetCloseStatus(&uStatus, 
                 &pszReason);
 
@@ -610,7 +586,6 @@ Routine Description:
         //
         // Convert status to UTF8
         //
-
         hr = strCloseReason.CopyWToUTF8Unescaped(pszReason);
         if (FAILED(hr))
         {
@@ -622,7 +597,6 @@ Routine Description:
         //
         // Send Close.
         //
-
         dwError = WINHTTP_HELPER::sm_pfnWinHttpWebSocketShutdown(
             _hWebSocketRequest,
             uStatus,
@@ -635,7 +609,6 @@ Routine Description:
             // Call will complete asynchronously, return.
             // ignore error.
             //
-
             DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
                 "WEBSOCKET_HANDLER::DoWinhttpWebSocketSend IO_PENDING");
 
@@ -648,7 +621,6 @@ Routine Description:
                 //
                 // Call completed synchronously.
                 //
-
                 DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
                 "WEBSOCKET_HANDLER::DoWinhttpWebSocketSend Shutdown successful.");
             }
@@ -810,7 +782,6 @@ Finished:
     // The handler object can be gone after this call.
     // do not reference it after this statement.
     //
-
     DecrementOutstandingIo();
 
     return hr;
@@ -841,7 +812,6 @@ WEBSOCKET_HANDLER::OnWinHttpIoError(
         hr, pCompletionStatus->AsyncResult.dwResult);
 
     Cleanup(ServerDisconnect);
-
     DecrementOutstandingIo();
 
     return hr;

@@ -140,11 +140,11 @@ public:
     }
 
     STRU*
-    QueryApplicationFullPath(
+    QueryApplicationPhysicalPath(
         VOID
     )
     {
-        return &m_struApplicationFullPath;
+        return &m_struApplicationPhysicalPath;
     }
 
     STRU*
@@ -250,14 +250,14 @@ private:
     DWORD                  m_dwShutdownTimeLimitInMS;
     DWORD                  m_dwRapidFailsPerMinute;
     DWORD                  m_dwProcessesPerApplication;
-    STRU                   m_struApplication;
     STRU                   m_struArguments;
     STRU                   m_struProcessPath;
     STRU                   m_struStdoutLogFile;
-    STRU                   m_struApplicationFullPath;
-    STRU                   m_strHostingModel;
+    STRU                   m_struApplication;
+    STRU                   m_struApplicationPhysicalPath;
     STRU                   m_struApplicationVirtualPath;
     STRU                   m_struConfigPath;
+    STRU                   m_strHostingModel;
     BOOL                   m_fStdoutLogEnabled;
     BOOL                   m_fForwardWindowsAuthToken;
     BOOL                   m_fDisableStartUpErrorPage;

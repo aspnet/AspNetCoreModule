@@ -15,6 +15,7 @@ typedef
 HRESULT
 (WINAPI * PFN_ASPNETCORE_CREATE_REQUEST_HANDLER)(
     _In_  IHttpContext       *pHttpContext,
+    _In_  HTTP_MODULE_ID     *pModuleId,
     _In_  APPLICATION        *pApplication,
     _Out_ REQUEST_HANDLER   **pRequestHandler
     );
@@ -113,9 +114,6 @@ public:
     {
         return m_fAppOfflineFound;
     }
-
-    //VOID
-    //OnAppOfflineHandleChange();
 
     VOID
     UpdateAppOfflineFileHandle();

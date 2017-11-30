@@ -113,7 +113,7 @@ PROCESS_MANAGER::GetProcess(
     PCWSTR           apsz[1];
     STACK_STRU(strEventMsg, 256);
     DWORD            dwProcessIndex = 0;
-    SERVER_PROCESS **ppSelectedServerProcess = NULL;
+    SERVER_PROCESS  *pSelectedServerProcess = NULL;
 
     if (!m_fServerProcessListReady)
     {
@@ -146,23 +146,19 @@ PROCESS_MANAGER::GetProcess(
     //
     // round robin through to the next available process.
     //
-
     dwProcessIndex = (DWORD)InterlockedIncrement64((LONGLONG*)&m_dwRouteToProcessIndex);
     dwProcessIndex = dwProcessIndex % m_dwProcessesPerApplication;
-    ppSelectedServerProcess = &m_ppServerProcessList[dwProcessIndex];
 
-    if (*ppSelectedServerProcess != NULL &&
+    if (m_ppServerProcessList[dwProcessIndex] != NULL &&
         m_ppServerProcessList[dwProcessIndex]->IsReady())
     {
-        //m_ppServerProcessList[dwProcessIndex]->ReferenceServerProcess();
         *ppServerProcess = m_ppServerProcessList[dwProcessIndex];
         goto Finished;
     }
 
     ReleaseSRWLockShared(&m_srwLock);
     fSharedLock = FALSE;
-    //    // should make the lock per process so that we can start processes simultaneously ?
-
+    // should make the lock per process so that we can start processes simultaneously ?
     if (m_ppServerProcessList[dwProcessIndex] == NULL ||
         !m_ppServerProcessList[dwProcessIndex]->IsReady())
     {
@@ -226,14 +222,14 @@ PROCESS_MANAGER::GetProcess(
 
         if (m_ppServerProcessList[dwProcessIndex] == NULL)
         {
-            m_ppServerProcessList[dwProcessIndex] = new SERVER_PROCESS();
-            if (m_ppServerProcessList[dwProcessIndex] == NULL)
+            pSelectedServerProcess = new SERVER_PROCESS();
+            if (pSelectedServerProcess == NULL)
             {
                 hr = E_OUTOFMEMORY;
                 goto Finished;
             }
 
-            hr = m_ppServerProcessList[dwProcessIndex]->Initialize(
+            hr = pSelectedServerProcess->Initialize(
                 this,                                   //ProcessManager
                 pConfig->QueryProcessPath(),            //
                 pConfig->QueryArguments(),              //
@@ -245,42 +241,36 @@ PROCESS_MANAGER::GetProcess(
                 pConfig->QueryEnvironmentVariables(),
                 pConfig->QueryStdoutLogEnabled(),
                 pConfig->QueryStdoutLogFile(),
-                pConfig->QueryApplicationFullPath(),   // physical path
-                pConfig->QueryApplicationPath()        // app path
+                pConfig->QueryApplicationPhysicalPath(),   // physical path
+                pConfig->QueryApplicationPath(),           // app path
+                pConfig->QueryApplicationVirtualPath()     // App relative virtual path
             );
             if (FAILED(hr))
             {
                 goto Finished;
             }
 
-            hr = m_ppServerProcessList[dwProcessIndex]->StartProcess();
+            hr = pSelectedServerProcess->StartProcess();
             if (FAILED(hr))
             {
                 goto Finished;
             }
         }
-        //
-        //        if( !m_ppServerProcessList[dwProcessIndex]->IsReady() )
-        //        { 
-        //            hr = HRESULT_FROM_WIN32( ERROR_CREATE_FAILED );
-        //            goto Finished;
-        //        }
-        //
-        //        m_ppServerProcessList[dwProcessIndex]->ReferenceServerProcess();
-        //        *ppServerProcess = m_ppServerProcessList[dwProcessIndex];
+
+        if (!pSelectedServerProcess->IsReady())
+        {
+            hr = HRESULT_FROM_WIN32(ERROR_CREATE_FAILED);
+            goto Finished;
+        }
+
+        m_ppServerProcessList[dwProcessIndex] = pSelectedServerProcess;
+        pSelectedServerProcess = NULL;
+
     }
+    *ppServerProcess = m_ppServerProcessList[dwProcessIndex];
 
 Finished:
-    //
-    //    if( FAILED(hr) )
-    //    {
-    //        if(m_ppServerProcessList[dwProcessIndex] != NULL )
-    //        {
-    //            m_ppServerProcessList[dwProcessIndex]->DereferenceServerProcess();
-    //            m_ppServerProcessList[dwProcessIndex] = NULL;
-    //        }
-    //    }
-    //
+
     if (fSharedLock)
     {
         ReleaseSRWLockShared(&m_srwLock);
@@ -291,6 +281,12 @@ Finished:
     {
         ReleaseSRWLockExclusive(&m_srwLock);
         fExclusiveLock = FALSE;
+    }
+
+    if (pSelectedServerProcess != NULL)
+    {
+        delete pSelectedServerProcess;
+        pSelectedServerProcess = NULL;
     }
 
     return hr;

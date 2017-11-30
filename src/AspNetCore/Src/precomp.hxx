@@ -120,7 +120,6 @@ inline bool IsSpace(char ch)
 #include "applicationmanager.h"
 #include "globalmodule.h"
 #include "resource.h"
-#include "protocolconfig.h"
 #include "proxymodule.h"
 
 
@@ -147,14 +146,11 @@ HRESULT_FROM_GETLASTERROR()
            : E_FAIL;
 }
 
-extern BOOL     g_fAsyncDisconnectAvailable;
 extern BOOL     g_fWinHttpNonBlockingCallbackAvailable;
 extern PVOID    g_pModuleId;
-extern BOOL     g_fWebSocketSupported;
 extern BOOL     g_fAspnetcoreRHAssemblyLoaded;
 extern BOOL     g_fEnableReferenceCountTracing;
 extern DWORD    g_dwActiveServerProcesses;
-extern DWORD    g_OptionalWinHttpFlags;
 extern HMODULE  g_hAspnetCoreRH;
 extern SRWLOCK  g_srwLock;
 extern PFN_ASPNETCORE_CREATE_APPLICATION      g_pfnAspNetCoreCreateApplication;

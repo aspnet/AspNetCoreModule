@@ -505,3 +505,15 @@ UTILITY::EnsureDirectoryPathExist(
 Finished:
     return hr;
 }
+
+
+HRESULT
+UTILITY::RevomeStaleFiles(
+    _In_  LPCWSTR pszDirPath,
+    _In_  DWORD dwNumberOfKeptFiles
+)
+{
+    HRESULT hr = S_OK;
+    //todo
+    return hr;
+}

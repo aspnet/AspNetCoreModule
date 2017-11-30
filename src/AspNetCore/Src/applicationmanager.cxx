@@ -27,7 +27,7 @@ APPLICATION_MANAGER::GetApplicationInfo(
     DBG_ASSERT(pServer != NULL);
     DBG_ASSERT(pConfig != NULL);
 
-    pszApplicationId = pConfig->QueryConfigPath()->QueryStr(); // pContext->GetApplication()->GetApplicationId();
+    pszApplicationId = pConfig->QueryConfigPath()->QueryStr();
 
     hr = key.Initialize(pszApplicationId);
     if (FAILED(hr))
@@ -117,6 +117,7 @@ APPLICATION_MANAGER::GetApplicationInfo(
 
         *ppApplicationInfo = pApplicationInfo;
         pApplicationInfo = NULL;
+
     }
 
 Finished:
@@ -126,14 +127,20 @@ Finished:
         ReleaseSRWLockExclusive(&m_srwLock);
     }
 
+    if (pApplicationInfo != NULL)
+    {
+        pApplicationInfo->DereferenceApplicationInfo();
+        pApplicationInfo = NULL;
+    }
+
+    if (*ppApplicationInfo != NULL)
+    {
+        // Need to decrease the ref counter as FindKey will increase it
+        (*ppApplicationInfo)->DereferenceApplicationInfo();
+    }
+
     if (FAILED(hr))
     {
-        if (pApplicationInfo != NULL)
-        {
-            pApplicationInfo->DereferenceApplicationInfo();
-            pApplicationInfo = NULL;
-        }
-
         if (fDuplicatedInProcessApp)
         {
             if (SUCCEEDED(strEventMsg.SafeSnwprintf(

@@ -153,7 +153,7 @@ ASPNETCORE_CONFIG::Populate(
         goto Finished;
     }
 
-    hr = m_struApplicationFullPath.Copy(pHttpContext->GetApplication()->GetApplicationPhysicalPath());
+    hr = m_struApplicationPhysicalPath.Copy(pHttpContext->GetApplication()->GetApplicationPhysicalPath());
     if (FAILED(hr))
     {
         goto Finished;

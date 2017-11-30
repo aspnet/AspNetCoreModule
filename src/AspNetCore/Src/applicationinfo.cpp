@@ -24,6 +24,7 @@ APPLICATION_INFO::~APPLICATION_INFO()
     {
         // sutdown the application
         m_pApplication->ShutDown();
+        m_pApplication->DereferenceApplication();
         m_pApplication = NULL;
     }
 }
@@ -68,7 +69,7 @@ APPLICATION_INFO::StartMonitoringAppOffline()
     HRESULT hr = S_OK;
     if (m_pFileWatcherEntry != NULL)
     {
-        hr = m_pFileWatcherEntry->Create(m_pConfiguration->QueryApplicationFullPath()->QueryStr(), L"app_offline.htm", this, NULL);
+        hr = m_pFileWatcherEntry->Create(m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(), L"app_offline.htm", this, NULL);
     }
     return hr;
 }
@@ -77,7 +78,7 @@ VOID
 APPLICATION_INFO::UpdateAppOfflineFileHandle()
 {
     STRU strFilePath;
-    UTILITY::ConvertPathToFullPath(L".\\app_offline.htm", m_pConfiguration->QueryApplicationFullPath()->QueryStr(), &strFilePath);
+    UTILITY::ConvertPathToFullPath(L".\\app_offline.htm", m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(), &strFilePath);
     APP_OFFLINE_HTM *pOldAppOfflineHtm = NULL;
     APP_OFFLINE_HTM *pNewAppOfflineHtm = NULL;
 
@@ -113,7 +114,13 @@ APPLICATION_INFO::UpdateAppOfflineFileHandle()
             }
         }
 
-        // OnAppOfflineHandleChange();
+        // recycle the application
+        if (m_pApplication != NULL)
+        {
+            m_pApplication->ShutDown();
+            m_pApplication->DereferenceApplication();
+            m_pApplication = NULL;
+        }
     }
 }
 

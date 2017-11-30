@@ -17,6 +17,7 @@ class REQUEST_HANDLER
 public:
     REQUEST_HANDLER(
         _In_ IHttpContext *pW3Context,
+        _In_ HTTP_MODULE_ID  *pModuleId,
         _In_ APPLICATION  *pApplication
     );
 
@@ -32,6 +33,12 @@ public:
     ) = 0;
 
     virtual
+    VOID
+    TerminateRequest(
+        bool    fClientInitiated
+    ) = 0;
+
+    virtual
     ~REQUEST_HANDLER(
         VOID
     );
@@ -41,13 +48,15 @@ public:
         VOID
     ) const;
 
+    virtual
     VOID
     DereferenceRequestHandler(
         VOID
     ) const;
 
 protected:
-    mutable LONG m_cRefs;
-    IHttpContext* m_pW3Context;
-    APPLICATION* m_pApplication;
+    mutable LONG     m_cRefs;
+    IHttpContext*    m_pW3Context;
+    APPLICATION*     m_pApplication;
+    HTTP_MODULE_ID   m_pModuleId;
 };

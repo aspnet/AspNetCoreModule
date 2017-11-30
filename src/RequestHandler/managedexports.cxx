@@ -143,7 +143,7 @@ http_get_application_properties(
 
     pConfiguration = pApplication->QueryConfig();
 
-    pIISCofigurationData->pwzFullApplicationPath = SysAllocString(pConfiguration->QueryApplicationFullPath()->QueryStr());
+    pIISCofigurationData->pwzFullApplicationPath = SysAllocString(pConfiguration->QueryApplicationPhysicalPath()->QueryStr());
     pIISCofigurationData->pwzVirtualApplicationPath = SysAllocString(pConfiguration->QueryApplicationVirtualPath()->QueryStr());
     pIISCofigurationData->fWindowsAuthEnabled = pConfiguration->QueryWindowsAuthEnabled();
     pIISCofigurationData->fBasicAuthEnabled = pConfiguration->QueryBasicAuthEnabled();
