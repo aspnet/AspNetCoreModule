@@ -24,8 +24,7 @@ public:
     static
     HRESULT
     GetPortableHostfxrLocation(
-        STRU* struHostfxrPath,
-        ASPNETCORE_CONFIG *pConfig
+        STRU* struHostfxrPath
     );
 };
 

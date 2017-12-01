@@ -129,13 +129,12 @@ IN_PROCESS_APPLICATION::Recycle(
 
 REQUEST_NOTIFICATION_STATUS
 IN_PROCESS_APPLICATION::OnAsyncCompletion(
-    IHttpContext* pHttpContext,
     DWORD           cbCompletion,
     HRESULT         hrCompletionStatus,
     IN_PROCESS_HANDLER* pInProcessHandler
 )
 {
-    HRESULT hr;
+
     REQUEST_NOTIFICATION_STATUS dwRequestNotificationStatus = RQ_NOTIFICATION_CONTINUE;
 
     if (pInProcessHandler->QueryIsManagedRequestComplete())
@@ -170,9 +169,14 @@ IN_PROCESS_APPLICATION::OnExecuteRequest(
     {
         ANCMEvents::ANCM_EXECUTE_REQUEST_FAIL::RaiseEvent(pHttpContext->GetTraceContext(),
             NULL,
-            E_APPLICATION_ACTIVATION_EXEC_FAILURE);
+            (ULONG)E_APPLICATION_ACTIVATION_EXEC_FAILURE);
     }
-    pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
+
+    pHttpContext->GetResponse()->SetStatus(500, 
+                                    "Internal Server Error", 
+                                     0,
+                                     (ULONG)E_APPLICATION_ACTIVATION_EXEC_FAILURE);
+
     return RQ_NOTIFICATION_FINISH_REQUEST;
 }
 
@@ -304,7 +308,6 @@ IN_PROCESS_APPLICATION::SetStdOut(
 {
     HRESULT      hr = S_OK;
     BOOL         fLocked = FALSE;
-    BOOL         fResult = FALSE;
     STRU         struPath;
 
     SYSTEMTIME              systemTime;
@@ -485,8 +488,8 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
     DWORD      dwTimeout;
     DWORD      dwResult;
     BOOL       fLocked = FALSE;
-    PCWSTR     apsz[1];
-    STACK_STRU(strEventMsg, 256);
+    //PCWSTR     apsz[1];
+    //STACK_STRU(strEventMsg, 256);
 
     if (m_fManagedAppLoaded || m_fLoadManagedAppError)
     {
@@ -501,6 +504,9 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
     {
         goto Finished;
     }
+
+    // Set up stdout redirect
+    SetStdOut();
 
     m_hThread = CreateThread(
         NULL,       // default security attributes
@@ -658,7 +664,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
 
     while (pszDotnetExeLocation != NULL)
     {
-        dwCopyLength = wcsnlen_s(pszDotnetExeLocation, 260);
+        dwCopyLength = (DWORD) wcsnlen_s(pszDotnetExeLocation, 260);
         if (dwCopyLength == 0)
         {
             continue;
@@ -816,8 +822,8 @@ Finished:
     //
     if (!m_fRecycleProcessCalled)
     {
-        STRU                    strEventMsg;
-        LPCWSTR                 apsz[1];
+        //STRU                    strEventMsg;
+        //LPCWSTR                 apsz[1];
         //if (SUCCEEDED(strEventMsg.SafeSnwprintf(
         //    ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT_MSG,
         //    m_pConfiguration->QueryApplicationPath()->QueryStr(),

@@ -26,24 +26,18 @@ APPLICATION::QueryConfig()
     return m_pConfig;
 }
 
-IHttpServer*
-APPLICATION::QueryHttpServer()
-{
-    return m_pHttpServer;
-}
-
 VOID
 APPLICATION::ReferenceApplication()
 const
 {
-    LONG cRefs = InterlockedIncrement(&m_cRefs);
+    InterlockedIncrement(&m_cRefs);
 }
 
 VOID
 APPLICATION::DereferenceApplication()
 const
 {
-    //DBG_ASSERT(m_cRefs != 0);
+    DBG_ASSERT(m_cRefs != 0);
 
     LONG cRefs = 0;
     if ((cRefs = InterlockedDecrement(&m_cRefs)) == 0)

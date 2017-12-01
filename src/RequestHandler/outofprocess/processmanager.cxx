@@ -110,7 +110,7 @@ PROCESS_MANAGER::GetProcess(
     HRESULT          hr = S_OK;
     BOOL             fSharedLock = FALSE;
     BOOL             fExclusiveLock = FALSE;
-    PCWSTR           apsz[1];
+    //PCWSTR           apsz[1];
     STACK_STRU(strEventMsg, 256);
     DWORD            dwProcessIndex = 0;
     SERVER_PROCESS  *pSelectedServerProcess = NULL;

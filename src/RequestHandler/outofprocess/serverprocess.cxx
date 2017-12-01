@@ -199,9 +199,6 @@ SERVER_PROCESS::SetupAppPath(
 )
 {
     HRESULT      hr = S_OK;
-    DWORD        dwCounter = 0;
-    DWORD        dwPosition = 0;
-    WCHAR*       pszPath = NULL;
     ENVIRONMENT_VAR_ENTRY*  pEntry = NULL;
 
     pEnvironmentVarTable->FindKey(ASPNETCORE_APP_PATH_ENV_STR, &pEntry);
@@ -860,7 +857,7 @@ SERVER_PROCESS::StartProcess(
     HRESULT                 hr = S_OK;
     PROCESS_INFORMATION     processInformation = {0};
     STARTUPINFOW            startupInfo = {0};
-    BOOL                    fDonePrepareCommandLine = FALSE;
+//    BOOL                    fDonePrepareCommandLine = FALSE;
     DWORD                   dwRetryCount = 2; // should we allow customer to config it
     DWORD                   dwCreationFlags = 0;
 
@@ -1168,8 +1165,8 @@ SERVER_PROCESS::SetupStdHandles(
     SECURITY_ATTRIBUTES     saAttr = { 0 };
 
     STRU                    struPath;
-    STRU                    strEventMsg;
-    LPCWSTR                 apsz[1];
+    //STRU                    strEventMsg;
+    //LPCWSTR                 apsz[1];
 
     DBG_ASSERT(pStartupInfo);
 
@@ -2079,8 +2076,8 @@ SERVER_PROCESS::SendShutdownHttpMessage( VOID )
     DWORD      dwStatusCode = 0;
     DWORD      dwSize = sizeof(dwStatusCode);
 
-    LPCWSTR   apsz[1];
-    STACK_STRU(strEventMsg, 256);
+    //LPCWSTR   apsz[1];
+    //STACK_STRU(strEventMsg, 256);
 
     hSession = WinHttpOpen(L"",
         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
@@ -2291,8 +2288,8 @@ SERVER_PROCESS::TerminateBackendProcess(
     VOID
 )
 {
-    LPCWSTR   apsz[1];
-    STACK_STRU(strEventMsg, 256);
+    //LPCWSTR   apsz[1];
+    //STACK_STRU(strEventMsg, 256);
 
     if (InterlockedCompareExchange(&m_lStopping, 1L, 0L) == 0L)
     {

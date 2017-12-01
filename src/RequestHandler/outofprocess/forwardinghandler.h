@@ -77,7 +77,7 @@ private:
         _In_ const PROTOCOL_CONFIG *    pProtocol,
         _In_ HINTERNET                  hConnect,
         _Inout_ STRU *                  pstrUrl,
-        _In_ ASPNETCORE_CONFIG*              pAspNetCoreConfig,
+//        _In_ ASPNETCORE_CONFIG*              pAspNetCoreConfig,
         _In_ SERVER_PROCESS*                 pServerProcess
     );
 

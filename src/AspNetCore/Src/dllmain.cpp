@@ -27,6 +27,8 @@ BOOL WINAPI DllMain(HMODULE hModule,
     LPVOID lpReserved
     )
 {
+    UNREFERENCED_PARAMETER(lpReserved);
+
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
@@ -71,6 +73,8 @@ HRESULT
     ASPNET_CORE_PROXY_MODULE_FACTORY *  pFactory = NULL;
     ASPNET_CORE_GLOBAL_MODULE *         pGlobalModule = NULL;
     APPLICATION_MANAGER *               pApplicationManager = NULL;
+
+    UNREFERENCED_PARAMETER(dwServerVersion);
 
 #ifdef DEBUG
     CREATE_DEBUG_PRINT_OBJECT("Asp.Net Core Module");

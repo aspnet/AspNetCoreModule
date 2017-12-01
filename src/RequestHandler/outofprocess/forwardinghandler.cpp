@@ -89,7 +89,6 @@ FORWARDING_HANDLER::OnExecuteRequestHandler()
     OUT_OF_PROCESS_APPLICATION *pApplication = NULL;
     PROTOCOL_CONFIG            *pProtocol = &sm_ProtocolConfig;
     SERVER_PROCESS             *pServerProcess = NULL;
-    FORWARDER_CONNECTION       *pConnection = NULL;
 
     USHORT                      cchHostName = 0;
 
@@ -174,7 +173,6 @@ FORWARDING_HANDLER::OnExecuteRequestHandler()
         pProtocol,
         hConnect,
         &struEscapedUrl,
-        pApplication->QueryConfig(),
         pServerProcess);
     if (FAILED(hr))
     {
@@ -961,7 +959,7 @@ FORWARDING_HANDLER::CreateWinHttpRequest(
     _In_ const PROTOCOL_CONFIG *    pProtocol,
     _In_ HINTERNET                  hConnect,
     _Inout_ STRU *                  pstrUrl,
-    _In_ ASPNETCORE_CONFIG*         pAspNetCoreConfig,
+//    _In_ ASPNETCORE_CONFIG*         pAspNetCoreConfig,
     _In_ SERVER_PROCESS*            pServerProcess
 )
 {
@@ -1136,7 +1134,6 @@ None
     DBG_ASSERT(m_pW3Context != NULL);
     __analysis_assume(m_pW3Context != NULL);
     IHttpResponse * pResponse = m_pW3Context->GetResponse();
-    BOOL fDerefForwardingHandler = TRUE;
     BOOL fEndRequest = FALSE;
 
     UNREFERENCED_PARAMETER(dwStatusInformationLength);

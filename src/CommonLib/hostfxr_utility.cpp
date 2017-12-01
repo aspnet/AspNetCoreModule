@@ -31,7 +31,7 @@ HOSTFXR_UTILITY::FindHostFxrDll(
     }
     else
     {
-        hr = GetPortableHostfxrLocation(struHostFxrDllLocation, pConfig);
+        hr = GetPortableHostfxrLocation(struHostFxrDllLocation);
         fStandAlone = FALSE;
     }
 
@@ -97,8 +97,7 @@ Finished:
 
 HRESULT
 HOSTFXR_UTILITY::GetPortableHostfxrLocation(
-    STRU* struHostfxrPath,
-    ASPNETCORE_CONFIG *pConfig
+    STRU* struHostfxrPath
 )
 {
     HRESULT hr = S_OK;
@@ -111,7 +110,6 @@ HOSTFXR_UTILITY::GetPortableHostfxrLocation(
     PCWSTR                      pszDotnetLocation = NULL;
     PCWSTR                      pszDotnetExeString(L"dotnet.exe");
     DWORD                       dwCopyLength;
-    DWORD                       dwPosition;
     BOOL                        fFound = FALSE;
     HANDLE                      hFileHandle = INVALID_HANDLE_VALUE;
     SECURITY_ATTRIBUTES         saAttr;
@@ -133,7 +131,7 @@ HOSTFXR_UTILITY::GetPortableHostfxrLocation(
     pszDotnetLocation = wcstok_s(struSystemPathVariable.QueryStr(), L";", &pwzDelimeterContext);
     while (pszDotnetLocation != NULL)
     {
-        dwCopyLength = wcsnlen_s(pszDotnetLocation, 260);
+        dwCopyLength = (DWORD) wcsnlen_s(pszDotnetLocation, 260);
 
         // We store both the exe and folder locations as we eventually need to check inside of host\\fxr
         // which doesn't need the dotnet.exe portion of the string

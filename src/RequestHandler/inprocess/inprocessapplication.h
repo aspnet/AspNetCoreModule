@@ -47,7 +47,6 @@ public:
 
     REQUEST_NOTIFICATION_STATUS
     OnAsyncCompletion(
-        IHttpContext*           pHttpContext,
         DWORD                   cbCompletion,
         HRESULT                 hrCompletionStatus,
         IN_PROCESS_HANDLER*     pInProcessHandler

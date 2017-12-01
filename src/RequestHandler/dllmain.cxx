@@ -25,7 +25,6 @@ InitializeGlobalConfiguration(
 )
 {
     HKEY hKey;
-    OSVERSIONINFO osvi;
 
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
         L"SOFTWARE\\Microsoft\\IIS Extensions\\IIS AspNetCore Module\\Parameters",
@@ -229,6 +228,8 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     LPVOID lpReserved
 )
 {
+    UNREFERENCED_PARAMETER(lpReserved);
+
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:

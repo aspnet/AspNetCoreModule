@@ -30,9 +30,6 @@ public:
     ASPNETCORE_CONFIG*
     QueryConfig();
 
-    IHttpServer*
-    QueryHttpServer();
-
     VOID
     ReferenceApplication()
     const;

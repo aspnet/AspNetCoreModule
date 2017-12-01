@@ -155,11 +155,12 @@ APPLICATION_INFO::EnsureApplicationCreated()
             goto Finished;
         }
 
-        hr = m_pfnAspNetCoreCreateApplication(m_pServer, m_pConfiguration, &m_pApplication);
+        hr = m_pfnAspNetCoreCreateApplication(m_pServer, m_pConfiguration, &pApplication);
         if (FAILED(hr))
         {
             goto Finished;
         }
+        m_pApplication = pApplication;
     }
 
 Finished:
@@ -305,8 +306,10 @@ Finished:
 HRESULT
 APPLICATION_INFO::GetRequestHandlerFromRuntimeStore(STRU* struFilename)
 {
+    UNREFERENCED_PARAMETER(struFilename);
     // TODO call into hostfxr to find the runtime store. 
     HRESULT hr = S_OK;
+    goto Finished;
 
 Finished:
     return hr;
@@ -320,6 +323,7 @@ APPLICATION_INFO::LoadAssemblyFromLocalBin(STRU* struFilename)
     hr = UTILITY::ConvertPathToFullPath(g_pwzAspnetcoreRequestHandlerName,
         m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(),
         struFilename);
+    goto Finished;
 
 Finished:
     return hr;

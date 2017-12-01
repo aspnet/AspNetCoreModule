@@ -83,8 +83,9 @@ http_set_managed_context(
     _In_ PVOID pvManagedContext
 )
 {
+    // todo: should we consider changing the signature
     HRESULT hr = S_OK;
-    pInProcessHandler->SetManangedHttpContext(pInProcessHandler);
+    pInProcessHandler->SetManangedHttpContext(pvManagedContext);
 
     return hr;
 }

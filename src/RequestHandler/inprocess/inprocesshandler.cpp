@@ -75,7 +75,7 @@ IN_PROCESS_HANDLER::OnAsyncCompletion(
             return RQ_NOTIFICATION_FINISH_REQUEST;
         }
 
-        return application->OnAsyncCompletion(m_pW3Context, cbCompletion, hrCompletionStatus, this);
+        return application->OnAsyncCompletion(cbCompletion, hrCompletionStatus, this);
     }
 }
 
@@ -84,6 +84,7 @@ IN_PROCESS_HANDLER::TerminateRequest(
     bool    fClientInitiated
 )
 {
+    UNREFERENCED_PARAMETER(fClientInitiated);
     //todo
 }
 
