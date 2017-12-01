@@ -99,7 +99,7 @@ public:
     virtual 
     ~SERVER_PROCESS();
 
-    HRESULT 
+    HRESULT
     HandleProcessExit(
         VOID
     );
@@ -125,7 +125,7 @@ public:
     QueryGuid()
     {
         return m_straGuid.QueryStr();
-    }
+    };
 
     VOID
     SendSignal( 
@@ -208,28 +208,6 @@ private:
         DWORD*    pdwPickedPort,
         DWORD     dwExcludedPort
     );
-//
-//    DWORD
-//    GetNumberOfDigits( 
-//        _In_ DWORD dwNumber 
-//    )
-//    {
-//        DWORD digits = 0;
-//        
-//        if( dwNumber == 0 )
-//        {
-//            digits = 1;
-//            goto Finished;
-//        }
-//
-//        while( dwNumber > 0)
-//        {
-//            dwNumber = dwNumber / 10;
-//            digits ++;
-//        }
-//    Finished:
-//        return digits;
-//    }
 
     static
     VOID

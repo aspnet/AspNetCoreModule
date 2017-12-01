@@ -124,7 +124,6 @@ APPLICATION_INFO::UpdateAppOfflineFileHandle()
     }
 }
 
-
 HRESULT
 APPLICATION_INFO::EnsureApplicationCreated()
 {
@@ -132,29 +131,14 @@ APPLICATION_INFO::EnsureApplicationCreated()
     BOOL    fLocked = FALSE;
     APPLICATION* pApplication = NULL;
     STACK_STRU(struFileName, 300);  // >MAX_PATH
+    STRU        hostFxrDllLocation;
 
     if (m_pApplication != NULL)
     {
         goto Finished;
     }
 
-    // load assembly and create the application
-    if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
-    {
-        hr = LoadAssemblyFromInetsrv();
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-    }
-    else
-    {
-        hr = LoadAssemblyFromInetsrv();
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-    }
+    LoadRequestHandlerAssembly();
 
     if (m_pApplication == NULL)
     {
@@ -187,7 +171,7 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::LoadAssemblyFromInetsrv()
+APPLICATION_INFO::LoadRequestHandlerAssembly()
 {
     HRESULT hr = S_OK;
     BOOL    fLocked = FALSE;
@@ -202,45 +186,32 @@ APPLICATION_INFO::LoadAssemblyFromInetsrv()
             goto Finished;
         }
 
-        DWORD dwSize = MAX_PATH;
-        BOOL  fDone = FALSE;
-        DWORD dwPosition = 0;
-
-        // Though we could call LoadLibrary(L"aspnetcorerh.dll") relying the OS to solve
-        // the path (the targeted dll is the same folder of w3wp.exe/iisexpress)
-        // let's still load with full path to avoid security issue
-        while (!fDone)
+        // load assembly and create the application
+        if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
         {
-            // Are you allowed to use stru's like this?
-            DWORD dwReturnedSize = GetModuleFileName(NULL, struFileName.QueryStr(), dwSize);
-            if (dwReturnedSize == 0)
+            // First find hostfxr location.
+            if (m_pConfiguration->QueryIsStandAloneApplication())
             {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-                fDone = TRUE;
-                goto Finished;
-            }
-            else if ((dwReturnedSize == dwSize) && (GetLastError() == ERROR_INSUFFICIENT_BUFFER))
-            {
-                dwSize *= 2; // smaller buffer. increase the buffer and retry
-                struFileName.Resize(dwSize + 20); // aspnetcorerh.dll
+                hr = LoadAssemblyFromLocalBin(&struFileName);
             }
             else
             {
-                fDone = TRUE;
+                hr = LoadAssemblyFromInetsrv(&struFileName);
+                //hr = GetRequestHandlerFromRuntimeStore(&struFileName);
+            }
+
+            if (FAILED(hr))
+            {
+                goto Finished;
             }
         }
-
-        if (FAILED(hr = struFileName.SyncWithBuffer()))
+        else
         {
-            goto Finished;
-        }
-        dwPosition = struFileName.LastIndexOf(L'\\', 0);
-        struFileName.QueryStr()[dwPosition] = L'\0';
-
-        if (FAILED(hr = struFileName.SyncWithBuffer()) ||
-            FAILED(hr = struFileName.Append(L"\\aspnetcorerh.dll")))
-        {
-            goto Finished;
+            hr = LoadAssemblyFromInetsrv(&struFileName);
+            if (FAILED(hr))
+            {
+                goto Finished;
+            }
         }
 
         g_hAspnetCoreRH = LoadLibraryW(struFileName.QueryStr());
@@ -284,10 +255,72 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::LoadAssemblyFromLocalBin()
+APPLICATION_INFO::LoadAssemblyFromInetsrv(STRU* struFilename)
 {
-    // TODO 
     HRESULT hr = S_OK;
+    DWORD dwSize = MAX_PATH;
+    BOOL  fDone = FALSE;
+    DWORD dwPosition = 0;
+
+    // Though we could call LoadLibrary(L"aspnetcorerh.dll") relying the OS to solve
+    // the path (the targeted dll is the same folder of w3wp.exe/iisexpress)
+    // let's still load with full path to avoid security issue
+    while (!fDone)
+    {
+        DWORD dwReturnedSize = GetModuleFileName(NULL, struFilename->QueryStr(), dwSize);
+        if (dwReturnedSize == 0)
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            fDone = TRUE;
+            goto Finished;
+        }
+        else if ((dwReturnedSize == dwSize) && (GetLastError() == ERROR_INSUFFICIENT_BUFFER))
+        {
+            dwSize *= 2; // smaller buffer. increase the buffer and retry
+            struFilename->Resize(dwSize + 20); // aspnetcorerh.dll
+        }
+        else
+        {
+            fDone = TRUE;
+        }
+    }
+
+    if (FAILED(hr = struFilename->SyncWithBuffer()))
+    {
+        goto Finished;
+    }
+    dwPosition = struFilename->LastIndexOf(L'\\', 0);
+    struFilename->QueryStr()[dwPosition] = L'\0';
+
+    if (FAILED(hr = struFilename->SyncWithBuffer()) ||
+        FAILED(hr = struFilename->Append(g_pwzAspnetcoreRequestHandlerName)))
+    {
+        goto Finished;
+    }
+
+Finished:
     return hr;
 }
 
+HRESULT
+APPLICATION_INFO::GetRequestHandlerFromRuntimeStore(STRU* struFilename)
+{
+    // TODO call into hostfxr to find the runtime store. 
+    HRESULT hr = S_OK;
+
+Finished:
+    return hr;
+}
+
+HRESULT
+APPLICATION_INFO::LoadAssemblyFromLocalBin(STRU* struFilename)
+{
+    HRESULT hr = S_OK;
+
+    hr = UTILITY::ConvertPathToFullPath(g_pwzAspnetcoreRequestHandlerName,
+        m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(),
+        struFilename);
+
+Finished:
+    return hr;
+}

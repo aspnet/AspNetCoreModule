@@ -2,12 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="dllmain.cxx" />
-    <ClCompile Include=".\inprocess\fx_ver.cxx">
-      <Filter>InProcess</Filter>
-    </ClCompile>
-    <ClCompile Include=".\outofprocess\forwardinghandler.cpp">
-      <Filter>OutOfProcess</Filter>
-    </ClCompile>
     <ClCompile Include=".\inprocess\inprocessapplication.cpp">
       <Filter>InProcess</Filter>
     </ClCompile>
@@ -16,6 +10,9 @@
     </ClCompile>
     <ClCompile Include="managedexports.cxx">
       <Filter>InProcess</Filter>
+    </ClCompile>
+    <ClCompile Include=".\outofprocess\forwardinghandler.cpp">
+      <Filter>OutOfProcess</Filter>
     </ClCompile>
     <ClCompile Include=".\outofprocess\outprocessapplication.cpp">
       <Filter>OutOfProcess</Filter>
@@ -45,17 +42,20 @@
   <ItemGroup>
     <ClInclude Include="precomp.hxx" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include=".\inprocess\fx_ver.h">
-      <Filter>InProcess</Filter>
-    </ClInclude>
-    <ClInclude Include=".\outofprocess\forwardinghandler.h">
-      <Filter>OutOfProcess</Filter>
-    </ClInclude>
     <ClInclude Include=".\inprocess\inprocessapplication.h">
       <Filter>InProcess</Filter>
     </ClInclude>
     <ClInclude Include=".\inprocess\inprocesshandler.h">
       <Filter>InProcess</Filter>
+    </ClInclude>
+    <ClInclude Include=".\outofprocess\forwardinghandler.h">
+      <Filter>OutOfProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="outofprocess\forwarderconnection.h">
+      <Filter>OutOfProcess</Filter>
+    </ClInclude>
+    <ClInclude Include="outofprocess\responseheaderhash.h">
+      <Filter>OutOfProcess</Filter>
     </ClInclude>
     <ClInclude Include=".\outofprocess\outprocessapplication.h">
       <Filter>OutOfProcess</Filter>
@@ -67,9 +67,6 @@
       <Filter>OutOfProcess</Filter>
     </ClInclude>
     <ClInclude Include="outofprocess\serverprocess.h">
-      <Filter>OutOfProcess</Filter>
-    </ClInclude>
-    <ClInclude Include="outofprocess\forwarderconnection.h">
       <Filter>OutOfProcess</Filter>
     </ClInclude>
     <ClInclude Include="outofprocess\responseheaderhash.h">
@@ -88,7 +85,12 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RequestHandler.rc" />
-    <ResourceCompile Include="Resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Source.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="RequestHandler.rc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Source.def" />
@@ -100,5 +102,8 @@
     <Filter Include="OutOfProcess">
       <UniqueIdentifier>{5568209f-269e-4d0a-bbb7-ba14f874ccb7}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="aspnetcore_msg.mc" />
   </ItemGroup>
 </Project>

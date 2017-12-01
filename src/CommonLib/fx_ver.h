@@ -1,9 +1,7 @@
 // Copyright (c) .NET Foundation and contributors. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-#ifndef __FX_VER_H__
-#define __FX_VER_H__
-#include <string>
+#pragma once
 
 // Note: This is not SemVer (esp., in comparing pre-release part, fx_ver_t does not
 // compare multiple dot separated identifiers individually.) ex: 1.0.0-beta.2 vs. 1.0.0-beta.11
@@ -46,4 +44,3 @@ private:
     static int compare(const fx_ver_t&a, const fx_ver_t& b);
 };
 
-#endif // __FX_VER_H__

@@ -28,44 +28,43 @@ register_callbacks(
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HTTP_REQUEST*
 http_get_raw_request(
-    _In_ IHttpContext* pHttpContext
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler
 )
 {
-    return pHttpContext->GetRequest()->GetRawHttpRequest();
+    return pInProcessHandler->QueryHttpContext()->GetRequest()->GetRawHttpRequest();
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HTTP_RESPONSE*
 http_get_raw_response(
-    _In_ IHttpContext* pHttpContext
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler
 )
 {
-    return pHttpContext->GetResponse()->GetRawHttpResponse();
+    return pInProcessHandler->QueryHttpContext()->GetResponse()->GetRawHttpResponse();
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT VOID http_set_response_status_code(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _In_ USHORT statusCode,
     _In_ PCSTR pszReason
 )
 {
-    pHttpContext->GetResponse()->SetStatus(statusCode, pszReason);
+    pInProcessHandler->QueryHttpContext()->GetResponse()->SetStatus(statusCode, pszReason);
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_post_completion(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     DWORD cbBytes
 )
 {
-    return pHttpContext->PostCompletion(cbBytes);
+    return pInProcessHandler->QueryHttpContext()->PostCompletion(cbBytes);
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_set_completion_status(
-    _In_ IHttpContext* pHttpContext,
     _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _In_ REQUEST_NOTIFICATION_STATUS requestNotificationStatus
 )
@@ -80,7 +79,6 @@ http_set_completion_status(
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_set_managed_context(
-    _In_ IHttpContext* pHttpContext,
     _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _In_ PVOID pvManagedContext
 )
@@ -94,11 +92,11 @@ http_set_managed_context(
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 VOID
 http_indicate_completion(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _In_ REQUEST_NOTIFICATION_STATUS notificationStatus
 )
 {
-    pHttpContext->IndicateCompletion(notificationStatus);
+    pInProcessHandler->QueryHttpContext()->IndicateCompletion(notificationStatus);
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
@@ -155,7 +153,7 @@ http_get_application_properties(
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_read_request_bytes(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _Out_ CHAR* pvBuffer,
     _In_ DWORD dwCbBuffer,
     _Out_ DWORD* pdwBytesReceived,
@@ -164,7 +162,7 @@ http_read_request_bytes(
 {
     HRESULT hr;
 
-    if (pHttpContext == NULL)
+    if (pInProcessHandler == NULL)
     {
         return E_FAIL;
     }
@@ -172,7 +170,7 @@ http_read_request_bytes(
     {
         return E_FAIL;
     }
-    IHttpRequest *pHttpRequest = (IHttpRequest*)pHttpContext->GetRequest();
+    IHttpRequest *pHttpRequest = (IHttpRequest*)pInProcessHandler->QueryHttpContext()->GetRequest();
 
     BOOL fAsync = TRUE;
 
@@ -195,13 +193,13 @@ http_read_request_bytes(
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_write_response_bytes(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _In_ HTTP_DATA_CHUNK* pDataChunks,
     _In_ DWORD dwChunks,
     _In_ BOOL* pfCompletionExpected
 )
 {
-    IHttpResponse *pHttpResponse = (IHttpResponse*)pHttpContext->GetResponse();
+    IHttpResponse *pHttpResponse = (IHttpResponse*)pInProcessHandler->QueryHttpContext()->GetResponse();
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
     DWORD dwBytesSent = 0;
@@ -220,11 +218,11 @@ http_write_response_bytes(
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_flush_response_bytes(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _Out_ BOOL* pfCompletionExpected
 )
 {
-    IHttpResponse *pHttpResponse = (IHttpResponse*)pHttpContext->GetResponse();
+    IHttpResponse *pHttpResponse = (IHttpResponse*)pInProcessHandler->QueryHttpContext()->GetResponse();
 
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
@@ -241,7 +239,7 @@ http_flush_response_bytes(
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_websockets_read_bytes(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _In_ CHAR* pvBuffer,
     _In_ DWORD cbBuffer,
     _In_ PFN_ASYNC_COMPLETION pfnCompletionCallback,
@@ -250,7 +248,7 @@ http_websockets_read_bytes(
     _In_ BOOL* pfCompletionPending
 )
 {
-    IHttpRequest3 *pHttpRequest = (IHttpRequest3*)pHttpContext->GetRequest();
+    IHttpRequest3 *pHttpRequest = (IHttpRequest3*)pInProcessHandler->QueryHttpContext()->GetRequest();
 
     BOOL fAsync = TRUE;
 
@@ -275,7 +273,7 @@ http_websockets_read_bytes(
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_websockets_write_bytes(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _In_ HTTP_DATA_CHUNK* pDataChunks,
     _In_ DWORD dwChunks,
     _In_ PFN_ASYNC_COMPLETION pfnCompletionCallback,
@@ -283,7 +281,7 @@ http_websockets_write_bytes(
     _In_ BOOL* pfCompletionExpected
 )
 {
-    IHttpResponse2 *pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
+    IHttpResponse2 *pHttpResponse = (IHttpResponse2*)pInProcessHandler->QueryHttpContext()->GetResponse();
 
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
@@ -305,13 +303,13 @@ http_websockets_write_bytes(
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_websockets_flush_bytes(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _In_ PFN_ASYNC_COMPLETION pfnCompletionCallback,
     _In_ VOID* pvCompletionContext,
     _In_ BOOL* pfCompletionExpected
 )
 {
-    IHttpResponse2 *pHttpResponse = (IHttpResponse2*)pHttpContext->GetResponse();
+    IHttpResponse2 *pHttpResponse = (IHttpResponse2*)pInProcessHandler->QueryHttpContext()->GetResponse();
 
     BOOL fAsync = TRUE;
     BOOL fMoreData = TRUE;
@@ -330,7 +328,7 @@ http_websockets_flush_bytes(
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_enable_websockets(
-    _In_ IHttpContext* pHttpContext
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler
 )
 {
     //if (!g_fWebSocketSupported)
@@ -338,8 +336,8 @@ http_enable_websockets(
     //    return E_FAIL;
     //}
 
-    ((IHttpContext3*)pHttpContext)->EnableFullDuplex();
-    ((IHttpResponse2*)pHttpContext->GetResponse())->DisableBuffering();
+    ((IHttpContext3*)pInProcessHandler->QueryHttpContext())->EnableFullDuplex();
+    ((IHttpResponse2*)pInProcessHandler->QueryHttpContext()->GetResponse())->DisableBuffering();
 
     return S_OK;
 }
@@ -347,51 +345,50 @@ http_enable_websockets(
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_cancel_io(
-    _In_ IHttpContext* pHttpContext
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler
 )
 {
-    return pHttpContext->CancelIo();
+    return pInProcessHandler->QueryHttpContext()->CancelIo();
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_response_set_unknown_header(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _In_ PCSTR pszHeaderName,
     _In_ PCSTR pszHeaderValue,
     _In_ USHORT usHeaderValueLength,
     _In_ BOOL  fReplace
 )
 {
-    return pHttpContext->GetResponse()->SetHeader(pszHeaderName, pszHeaderValue, usHeaderValueLength, fReplace);
+    return pInProcessHandler->QueryHttpContext()->GetResponse()->SetHeader(pszHeaderName, pszHeaderValue, usHeaderValueLength, fReplace);
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_response_set_known_header(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _In_ HTTP_HEADER_ID dwHeaderId,
     _In_ PCSTR pszHeaderValue,
     _In_ USHORT usHeaderValueLength,
     _In_ BOOL  fReplace
 )
 {
-    return pHttpContext->GetResponse()->SetHeader(dwHeaderId, pszHeaderValue, usHeaderValueLength, fReplace);
+    return pInProcessHandler->QueryHttpContext()->GetResponse()->SetHeader(dwHeaderId, pszHeaderValue, usHeaderValueLength, fReplace);
 }
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
 HRESULT
 http_get_authentication_information(
-    _In_ IHttpContext* pHttpContext,
+    _In_ IN_PROCESS_HANDLER* pInProcessHandler,
     _Out_ BSTR* pstrAuthType,
     _Out_ VOID** pvToken
 )
 {
-    *pstrAuthType = SysAllocString(pHttpContext->GetUser()->GetAuthenticationType());
-    *pvToken = pHttpContext->GetUser()->GetPrimaryToken();
+    *pstrAuthType = SysAllocString(pInProcessHandler->QueryHttpContext()->GetUser()->GetAuthenticationType());
+    *pvToken = pInProcessHandler->QueryHttpContext()->GetUser()->GetPrimaryToken();
 
     return S_OK;
 }
-
 
 // End of export

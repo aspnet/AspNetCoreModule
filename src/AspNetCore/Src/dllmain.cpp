@@ -12,12 +12,12 @@ PCWSTR              g_pszModuleName = NULL;
 HINSTANCE           g_hModule;
 HMODULE             g_hAspnetCoreRH = NULL;
 BOOL                g_fAspnetcoreRHAssemblyLoaded = FALSE;
-//DWORD               g_dwTlsIndex = TLS_OUT_OF_INDEXES;
 DWORD               g_dwAspNetCoreDebugFlags = 0;
 DWORD               g_dwActiveServerProcesses = 0;
 SRWLOCK             g_srwLock;
 DWORD               g_dwDebugFlags = 0;
 PCSTR               g_szDebugLabel = "ASPNET_CORE_MODULE";
+PCWSTR              g_pwzAspnetcoreRequestHandlerName = L"\\aspnetcorerh.dll";
 PFN_ASPNETCORE_CREATE_APPLICATION      g_pfnAspNetCoreCreateApplication;
 PFN_ASPNETCORE_CREATE_REQUEST_HANDLER  g_pfnAspNetCoreCreateRequestHandler;
 
@@ -110,7 +110,6 @@ HRESULT
     }
 
     pFactory = NULL;
-
     pApplicationManager = APPLICATION_MANAGER::GetInstance();
     if(pApplicationManager == NULL)
     {
@@ -120,9 +119,10 @@ HRESULT
     
     hr = pApplicationManager->Initialize();
     if(FAILED(hr))
-    {
+     {
         goto Finished;
     }
+    pGlobalModule = NULL;
 
     pGlobalModule = new ASPNET_CORE_GLOBAL_MODULE(pApplicationManager);
     if (pGlobalModule == NULL)
@@ -134,6 +134,7 @@ HRESULT
     hr = pModuleInfo->SetGlobalNotifications(
                                    pGlobalModule,
                                    GL_CONFIGURATION_CHANGE | GL_STOP_LISTENING);
+
     if (FAILED(hr))
     {
         goto Finished;

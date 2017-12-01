@@ -93,8 +93,6 @@ inline bool IsSpace(char ch)
 #include <hashtable.h>
 #include "stringa.h"
 #include "stringu.h"
-//#include "treehash.h"
-
 #include "dbgutil.h"
 #include "ahutil.h"
 #include "multisz.h"
@@ -107,14 +105,14 @@ inline bool IsSpace(char ch)
 #include <time.h>
 
 #include "..\..\CommonLib\environmentvariablehash.h"
-#include "..\..\CommonLib\application.h"
 #include "..\..\CommonLib\aspnetcoreconfig.h"
+#include "..\..\CommonLib\application.h"
 #include "..\..\CommonLib\utility.h"
 #include "..\..\CommonLib\debugutil.h"
-#include"..\..\CommonLib\requesthandler.h"
-#include "..\aspnetcore_msg.h"
+#include "..\..\CommonLib\requesthandler.h"
+//#include "..\aspnetcore_msg.h"
+//#include "aspnetcore_event.h"
 #include "appoffline.h"
-#include "aspnetcore_event.h"
 #include "filewatcher.h"
 #include "applicationinfo.h"
 #include "applicationmanager.h"
@@ -153,6 +151,8 @@ extern BOOL     g_fEnableReferenceCountTracing;
 extern DWORD    g_dwActiveServerProcesses;
 extern HMODULE  g_hAspnetCoreRH;
 extern SRWLOCK  g_srwLock;
+extern PCWSTR   g_pwzAspnetcoreRequestHandlerName;
+
 extern PFN_ASPNETCORE_CREATE_APPLICATION      g_pfnAspNetCoreCreateApplication;
 extern PFN_ASPNETCORE_CREATE_REQUEST_HANDLER  g_pfnAspNetCoreCreateRequestHandler;
 #pragma warning( error : 4091)

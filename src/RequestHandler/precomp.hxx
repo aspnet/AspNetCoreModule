@@ -17,7 +17,6 @@
 #include <atlbase.h>
 #include <pdh.h>
 #include <vector>
-
 #include <Shlobj.h>
 #include <httpserv.h>
 #include <winhttp.h>
@@ -48,6 +47,7 @@
 #include "..\IISLib\multisza.h"
 #include "..\IISLib\base64.h"
 #include "..\IISLib\listentry.h"
+#include "..\CommonLib\fx_ver.h"
 #include "..\CommonLib\debugutil.h"
 #include "..\CommonLib\requesthandler.h"
 #include "..\CommonLib\aspnetcoreconfig.h"
@@ -56,7 +56,6 @@
 #include "disconnectcontext.h"
 #include ".\inprocess\InProcessHandler.h"
 #include ".\inprocess\inprocessapplication.h"
-#include ".\inprocess\fx_ver.h"
 #include ".\outofprocess\sttimer.h"
 #include ".\outofprocess\protocolconfig.h"
 #include ".\outofprocess\forwarderconnection.h"
@@ -99,7 +98,6 @@ inline bool IsSpace(char ch)
         return false;
     }
 }
-
 
 extern BOOL       g_fAsyncDisconnectAvailable;
 extern BOOL       g_fWinHttpNonBlockingCallbackAvailable;

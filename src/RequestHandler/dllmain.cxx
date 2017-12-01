@@ -18,12 +18,14 @@ HINTERNET           g_hWinhttpSession = NULL;
 IHttpServer *       g_pHttpServer = NULL;
 HINSTANCE           g_hWinHttpModule;
 
+
 VOID
 InitializeGlobalConfiguration(
     VOID
 )
 {
     HKEY hKey;
+    OSVERSIONINFO osvi;
 
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
         L"SOFTWARE\\Microsoft\\IIS Extensions\\IIS AspNetCore Module\\Parameters",
@@ -232,6 +234,8 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     case DLL_PROCESS_ATTACH:
         DisableThreadLibraryCalls(hModule);
         InitializeSRWLock(&g_srwLockRH);
+        // Initialze some global variables here
+        InitializeGlobalConfiguration();
         break;
     default:
         break;
@@ -249,6 +253,8 @@ CreateApplication(
 {
     HRESULT      hr = S_OK;
     APPLICATION *pApplication = NULL;
+
+    //REQUEST_HANDLER::StaticInitialize(pServer);
 
     if (pConfig->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
     {

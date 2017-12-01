@@ -2,6 +2,7 @@
 
 extern DWORD            g_OptionalWinHttpFlags;
 
+
 enum FORWARDING_REQUEST_STATUS
 {
     FORWARDER_START,
@@ -12,10 +13,12 @@ enum FORWARDING_REQUEST_STATUS
     FORWARDER_FINISH_REQUEST
 };
 
+
 class FORWARDING_HANDLER : public REQUEST_HANDLER
 {
 public:
     FORWARDING_HANDLER(
+
         _In_ IHttpContext     *pW3Context,
         _In_  HTTP_MODULE_ID  *pModuleId,
         _In_ APPLICATION      *pApplication);
@@ -151,6 +154,7 @@ private:
         _Out_   PCWSTR *                ppszHeaders,
         _Inout_ DWORD *                 pcchHeaders
     );
+
 
     DWORD                               m_Signature;
     //

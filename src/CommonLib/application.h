@@ -1,6 +1,5 @@
 #pragma once
-#include"stdafx.h"
-#include "aspnetcoreconfig.h"
+//#include "aspnetcoreconfig.h"
 
 enum APPLICATION_STATUS
 {
@@ -8,6 +7,8 @@ enum APPLICATION_STATUS
     RUNNING,
     FAUL
 };
+
+class  ASPNETCORE_CONFIG;
 
 class APPLICATION
 {

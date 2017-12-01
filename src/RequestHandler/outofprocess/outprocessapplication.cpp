@@ -63,5 +63,4 @@ OUT_OF_PROCESS_APPLICATION::ShutDown()
         m_pProcessManager->DereferenceProcessManager();
         m_pProcessManager = NULL;
     }
-    //todo
 }

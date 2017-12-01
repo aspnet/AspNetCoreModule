@@ -86,23 +86,34 @@ public:
     );
 
     static
+    BOOL
+    DirectoryExists(
+        _In_ STRU *pstrPath
+    );
+
+    static
+    BOOL
+    GetSystemPathVariable(
+        _In_ PCWSTR pszEnvironmentVariable,
+        _Out_ STRU *pstrResult
+    );
+
+    static
+    VOID
+    FindDotNetFolders(
+        _In_ PCWSTR pszPath,
+        _Out_ std::vector<std::wstring> *pvFolders
+    );
+
+    static
     HRESULT
-    RevomeStaleFiles(
-        _In_  LPCWSTR pszDirPath,
-        _In_  DWORD dwNumberOfKeptFiles
+    FindHighestDotNetVersion(
+        _In_ std::vector<std::wstring> vFolders,
+        _Out_ STRU *pstrResult
     );
 
 private:
 
     UTILITY() {}
     ~UTILITY() {}
-
-    static
-    CHAR 
-    ToHexDigit(
-        UINT nDigit
-    )
-    {
-        return static_cast<CHAR>(nDigit > 9 ? nDigit - 10 + 'A' : nDigit + '0');
-    }
 };

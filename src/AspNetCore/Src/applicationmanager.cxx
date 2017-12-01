@@ -27,7 +27,7 @@ APPLICATION_MANAGER::GetApplicationInfo(
     DBG_ASSERT(pServer != NULL);
     DBG_ASSERT(pConfig != NULL);
 
-    pszApplicationId = pConfig->QueryConfigPath()->QueryStr();
+    pszApplicationId = pConfig->QueryConfigPath()->QueryStr(); 
 
     hr = key.Initialize(pszApplicationId);
     if (FAILED(hr))
@@ -114,10 +114,8 @@ APPLICATION_MANAGER::GetApplicationInfo(
         fExclusiveLock = FALSE;
 
         pApplicationInfo->StartMonitoringAppOffline();
-
         *ppApplicationInfo = pApplicationInfo;
         pApplicationInfo = NULL;
-
     }
 
 Finished:
@@ -164,25 +162,25 @@ Finished:
         }
         else if (fMixedHostingModelError)
         {
-            if (SUCCEEDED(strEventMsg.SafeSnwprintf(
-                ASPNETCORE_EVENT_MIXED_HOSTING_MODEL_ERROR_MSG,
-                pszApplicationId,
-                pConfig->QueryHostingModelStr())))
-            {
-                apsz[0] = strEventMsg.QueryStr();
-                /*if (FORWARDING_HANDLER::QueryEventLog() != NULL)
-                {
-                    ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
-                        EVENTLOG_ERROR_TYPE,
-                        0,
-                        ASPNETCORE_EVENT_MIXED_HOSTING_MODEL_ERROR,
-                        NULL,
-                        1,
-                        0,
-                        apsz,
-                        NULL);
-                }*/
-            }
+            //if (SUCCEEDED(strEventMsg.SafeSnwprintf(
+            //    ASPNETCORE_EVENT_MIXED_HOSTING_MODEL_ERROR_MSG,
+            //    pszApplicationId,
+            //    pConfig->QueryHostingModelStr())))
+            //{
+            //    apsz[0] = strEventMsg.QueryStr();
+            //    /*if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+            //    {
+            //        ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
+            //            EVENTLOG_ERROR_TYPE,
+            //            0,
+            //            ASPNETCORE_EVENT_MIXED_HOSTING_MODEL_ERROR,
+            //            NULL,
+            //            1,
+            //            0,
+            //            apsz,
+            //            NULL);
+            //    }*/
+            //}
         }
         else
         {

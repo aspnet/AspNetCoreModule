@@ -46,6 +46,7 @@ WEBSOCKET_HANDLER::WEBSOCKET_HANDLER() :
     _fReceivedCloseMsg(FALSE)
 {
     DebugPrintf (ASPNETCORE_DEBUG_FLAG_INFO, "WEBSOCKET_HANDLER::WEBSOCKET_HANDLER");
+
     InitializeCriticalSectionAndSpinCount(&_RequestLock, 1000);
     InsertRequest();
 }
@@ -205,8 +206,8 @@ WEBSOCKET_HANDLER::IndicateCompletionToIIS(
 
 --*/
 {
-    DebugPrintf (ASPNETCORE_DEBUG_FLAG_INFO,
-            "WEBSOCKET_HANDLER::IndicateCompletionToIIS");
+    /*DebugPrintf (ASPNETCORE_DEBUG_FLAG_INFO,
+            "WEBSOCKET_HANDLER::IndicateCompletionToIIS");*/
 
     _pHandler->SetStatus(FORWARDER_DONE);
 

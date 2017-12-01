@@ -40,10 +40,6 @@
 
 //#define HEX_TO_ASCII(c) ((CHAR)(((c) < 10) ? ((c) + '0') : ((c) + 'a' - 10)))
 
-//HTTP_MODULE_ID   g_pModuleId;
-//IHttpServer *    g_pHttpServer;
-//BOOL             g_fRecycleProcessCalled;
-
 #include "stdafx.h"
 
 enum APP_HOSTING_MODEL
@@ -157,30 +153,22 @@ public:
 
     STRU*
     QueryProcessPath(
-        VOID
-    )
+            VOID
+        )
     {
         return &m_struProcessPath;
     }
 
     APP_HOSTING_MODEL
     QueryHostingModel(
-            VOID
+        VOID
     )
     {
         return m_hostingModel;
     }
 
-    STRU*
-    QueryHostingModelStr(
-            VOID
-        )
-    {
-        return &m_strHostingModel;
-    }
-
     BOOL
-    QueryStdoutLogEnabled()
+        QueryStdoutLogEnabled()
     {
         return m_fStdoutLogEnabled;
     }
@@ -227,6 +215,20 @@ public:
         return &m_struConfigPath;
     }
 
+    STRU*
+    QueryHostfxrPath()
+    {
+        return &m_struHostFxrPath;
+    }
+
+    BOOL
+    QueryIsStandAloneApplication(
+        VOID
+    )
+    {
+        return m_fIsStandAloneApplication;
+    }
+
 private:
 
     //
@@ -258,12 +260,14 @@ private:
     STRU                   m_struApplicationVirtualPath;
     STRU                   m_struConfigPath;
     STRU                   m_strHostingModel;
+    STRU                   m_struHostFxrPath;
     BOOL                   m_fStdoutLogEnabled;
     BOOL                   m_fForwardWindowsAuthToken;
     BOOL                   m_fDisableStartUpErrorPage;
     BOOL                   m_fWindowsAuthEnabled;
     BOOL                   m_fBasicAuthEnabled;
     BOOL                   m_fAnonymousAuthEnabled;
+    BOOL                   m_fIsStandAloneApplication;
     APP_HOSTING_MODEL      m_hostingModel;
     ENVIRONMENT_VAR_HASH*  m_pEnvironmentVariables;
 };

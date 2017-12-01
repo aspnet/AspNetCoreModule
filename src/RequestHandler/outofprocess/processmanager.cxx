@@ -158,6 +158,7 @@ PROCESS_MANAGER::GetProcess(
 
     ReleaseSRWLockShared(&m_srwLock);
     fSharedLock = FALSE;
+
     // should make the lock per process so that we can start processes simultaneously ?
     if (m_ppServerProcessList[dwProcessIndex] == NULL ||
         !m_ppServerProcessList[dwProcessIndex]->IsReady())
@@ -222,6 +223,7 @@ PROCESS_MANAGER::GetProcess(
 
         if (m_ppServerProcessList[dwProcessIndex] == NULL)
         {
+
             pSelectedServerProcess = new SERVER_PROCESS();
             if (pSelectedServerProcess == NULL)
             {
@@ -229,21 +231,22 @@ PROCESS_MANAGER::GetProcess(
                 goto Finished;
             }
 
+
             hr = pSelectedServerProcess->Initialize(
-                this,                                   //ProcessManager
-                pConfig->QueryProcessPath(),            //
-                pConfig->QueryArguments(),              //
-                pConfig->QueryStartupTimeLimitInMS(),
-                pConfig->QueryShutdownTimeLimitInMS(),
-                pConfig->QueryWindowsAuthEnabled(),
-                pConfig->QueryBasicAuthEnabled(),
-                pConfig->QueryAnonymousAuthEnabled(),
-                pConfig->QueryEnvironmentVariables(),
-                pConfig->QueryStdoutLogEnabled(),
-                pConfig->QueryStdoutLogFile(),
-                pConfig->QueryApplicationPhysicalPath(),   // physical path
-                pConfig->QueryApplicationPath(),           // app path
-                pConfig->QueryApplicationVirtualPath()     // App relative virtual path
+                    this,                                   //ProcessManager
+                    pConfig->QueryProcessPath(),            //
+                    pConfig->QueryArguments(),              //
+                    pConfig->QueryStartupTimeLimitInMS(),
+                    pConfig->QueryShutdownTimeLimitInMS(),
+                    pConfig->QueryWindowsAuthEnabled(),
+                    pConfig->QueryBasicAuthEnabled(),
+                    pConfig->QueryAnonymousAuthEnabled(),
+                    pConfig->QueryEnvironmentVariables(),
+                    pConfig->QueryStdoutLogEnabled(),
+                    pConfig->QueryStdoutLogFile(),
+                    pConfig->QueryApplicationPhysicalPath(),   // physical path
+                    pConfig->QueryApplicationPath(),           // app path
+                    pConfig->QueryApplicationVirtualPath()     // App relative virtual path
             );
             if (FAILED(hr))
             {

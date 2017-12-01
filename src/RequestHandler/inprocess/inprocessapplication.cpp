@@ -130,7 +130,7 @@ IN_PROCESS_APPLICATION::OnExecuteRequest(
 {
     if (m_RequestHandler != NULL)
     {
-        return m_RequestHandler(pHttpContext, pInProcessHandler, m_RequestHandlerContext);
+        return m_RequestHandler(pInProcessHandler, m_RequestHandlerContext);
     }
 
     ////
