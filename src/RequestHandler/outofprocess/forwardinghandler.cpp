@@ -267,12 +267,12 @@ FORWARDING_HANDLER::OnExecuteRequestHandler()
     DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
 
     //FREB log
-    /*if (ANCMEvents::ANCM_REQUEST_FORWARD_START::IsEnabled(m_pW3Context->GetTraceContext()))
+    if (ANCMEvents::ANCM_REQUEST_FORWARD_START::IsEnabled(m_pW3Context->GetTraceContext()))
     {
         ANCMEvents::ANCM_REQUEST_FORWARD_START::RaiseEvent(
             m_pW3Context->GetTraceContext(),
             NULL);
-    }*/
+    }
 
     if (!WinHttpSendRequest(m_hRequest,
         m_pszHeaders,
@@ -285,13 +285,15 @@ FORWARDING_HANDLER::OnExecuteRequestHandler()
         hr = HRESULT_FROM_WIN32(GetLastError());
         DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
             "FORWARDING_HANDLER::OnExecuteRequestHandler, Send request failed");
-        /*if (ANCMEvents::ANCM_REQUEST_FORWARD_FAIL::IsEnabled(m_pW3Context->GetTraceContext()))
+
+        // FREB log
+        if (ANCMEvents::ANCM_REQUEST_FORWARD_FAIL::IsEnabled(m_pW3Context->GetTraceContext()))
         {
             ANCMEvents::ANCM_REQUEST_FORWARD_FAIL::RaiseEvent(
                 m_pW3Context->GetTraceContext(),
                 NULL,
                 hr);
-        }*/
+        }
 
         goto Failure;
     }
@@ -1150,13 +1152,14 @@ None
     }
 
     //FREB log
-   /* if (ANCMEvents::ANCM_WINHTTP_CALLBACK::IsEnabled(m_pW3Context->GetTraceContext()))
+    if (ANCMEvents::ANCM_WINHTTP_CALLBACK::IsEnabled(m_pW3Context->GetTraceContext()))
     {
         ANCMEvents::ANCM_WINHTTP_CALLBACK::RaiseEvent(
             m_pW3Context->GetTraceContext(),
             NULL,
             dwInternetStatus);
-    }*/
+    }
+
     //
     // ReadLock on the winhttp handle to protect from a client disconnect/
     // server stop closing the handle while we are using it.
@@ -1273,12 +1276,14 @@ None
         break;
 
     case WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING:
-        /*if (ANCMEvents::ANCM_REQUEST_FORWARD_END::IsEnabled(m_pW3Context->GetTraceContext()))
+        DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
+            "FORWARDING_HANDLER::OnWinHttpCompletionInternal : WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING\n");
+        if (ANCMEvents::ANCM_REQUEST_FORWARD_END::IsEnabled(m_pW3Context->GetTraceContext()))
         {
             ANCMEvents::ANCM_REQUEST_FORWARD_END::RaiseEvent(
                 m_pW3Context->GetTraceContext(),
                 NULL);
-        }*/
+        }
         fEndRequest = TRUE;
         m_hRequest = NULL;
         fAnotherCompletionExpected = FALSE;
@@ -1386,13 +1391,13 @@ Failure:
     //}
 
     // FREB log
-    //if (ANCMEvents::ANCM_REQUEST_FORWARD_FAIL::IsEnabled(m_pW3Context->GetTraceContext()))
-    //{
-    //    ANCMEvents::ANCM_REQUEST_FORWARD_FAIL::RaiseEvent(
-    //        m_pW3Context->GetTraceContext(),
-    //        NULL,
-    //        hr);
-    //}
+    if (ANCMEvents::ANCM_REQUEST_FORWARD_FAIL::IsEnabled(m_pW3Context->GetTraceContext()))
+    {
+        ANCMEvents::ANCM_REQUEST_FORWARD_FAIL::RaiseEvent(
+            m_pW3Context->GetTraceContext(),
+            NULL,
+            hr);
+    }
 
 Finished:
 

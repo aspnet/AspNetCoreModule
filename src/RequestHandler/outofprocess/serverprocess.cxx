@@ -1017,13 +1017,13 @@ SERVER_PROCESS::StartProcess(
         //        }
         //
         //        // FREB log
-        //        if (ANCMEvents::ANCM_START_APPLICATION_SUCCESS::IsEnabled(context->GetTraceContext()))
-        //        {
-        //            ANCMEvents::ANCM_START_APPLICATION_SUCCESS::RaiseEvent(
-        //                context->GetTraceContext(),
-        //                NULL,
-        //                apsz[0]);
-        //        }
+                //if (ANCMEvents::ANCM_START_APPLICATION_SUCCESS::IsEnabled(context->GetTraceContext()))
+                //{
+                //    ANCMEvents::ANCM_START_APPLICATION_SUCCESS::RaiseEvent(
+                //        context->GetTraceContext(),
+                //        NULL,
+                //        apsz[0]);
+                //}
         //    }
         //
 
@@ -1238,7 +1238,7 @@ SERVER_PROCESS::SetupStdHandles(
         pStartupInfo->hStdError = m_hStdoutHandle;
         pStartupInfo->hStdOutput = m_hStdoutHandle;
         // start timer to open and close handles regularly.
-        m_Timer.InitializeTimer(SERVER_PROCESS::TimerCallback, &m_struFullLogFile, 3000, 3000);
+        m_Timer.InitializeTimer(STTIMER::TimerCallback, &m_struFullLogFile, 3000, 3000);
     }
     else
     {   // only enable stderr
@@ -1288,40 +1288,6 @@ Finished:
         }
     }
     return hr;
-}
-
-VOID
-CALLBACK
-SERVER_PROCESS::TimerCallback(
-    _In_ PTP_CALLBACK_INSTANCE Instance,
-    _In_ PVOID Context,
-    _In_ PTP_TIMER Timer
-)
-{
-    Instance;
-    Timer;
-    STRU*                   pstruLogFilePath = (STRU*)Context;
-    HANDLE                  hStdoutHandle = NULL;
-    SECURITY_ATTRIBUTES     saAttr = {0};
-    HRESULT                 hr = S_OK;
-
-    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-    saAttr.bInheritHandle = TRUE; 
-    saAttr.lpSecurityDescriptor = NULL;
-
-    hStdoutHandle = CreateFileW(pstruLogFilePath->QueryStr(),
-                                FILE_READ_DATA,
-                                FILE_SHARE_WRITE,
-                                &saAttr,
-                                OPEN_ALWAYS,
-                                FILE_ATTRIBUTE_NORMAL,
-                                NULL);
-    if (hStdoutHandle == INVALID_HANDLE_VALUE)
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-    }
-
-    CloseHandle(hStdoutHandle);
 }
 
 HRESULT
@@ -1977,11 +1943,10 @@ SERVER_PROCESS::~SERVER_PROCESS()
         m_hStdoutHandle = NULL;
     }
 
-    
-        if (m_fStdoutLogEnabled)
-        {
-            m_Timer.CancelTimer();
-        }
+    if (m_fStdoutLogEnabled)
+    {
+        m_Timer.CancelTimer();
+    }
     
     if (!m_fStdoutLogEnabled && !m_struFullLogFile.IsEmpty())
     {
@@ -1996,11 +1961,6 @@ SERVER_PROCESS::~SERVER_PROCESS()
             // as nothing can be done
             DeleteFile(m_struFullLogFile.QueryStr());
         }
-    }
-
-    if (m_fStdoutLogEnabled)
-    {
-        m_Timer.CancelTimer();
     }
 
     if (m_hJobObject != NULL)

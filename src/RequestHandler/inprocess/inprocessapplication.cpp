@@ -12,7 +12,9 @@ IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(
     m_fManagedAppLoaded(FALSE),
     m_fLoadManagedAppError(FALSE),
     m_fInitialized(FALSE),
-    m_fRecycleProcessCalled(FALSE)
+    m_fRecycleProcessCalled(FALSE),
+    m_hLogFileHandle(INVALID_HANDLE_VALUE),
+    m_fDoneStdRedirect(FALSE)
 {
     // is it guaranteed that we have already checked app offline at this point?
     // If so, I don't think there is much to do here.
@@ -47,6 +49,34 @@ IN_PROCESS_APPLICATION::Recycle(
     {
         DWORD    dwThreadStatus = 0;
         DWORD    dwTimeout = m_pConfig->QueryShutdownTimeLimitInMS();
+        HANDLE   handle = NULL;
+        WIN32_FIND_DATA fileData;
+
+        if (m_pStdFile != NULL)
+        {
+            fflush(stdout);
+            fflush(stderr);
+            fclose(m_pStdFile);
+        }
+
+        if (m_hLogFileHandle != INVALID_HANDLE_VALUE)
+        {
+            m_Timer.CancelTimer();
+            CloseHandle(m_hLogFileHandle);
+            m_hLogFileHandle = INVALID_HANDLE_VALUE;
+        }
+
+        // delete empty log file, if logging is not enabled
+        handle = FindFirstFile(m_struLogFilePath.QueryStr(), &fileData);
+        if (handle != INVALID_HANDLE_VALUE &&
+                fileData.nFileSizeHigh &&
+                fileData.nFileSizeLow == 0) // skip check of nFileSizeHigh
+        {
+            FindClose(handle);
+            // no need to check whether the deletion succeeds
+            // as nothing can be done
+            DeleteFile(m_struLogFilePath.QueryStr());
+        }
 
         AcquireSRWLockExclusive(&m_srwLock);
 
@@ -133,15 +163,15 @@ IN_PROCESS_APPLICATION::OnExecuteRequest(
         return m_RequestHandler(pInProcessHandler, m_RequestHandlerContext);
     }
 
-    ////
-    //// return error as the application did not register callback
-    ////
-    //if (ANCMEvents::ANCM_EXECUTE_REQUEST_FAIL::IsEnabled(pHttpContext->GetTraceContext()))
-    //{
-    //    ANCMEvents::ANCM_EXECUTE_REQUEST_FAIL::RaiseEvent(pHttpContext->GetTraceContext(),
-    //        NULL,
-    //        E_APPLICATION_ACTIVATION_EXEC_FAILURE);
-    //}
+    //
+    // return error as the application did not register callback
+    //
+    if (ANCMEvents::ANCM_EXECUTE_REQUEST_FAIL::IsEnabled(pHttpContext->GetTraceContext()))
+    {
+        ANCMEvents::ANCM_EXECUTE_REQUEST_FAIL::RaiseEvent(pHttpContext->GetTraceContext(),
+            NULL,
+            E_APPLICATION_ACTIVATION_EXEC_FAILURE);
+    }
     pHttpContext->GetResponse()->SetStatus(500, "Internal Server Error", 0, E_APPLICATION_ACTIVATION_EXEC_FAILURE);
     return RQ_NOTIFICATION_FINISH_REQUEST;
 }
@@ -265,6 +295,183 @@ IN_PROCESS_APPLICATION::FindHighestDotNetVersion(
 
     // we check FAILED(hr) outside of function
     return hr;
+}
+
+VOID
+IN_PROCESS_APPLICATION::SetStdOut(
+    VOID
+)
+{
+    HRESULT      hr = S_OK;
+    BOOL         fLocked = FALSE;
+    BOOL         fResult = FALSE;
+    STRU         struPath;
+
+    SYSTEMTIME              systemTime;
+    SECURITY_ATTRIBUTES     saAttr = { 0 };
+
+    if (!m_fDoneStdRedirect)
+    {
+        // Have not set stdout yet, redirect stdout to log file
+        AcquireSRWLockExclusive(&m_srwLock);
+        fLocked = TRUE;
+        if (!m_fDoneStdRedirect)
+        {
+            hr = UTILITY::ConvertPathToFullPath(
+                m_pConfig->QueryStdoutLogFile()->QueryStr(),
+                m_pConfig->QueryApplicationPhysicalPath()->QueryStr(),
+                &struPath);
+            if (FAILED(hr))
+            {
+                goto Finished;
+            }
+
+            hr = UTILITY::EnsureDirectoryPathExist(struPath.QueryStr());
+            if (FAILED(hr))
+            {
+                goto Finished;
+            }
+
+            GetSystemTime(&systemTime);
+            hr = m_struLogFilePath.SafeSnwprintf(L"%s_%d%02d%02d%02d%02d%02d_%d.log",
+                struPath.QueryStr(),
+                systemTime.wYear,
+                systemTime.wMonth,
+                systemTime.wDay,
+                systemTime.wHour,
+                systemTime.wMinute,
+                systemTime.wSecond,
+                GetCurrentProcessId());
+            if (FAILED(hr))
+            {
+                goto Finished;
+            }
+
+            saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+            saAttr.bInheritHandle = TRUE;
+            saAttr.lpSecurityDescriptor = NULL;
+
+            m_hLogFileHandle = CreateFileW(m_struLogFilePath.QueryStr(),
+                FILE_WRITE_DATA,
+                FILE_SHARE_READ,
+                &saAttr,
+                CREATE_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL,
+                NULL);
+
+            if (m_hLogFileHandle == INVALID_HANDLE_VALUE)
+            {
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                goto Finished;
+            }
+
+            //
+            // best effort
+            // no need to capture the error code as nothing we can do here
+            // in case mamanged layer exits abnormally, may not be able to capture the log content as it is buffered.
+            //
+            if (!GetConsoleWindow())
+            {
+                //
+                // SetStdHandle works as w3wp does not have Console
+                // Current process does not have a console
+                //
+                SetStdHandle(STD_ERROR_HANDLE, m_hLogFileHandle);
+                if (m_pConfig->QueryStdoutLogEnabled())
+                {
+                    SetStdHandle(STD_OUTPUT_HANDLE, m_hLogFileHandle);
+                    // not work
+                    // AllocConsole()  does not help
+                    // *stdout = *m_pStdFile;
+                    // *stderr = *m_pStdFile;
+                    // _dup2(_fileno(m_pStdFile), _fileno(stdout));
+                    // _dup2(_fileno(m_pStdFile), _fileno(stderr));
+                    // this one cannot capture the process start failure
+                    // _wfreopen_s(&m_pStdFile, struLogFileName.QueryStr(), L"w", stdout);
+
+                    // Periodically flush the log content to file
+                    m_Timer.InitializeTimer(STTIMER::TimerCallback, &m_struLogFilePath, 3000, 3000);
+                }
+            }
+            else
+            {
+                // The process has console, e.g., IIS Express scenario
+                CloseHandle(m_hLogFileHandle);
+                m_hLogFileHandle = INVALID_HANDLE_VALUE;
+
+                if (m_pConfig->QueryStdoutLogEnabled())
+                {
+                    if (_wfopen_s(&m_pStdFile, m_struLogFilePath.QueryStr(), L"w") == 0)
+                    {
+                        // known issue: error info may not be capture when process crashes during buffering
+                        // even we disabled FILE buffering
+                        setvbuf(m_pStdFile, NULL, _IONBF, 0);
+                        _dup2(_fileno(m_pStdFile), _fileno(stdout));
+                        _dup2(_fileno(m_pStdFile), _fileno(stderr));
+                    }
+                    // not work for console scenario
+                    // close and AllocConsole does not help
+                    //_wfreopen_s(&m_pStdFile, struLogFileName.QueryStr(), L"w", stdout);
+                    // SetStdHandle(STD_ERROR_HANDLE, m_hLogFileHandle);
+                    // SetStdHandle(STD_OUTPUT_HANDLE, m_hLogFileHandle);
+                    //*stdout = *m_pStdFile;
+                    //*stderr = *m_pStdFile;
+                }
+                else
+                {
+                    // delete the file as log is disabled
+                    WIN32_FIND_DATA fileData;
+                    HANDLE handle = FindFirstFile(m_struLogFilePath.QueryStr(), &fileData);
+                    if (handle != INVALID_HANDLE_VALUE &&
+                        fileData.nFileSizeHigh == 0 &&
+                        fileData.nFileSizeLow == 0)
+                    {
+                        FindClose(handle);
+                        // no need to check whether the deletion succeeds
+                        // as nothing can be done
+                        DeleteFile(m_struLogFilePath.QueryStr());
+                    }
+                }
+            }
+        }
+    }
+
+Finished:
+    m_fDoneStdRedirect = TRUE;
+    if (fLocked)
+    {
+        ReleaseSRWLockExclusive(&m_srwLock);
+    }
+    if (FAILED(hr) && m_pConfig->QueryStdoutLogEnabled())
+    {
+        //todo log an warning
+        //STRU                    strEventMsg;
+        //LPCWSTR                 apsz[1];
+
+        //if (SUCCEEDED(strEventMsg.SafeSnwprintf(
+        //    ASPNETCORE_EVENT_INVALID_STDOUT_LOG_FILE_MSG,
+        //    m_struLogFilePath.QueryStr(),
+        //    HRESULT_FROM_GETLASTERROR())))
+        //{
+        //    apsz[0] = strEventMsg.QueryStr();
+        //    //
+        //    // not checking return code because if ReportEvent
+        //    // fails, we cannot do anything.
+        //    //
+        //    if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+        //    {
+        //        ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
+        //            EVENTLOG_WARNING_TYPE,
+        //            0,
+        //            ASPNETCORE_EVENT_CONFIG_ERROR,
+        //            NULL,
+        //            1,
+        //            0,
+        //            apsz,
+        //            NULL);
+        //    }
+        //}
+    }
 }
 
 // Will be called by the inprocesshandler

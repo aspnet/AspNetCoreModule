@@ -112,15 +112,6 @@ public:
         return m_pForwarderConnection;
     }
 
-    static
-    VOID
-    CALLBACK
-    TimerCallback(
-        _In_ PTP_CALLBACK_INSTANCE Instance,
-        _In_ PVOID Context,
-        _In_ PTP_TIMER Timer
-    );
-
     LPCSTR
     QueryGuid()
     {

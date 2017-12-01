@@ -96,6 +96,10 @@ private:
     // The event that gets triggered when managed initialization is complete
     HANDLE                          m_pInitalizeEvent;
 
+    // The std log file handle
+    HANDLE                          m_hLogFileHandle;
+    STRU                            m_struLogFilePath;
+
     // The exit code of the .NET Core process
     INT                             m_ProcessExitCode;
 
@@ -103,11 +107,19 @@ private:
     BOOL                            m_fLoadManagedAppError;
     BOOL                            m_fInitialized;
     BOOL                            m_fIsWebSocketsConnection;
-    SRWLOCK                         m_srwLock;
-
+    BOOL                            m_fDoneStdRedirect;
     BOOL                            m_fRecycleProcessCalled;
 
+    FILE*                           m_pStdFile;
+    STTIMER                         m_Timer;
+    SRWLOCK                         m_srwLock;
+
     static IN_PROCESS_APPLICATION*   s_Application;
+
+    VOID
+    SetStdOut(
+        VOID
+    );
 
     static
     VOID

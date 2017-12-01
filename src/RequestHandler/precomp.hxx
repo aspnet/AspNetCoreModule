@@ -24,6 +24,8 @@
 #include <cstdlib>
 #include <reftrace.h>
 #include <wchar.h>
+#include <io.h>
+#include <stdio.h>
 // This should remove our issue of compiling for win7 without header files.
 // We  force the Windows 8 version check logic in iiswebsocket.h to succeed even though we're compiling for Windows 7.
 // Then, we set the version defines back to Windows 7 to for the remainder of the compilation.
@@ -53,10 +55,11 @@
 #include "..\CommonLib\aspnetcoreconfig.h"
 #include "..\CommonLib\utility.h"
 #include "..\CommonLib\application.h"
+#include "aspnetcore_event.h"
 #include "disconnectcontext.h"
+#include "sttimer.h"
 #include ".\inprocess\InProcessHandler.h"
 #include ".\inprocess\inprocessapplication.h"
-#include ".\outofprocess\sttimer.h"
 #include ".\outofprocess\protocolconfig.h"
 #include ".\outofprocess\forwarderconnection.h"
 #include ".\outofprocess\serverprocess.h"

@@ -113,6 +113,41 @@ public:
         fInCanel = FALSE;
     }
 
+    static
+    VOID
+    CALLBACK
+    TimerCallback(
+        _In_ PTP_CALLBACK_INSTANCE Instance,
+        _In_ PVOID Context,
+        _In_ PTP_TIMER Timer
+    )
+    {
+        Instance;
+        Timer;
+        STRU*                   pstruLogFilePath = (STRU*)Context;
+        HANDLE                  hStdoutHandle = NULL;
+        SECURITY_ATTRIBUTES     saAttr = { 0 };
+        HRESULT                 hr = S_OK;
+
+        saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+        saAttr.bInheritHandle = TRUE;
+        saAttr.lpSecurityDescriptor = NULL;
+
+        hStdoutHandle = CreateFileW(pstruLogFilePath->QueryStr(),
+                                    FILE_READ_DATA,
+                                    FILE_SHARE_WRITE,
+                                    &saAttr,
+                                    OPEN_ALWAYS,
+                                    FILE_ATTRIBUTE_NORMAL,
+                                    NULL);
+        if (hStdoutHandle == INVALID_HANDLE_VALUE)
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+        }
+
+        CloseHandle(hStdoutHandle);
+    }
+
 private:
 
     VOID

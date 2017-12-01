@@ -173,7 +173,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="aspnetcore_event.h" />
     <ClInclude Include="disconnectcontext.h" />
+    <ClInclude Include="sttimer.h" />
     <ClInclude Include="outofprocess\forwarderconnection.h" />
     <ClInclude Include="outofprocess\processmanager.h" />
     <ClInclude Include="outofprocess\protocolconfig.h" />
@@ -187,7 +189,6 @@
     <ClInclude Include=".\inprocess\inprocesshandler.h" />
     <ClInclude Include=".\outofprocess\forwardinghandler.h" />
     <ClInclude Include=".\outofprocess\outprocessapplication.h" />
-    <ClInclude Include=".\outofprocess\sttimer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cxx" />
