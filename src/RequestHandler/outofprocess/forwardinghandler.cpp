@@ -108,7 +108,7 @@ FORWARDING_HANDLER::OnExecuteRequestHandler()
         goto Failure;
     }
 
-    pApplication = dynamic_cast<OUT_OF_PROCESS_APPLICATION*> (m_pApplication);
+    pApplication = static_cast<OUT_OF_PROCESS_APPLICATION*> (m_pApplication);
     if (pApplication == NULL)
     {
         hr = E_INVALIDARG;

@@ -932,7 +932,7 @@ SERVER_PROCESS::StartProcess(
             CREATE_NEW_PROCESS_GROUP;
 
         if (!CreateProcessW(
-            NULL,                   // applicationName     
+            NULL,                   // applicationName
             m_struCommandLine.QueryStr(),
             NULL,                   // processAttr
             NULL,                   // threadAttr
@@ -1989,8 +1989,10 @@ SERVER_PROCESS::~SERVER_PROCESS()
 //    InterlockedDecrement(&g_dwActiveServerProcesses);
 }
 
-VOID 
-ProcessHandleCallback(
+//static
+VOID
+CALLBACK
+SERVER_PROCESS::ProcessHandleCallback(
     _In_ PVOID  pContext,
     _In_ BOOL
 )
@@ -2018,7 +2020,7 @@ SERVER_PROCESS::RegisterProcessWait(
     status = RegisterWaitForSingleObject(
                 phWaitHandle,
                 hProcessToWaitOn,
-                (WAITORTIMERCALLBACK)&ProcessHandleCallback,
+                (WAITORTIMERCALLBACKFUNC)&ProcessHandleCallback,
                 this,
                 INFINITE,
                 WT_EXECUTEONLYONCE | WT_EXECUTEINWAITTHREAD 
@@ -2258,7 +2260,8 @@ SERVER_PROCESS::SendShutDownSignalInternal(
 
         if (AttachConsole(m_dwProcessId))
         {
-            // call ctrl-break instead of ctrl-c as child process may ignore ctrl-c
+            // As we called CreateProcess with CREATE_NEW_PROCESS_GROUP
+            // call ctrl-break instead of ctrl-c as child process ignores ctrl-c
             if (!GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, m_dwProcessId))
             {
                 // failed to send the ctrl signal. terminate the backend process immediately instead of waiting for timeout

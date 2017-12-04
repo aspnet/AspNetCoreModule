@@ -47,7 +47,6 @@ public:
         _In_ STRU                 *pszAppVirtualPath
         );
 
-
     HRESULT
     StartProcess( VOID );
 
@@ -98,6 +97,14 @@ public:
 
     virtual 
     ~SERVER_PROCESS();
+
+    static
+    VOID
+    CALLBACK
+    ProcessHandleCallback(
+        _In_ PVOID  pContext,
+        _In_ BOOL
+    );
 
     HRESULT
     HandleProcessExit(
