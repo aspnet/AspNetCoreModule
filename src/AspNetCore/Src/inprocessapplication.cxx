@@ -667,6 +667,9 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         goto Finished;
     }
 
+    LogEventViewer(L"Host/fxr path exists.");
+
+
     // Find all folders under host\\fxr\\ for version numbers.
     hr = strHostFxrSearchExpression.Copy(strDotnetFolderLocation);
     if (FAILED(hr))
@@ -691,6 +694,8 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         goto Finished;
     }
 
+    LogEventViewer(L"Found a folder with dotnet.");
+
     hr = FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
     if (FAILED(hr))
     {
@@ -714,6 +719,8 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     {
         goto Finished;
     }
+
+    LogEventViewer(L"Found hostfxr.dll.");
 
     hModule = LoadLibraryW(strDotnetFolderLocation.QueryStr());
 
