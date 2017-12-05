@@ -54,6 +54,7 @@ ASPNETCORE_CONFIG::CreateLogFile(
     _Out_ HANDLE* pHandle
 )
 {
+    // This doesn't work with full paths. TODO
     HRESULT hr = HRESULT_FROM_NT(ERROR_NOT_SUPPORTED); // Assume log is not enabled
     SECURITY_ATTRIBUTES     saAttr = { 0 };
     SYSTEMTIME              systemTime;
@@ -61,6 +62,7 @@ ASPNETCORE_CONFIG::CreateLogFile(
 
     DBG_ASSERT(pstruFullFileName);
     DBG_ASSERT(pHandle);
+    IN_PROCESS_APPLICATION::LogEventViewer(L"In Create log file.");
 
     *pHandle = INVALID_HANDLE_VALUE;
     if (fIgnoreDisableInConfig || m_fStdoutLogEnabled)
@@ -74,7 +76,7 @@ ASPNETCORE_CONFIG::CreateLogFile(
         {
             goto Finished;
         }
-
+        IN_PROCESS_APPLICATION::LogEventViewer(L"Hello");
         //
         // Check whether the (first) segment exists based on configuration element 'stdoutLogFile'
         // If not, create that folder. We only want make the default '.\logs\stdout' work.
@@ -91,22 +93,27 @@ ASPNETCORE_CONFIG::CreateLogFile(
             }
             strSegment = struLogPath.QueryStr();
         }
+
         if (strSegment != NULL)
         {
+
             hr = PATH::ConvertPathToFullPath(
                 strSegment,
                 m_struApplicationFullPath.QueryStr(),
                 &struPath);
+
             if (FAILED(hr))
             {
                 goto Finished;
             }
+
             if (!CreateDirectory(struPath.QueryStr(), NULL) &&
                 ERROR_ALREADY_EXISTS != GetLastError())
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
                 goto Finished;
             }
+
         }
         struPath.Reset();
         hr = PATH::ConvertPathToFullPath(
@@ -117,6 +124,7 @@ ASPNETCORE_CONFIG::CreateLogFile(
         {
             goto Finished;
         }
+        IN_PROCESS_APPLICATION::LogEventViewer(L"Mannnnnn");
 
         GetSystemTime(&systemTime);
         hr = pstruFullFileName->SafeSnwprintf(L"%s_%d%02d%02d%02d%02d%02d_%d.log",
@@ -132,6 +140,7 @@ ASPNETCORE_CONFIG::CreateLogFile(
         {
            goto Finished;
         }
+        IN_PROCESS_APPLICATION::LogEventViewer(L"Bout to make a file");
 
         saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
         saAttr.bInheritHandle = TRUE;
@@ -144,11 +153,14 @@ ASPNETCORE_CONFIG::CreateLogFile(
                 CREATE_ALWAYS,
                 FILE_ATTRIBUTE_NORMAL,
                 NULL);
+
         if (*pHandle == INVALID_HANDLE_VALUE)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
             goto Finished;
         }
+        IN_PROCESS_APPLICATION::LogEventViewer(L"Made that file");
+
         hr = S_OK;
     }
 Finished:

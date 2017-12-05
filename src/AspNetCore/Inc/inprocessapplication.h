@@ -78,6 +78,9 @@ public:
     }
 
 
+    static
+        HRESULT LogEventViewer(PCWSTR message);
+
 private:
     // Thread executing the .NET Core process
     HANDLE                          m_hThread;
@@ -122,9 +125,6 @@ private:
         _In_ std::vector<std::wstring> vFolders,
         _Out_ STRU *pstrResult
     );
-
-    static
-    HRESULT LogEventViewer(PCWSTR message);
 
     static
     BOOL

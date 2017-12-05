@@ -141,12 +141,14 @@ IN_PROCESS_APPLICATION::SetStdOut(
     HRESULT      hr = S_OK;
     BOOL         fLocked = FALSE;
     BOOL         fResult = FALSE;
+    LogEventViewer(L"Calling SetStdOut.");
 
     if (!m_fDoneStdRedirect)
     {
         // Have not set stdout yet, redirect stdout to log file
         AcquireSRWLockExclusive(&m_srwLock);
         fLocked = TRUE;
+        LogEventViewer(L"Setting std out to file");
         if (!m_fDoneStdRedirect)
         {
             //
@@ -156,19 +158,27 @@ IN_PROCESS_APPLICATION::SetStdOut(
             //
             if (!GetConsoleWindow())
             {
+                LogEventViewer(L"Trying to create log file.");
+
                 hr = m_pConfiguration->CreateLogFile(TRUE, &m_struLogFilePath, &m_hLogFileHandle);
                 if (FAILED(hr))
                 {
                     goto Finished;
                 }
+                LogEventViewer(L"Created log file.");
+
                 //
                 // SetStdHandle works as w3wp does not have Console
                 // Current process does not have a console
                 //
                 SetStdHandle(STD_ERROR_HANDLE, m_hLogFileHandle);
+
+
                 if (m_pConfiguration->QueryStdoutLogEnabled())
                 {
                     SetStdHandle(STD_OUTPUT_HANDLE, m_hLogFileHandle);
+                    LogEventViewer(L"SetStdHandle succeeded");
+
                     // not work
                     // AllocConsole()  does not help
                     // *stdout = *m_pStdFile;
