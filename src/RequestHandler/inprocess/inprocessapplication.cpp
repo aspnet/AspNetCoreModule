@@ -810,11 +810,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // set the callbacks
     s_Application = this;
 
-    m_ProcessExitCode = pProc(2, argv);
-    if (m_ProcessExitCode != 0)
-    {
-
-    }
+    RunDotnetApplication(argv, pProc);
 
 Finished:
     //
@@ -859,4 +855,34 @@ Finished:
         }
     }
     return hr;
+}
+
+//
+// Calls hostfxr_main with the hostfxr and application as arguments.
+// Method should be called with only 
+// Need to have __try / __except in methods that require unwinding.
+// 
+HRESULT
+IN_PROCESS_APPLICATION::RunDotnetApplication(PCWSTR* argv, hostfxr_main_fn pProc)
+{
+    HRESULT hr = S_OK;
+    __try
+    {
+        m_ProcessExitCode = pProc(2, argv);
+    }
+    __except (FilterException(GetExceptionCode(), GetExceptionInformation()))
+    {
+        // TODO Log error message here.
+        hr = E_FAIL;
+    }
+    return hr;
+}
+
+// static
+INT
+IN_PROCESS_APPLICATION::FilterException(unsigned int code, struct _EXCEPTION_POINTERS *ep)
+{
+    // We assume that any exception is a failure as the applicaiton didn't start or there was a startup error.
+    // TODO, log error based on exception code.
+    return EXCEPTION_EXECUTE_HANDLER;
 }
