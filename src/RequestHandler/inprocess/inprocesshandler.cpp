@@ -34,18 +34,19 @@ IN_PROCESS_HANDLER::OnExecuteRequestHandler()
         }
         */
         //fInternalError = TRUE;
+        m_pW3Context->GetResponse()->SetStatus(500, "Internal Server Error", 0, hr);
         return REQUEST_NOTIFICATION_STATUS::RQ_NOTIFICATION_FINISH_REQUEST;
     }
 
     // FREB log
-    /*
+    
     if (ANCMEvents::ANCM_START_APPLICATION_SUCCESS::IsEnabled(m_pW3Context->GetTraceContext()))
     {
         ANCMEvents::ANCM_START_APPLICATION_SUCCESS::RaiseEvent(
             m_pW3Context->GetTraceContext(),
             NULL,
             L"InProcess Application");
-    }*/
+    }
 
     //SetHttpSysDisconnectCallback();
     return ((IN_PROCESS_APPLICATION*)m_pApplication)->OnExecuteRequest(m_pW3Context, this);
