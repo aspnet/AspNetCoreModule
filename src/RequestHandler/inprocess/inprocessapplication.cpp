@@ -498,15 +498,15 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
         goto Finished;
     }
 
+    // Set up stdout redirect
+    SetStdOut();
+
     AcquireSRWLockExclusive(&m_srwLock);
     fLocked = TRUE;
     if (m_fManagedAppLoaded || m_fLoadManagedAppError)
     {
         goto Finished;
     }
-
-    // Set up stdout redirect
-    SetStdOut();
 
     m_hThread = CreateThread(
         NULL,       // default security attributes
