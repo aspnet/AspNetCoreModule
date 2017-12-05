@@ -880,7 +880,7 @@ IN_PROCESS_APPLICATION::RunDotnetApplication(PCWSTR* argv, hostfxr_main_fn pProc
 
 // static
 INT
-IN_PROCESS_APPLICATION::FilterException(unsigned int code, struct _EXCEPTION_POINTERS *ep)
+IN_PROCESS_APPLICATION::FilterException(unsigned int, struct _EXCEPTION_POINTERS*)
 {
     // We assume that any exception is a failure as the applicaiton didn't start or there was a startup error.
     // TODO, log error based on exception code.
