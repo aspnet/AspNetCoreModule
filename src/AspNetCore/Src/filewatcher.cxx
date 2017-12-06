@@ -13,6 +13,8 @@ FILE_WATCHER::~FILE_WATCHER()
 {
     if (m_hChangeNotificationThread != NULL)
     {
+        // Need to terminate thread before closing it.
+        TerminateThread(m_hChangeNotificationThread, 1);
         CloseHandle(m_hChangeNotificationThread);
         m_hChangeNotificationThread = NULL;
     }

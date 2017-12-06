@@ -144,7 +144,7 @@ public:
 
 private:
     HRESULT FindRequestHandlerAssembly();
-    HRESULT FindNativeAssemblyFromInetsrv(STRU* struFilename);
+    HRESULT FindNativeAssemblyFromGlobalLocation(STRU* struFilename);
     HRESULT FindNativeAssemblyFromLocalBin(STRU* struFilename);
     HRESULT GetRequestHandlerFromRuntimeStore(STRU* struFilename);
 

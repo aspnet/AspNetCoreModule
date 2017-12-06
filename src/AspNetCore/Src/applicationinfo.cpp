@@ -138,7 +138,11 @@ APPLICATION_INFO::EnsureApplicationCreated()
         goto Finished;
     }
 
-    FindRequestHandlerAssembly();
+    hr = FindRequestHandlerAssembly();
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
 
     if (m_pApplication == NULL)
     {
@@ -290,32 +294,6 @@ APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename)
     {
         goto Finished;
     }
-
-Finished:
-    return hr;
-}
-
-HRESULT
-APPLICATION_INFO::GetRequestHandlerFromRuntimeStore(STRU* struFilename)
-{
-    UNREFERENCED_PARAMETER(struFilename);
-    // TODO call into hostfxr to find the runtime store. 
-    HRESULT hr = S_OK;
-    goto Finished;
-
-Finished:
-    return hr;
-}
-
-HRESULT
-APPLICATION_INFO::FindNativeAssemblyFromLocalBin(STRU* struFilename)
-{
-    HRESULT hr = S_OK;
-
-    hr = UTILITY::ConvertPathToFullPath(g_pwzAspnetcoreRequestHandlerName,
-        m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(),
-        struFilename);
-    goto Finished;
 
 Finished:
     return hr;
