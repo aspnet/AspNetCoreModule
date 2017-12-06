@@ -191,7 +191,7 @@ APPLICATION_INFO::FindRequestHandlerAssembly()
         if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
         {
             // Look at inetsvr only for now. TODO add in functionality
-            hr = FindNativeAssemblyFromInetsrv(&struFileName);
+            hr = FindNativeAssemblyFromGlobalLocation(&struFileName);
 
             if (FAILED(hr))
             {
@@ -200,7 +200,7 @@ APPLICATION_INFO::FindRequestHandlerAssembly()
         }
         else
         {
-            hr = FindNativeAssemblyFromInetsrv(&struFileName);
+            hr = FindNativeAssemblyFromGlobalLocation(&struFileName);
             if (FAILED(hr))
             {
                 goto Finished;
@@ -248,7 +248,7 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::FindNativeAssemblyFromInetsrv(STRU* struFilename)
+APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename)
 {
     HRESULT hr = S_OK;
     DWORD dwSize = MAX_PATH;
