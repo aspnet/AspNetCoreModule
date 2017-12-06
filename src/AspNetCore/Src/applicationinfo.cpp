@@ -22,7 +22,7 @@ APPLICATION_INFO::~APPLICATION_INFO()
     }
     if (m_pApplication != NULL)
     {
-        // sutdown the application
+        // shutdown the application
         m_pApplication->ShutDown();
         m_pApplication->DereferenceApplication();
         m_pApplication = NULL;
