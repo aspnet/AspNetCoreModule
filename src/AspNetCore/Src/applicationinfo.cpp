@@ -138,7 +138,7 @@ APPLICATION_INFO::EnsureApplicationCreated()
         goto Finished;
     }
 
-    LoadRequestHandlerAssembly();
+    FindRequestHandlerAssembly();
 
     if (m_pApplication == NULL)
     {
@@ -172,7 +172,7 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::LoadRequestHandlerAssembly()
+APPLICATION_INFO::FindRequestHandlerAssembly()
 {
     HRESULT hr = S_OK;
     BOOL    fLocked = FALSE;
@@ -193,11 +193,11 @@ APPLICATION_INFO::LoadRequestHandlerAssembly()
             // First find hostfxr location.
             if (m_pConfiguration->QueryIsStandAloneApplication())
             {
-                hr = LoadAssemblyFromLocalBin(&struFileName);
+                hr = FindNativeAssemblyFromLocalBin(&struFileName);
             }
             else
             {
-                hr = LoadAssemblyFromInetsrv(&struFileName);
+                hr = FindNativeAssemblyFromInetsrv(&struFileName);
                 //hr = GetRequestHandlerFromRuntimeStore(&struFileName);
             }
 
@@ -208,7 +208,7 @@ APPLICATION_INFO::LoadRequestHandlerAssembly()
         }
         else
         {
-            hr = LoadAssemblyFromInetsrv(&struFileName);
+            hr = FindNativeAssemblyFromInetsrv(&struFileName);
             if (FAILED(hr))
             {
                 goto Finished;
@@ -256,7 +256,7 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::LoadAssemblyFromInetsrv(STRU* struFilename)
+APPLICATION_INFO::FindNativeAssemblyFromInetsrv(STRU* struFilename)
 {
     HRESULT hr = S_OK;
     DWORD dwSize = MAX_PATH;
@@ -316,7 +316,7 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::LoadAssemblyFromLocalBin(STRU* struFilename)
+APPLICATION_INFO::FindNativeAssemblyFromLocalBin(STRU* struFilename)
 {
     HRESULT hr = S_OK;
 

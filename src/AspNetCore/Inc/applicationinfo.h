@@ -143,9 +143,9 @@ public:
     }
 
 private:
-    HRESULT LoadRequestHandlerAssembly();
-    HRESULT LoadAssemblyFromInetsrv(STRU* struFilename);
-    HRESULT LoadAssemblyFromLocalBin(STRU* struFilename);
+    HRESULT FindRequestHandlerAssembly();
+    HRESULT FindNativeAssemblyFromInetsrv(STRU* struFilename);
+    HRESULT FindNativeAssemblyFromLocalBin(STRU* struFilename);
     HRESULT GetRequestHandlerFromRuntimeStore(STRU* struFilename);
 
     mutable LONG            m_cRefs;
