@@ -190,16 +190,8 @@ APPLICATION_INFO::FindRequestHandlerAssembly()
         // load assembly and create the application
         if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
         {
-            // First find hostfxr location.
-            if (m_pConfiguration->QueryIsStandAloneApplication())
-            {
-                hr = FindNativeAssemblyFromLocalBin(&struFileName);
-            }
-            else
-            {
-                hr = FindNativeAssemblyFromInetsrv(&struFileName);
-                //hr = GetRequestHandlerFromRuntimeStore(&struFileName);
-            }
+            // Look at inetsvr only for now. TODO add in functionality
+            hr = FindNativeAssemblyFromInetsrv(&struFileName);
 
             if (FAILED(hr))
             {
