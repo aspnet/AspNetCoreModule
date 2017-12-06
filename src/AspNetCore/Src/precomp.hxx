@@ -54,9 +54,6 @@
 #define WINHTTP_OPTION_ASSURED_NON_BLOCKING_CALLBACKS 111
 #endif
 
-#define ASPNETCORE_EVENT_PROVIDER L"IIS AspNetCore Module"
-#define ASPNETCORE_IISEXPRESS_EVENT_PROVIDER L"IIS Express AspNetCore Module"
-
 #ifdef max
 #undef max
 template<typename T> inline T max(T a, T b)

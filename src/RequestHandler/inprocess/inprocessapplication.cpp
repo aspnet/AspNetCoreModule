@@ -822,8 +822,8 @@ Finished:
         //LPCWSTR                 apsz[1];
         //if (SUCCEEDED(strEventMsg.SafeSnwprintf(
         //    ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT_MSG,
-        //    m_pConfiguration->QueryApplicationPath()->QueryStr(),
-        //    m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(),
+        //    m_pConfig->QueryApplicationPath()->QueryStr(),
+        //    m_pConfig->QueryApplicationPhysicalPath()->QueryStr(),
         //    m_ProcessExitCode
         //)))
         //{

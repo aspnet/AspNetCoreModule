@@ -56,8 +56,10 @@
 #include "..\CommonLib\utility.h"
 #include "..\CommonLib\application.h"
 #include "aspnetcore_event.h"
+#include "aspnetcore_msg.h"
 #include "disconnectcontext.h"
 #include "sttimer.h"
+#include "resource.h"
 #include ".\inprocess\InProcessHandler.h"
 #include ".\inprocess\inprocessapplication.h"
 #include ".\outofprocess\protocolconfig.h"
@@ -85,6 +87,9 @@ template<typename T> inline T min(T a, T b)
     return a < b ? a : b;
 }
 #endif
+
+#define ASPNETCORE_EVENT_PROVIDER L"IIS AspNetCore Module"
+#define ASPNETCORE_IISEXPRESS_EVENT_PROVIDER L"IIS Express AspNetCore Module"
 
 inline bool IsSpace(char ch)
 {

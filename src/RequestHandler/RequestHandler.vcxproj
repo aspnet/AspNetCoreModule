@@ -33,7 +33,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-   </PropertyGroup>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
@@ -218,6 +218,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="aspnetcore_event.h" />
+    <ClInclude Include="aspnetcore_msg.h" />
     <ClInclude Include="disconnectcontext.h" />
     <ClInclude Include="sttimer.h" />
     <ClInclude Include="outofprocess\forwarderconnection.h" />

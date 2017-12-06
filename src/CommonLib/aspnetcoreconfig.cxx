@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "aspnetcoreconfig.h"
+
 ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
 {
     if (m_pEnvironmentVariables != NULL)

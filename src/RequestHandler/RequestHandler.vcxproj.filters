@@ -81,6 +81,7 @@
     <ClInclude Include="disconnectcontext.h" />
     <ClInclude Include="aspnetcore_event.h" />
     <ClInclude Include="sttimer.h" />
+    <ClInclude Include="aspnetcore_msg.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="RequestHandler.rc" />

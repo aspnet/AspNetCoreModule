@@ -1,3 +1,6 @@
+// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the MIT License. See License.txt in the project root for license information.
+
 #include "stdafx.h"
 
 REQUEST_HANDLER::REQUEST_HANDLER(
@@ -39,22 +42,3 @@ REQUEST_HANDLER::DereferenceRequestHandler(
     }
 
 }
-
-// static 
-/*
-HRESULT
-REQUEST_HANDLER::StaticInitialize(
-    IHttpServer* pServer
-)
-{
-    if (pServer->IsCommandLineLaunch())
-    {
-        sm_hEventLog = RegisterEventSource(NULL, ASPNETCORE_IISEXPRESS_EVENT_PROVIDER);
-    }
-    else
-    {
-        sm_hEventLog = RegisterEventSource(NULL, ASPNETCORE_EVENT_PROVIDER);
-    }
-    return S_OK;
-}
-*/

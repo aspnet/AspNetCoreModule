@@ -1,19 +1,3 @@
-<<<<<<< HEAD
-//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ generated include file.
-// Used by RequestHandler.rc
-
-// Next default values for new objects
-// 
-#ifdef APSTUDIO_INVOKED
-#ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        101
-#define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1001
-#define _APS_NEXT_SYMED_VALUE           101
-#endif
-#endif
-=======
 // Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
@@ -37,5 +21,4 @@
 #define ASPNETCORE_EVENT_DUPLICATED_INPROCESS_APP_MSG        L"Only one inprocess application is allowed per IIS application pool. Please assign the application '%s' to a different IIS application pool."
 #define ASPNETCORE_EVENT_MIXED_HOSTING_MODEL_ERROR_MSG       L"Mixed hosting model is not supported. Application '%s' configured with different hostingModel value '%s' other than the one of running application(s)."
 #define ASPNETCORE_EVENT_ADD_APPLICATION_ERROR_MSG           L"Failed to start application '%s', ErrorCode '0x%x'."
-#define ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT_MSG           L"Application '%s' with physical root '%s' hit unexpected managed background thread eixt, ErrorCode = '0x%x."
->>>>>>> 4af2a77311bcc65945f8d0556b5f8caae8235f2f
+#define ASPNETCORE_EVENT_INPROCESS_THREAD_EXIT_MSG           L"Application '%s' with physical root '%s' hit unexpected managed background thread exit, ErrorCode = '0x%x."
