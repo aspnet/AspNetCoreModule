@@ -6,12 +6,12 @@
 
 HTTP_MODULE_ID      g_pModuleId = NULL;
 IHttpServer *       g_pHttpServer = NULL;
-BOOL                g_fWinHttpNonBlockingCallbackAvailable = FALSE;
 BOOL                g_fRecycleProcessCalled = FALSE;
 PCWSTR              g_pszModuleName = NULL;
 HINSTANCE           g_hModule;
 HMODULE             g_hAspnetCoreRH = NULL;
 BOOL                g_fAspnetcoreRHAssemblyLoaded = FALSE;
+BOOL                g_fAspnetcoreRHLoadedError = FALSE;
 DWORD               g_dwAspNetCoreDebugFlags = 0;
 DWORD               g_dwActiveServerProcesses = 0;
 SRWLOCK             g_srwLock;
@@ -69,7 +69,9 @@ HRESULT
 
 --*/
 {
-    HRESULT                 hr = S_OK;
+    HRESULT                             hr = S_OK;
+    HKEY                                hKey;
+    BOOL                                fDisableANCM = FALSE;
     ASPNET_CORE_PROXY_MODULE_FACTORY *  pFactory = NULL;
     ASPNET_CORE_GLOBAL_MODULE *         pGlobalModule = NULL;
     APPLICATION_MANAGER *               pApplicationManager = NULL;
@@ -90,6 +92,36 @@ HRESULT
     g_pModuleId = pModuleInfo->GetId();
     g_pszModuleName = pModuleInfo->GetName();
     g_pHttpServer = pHttpServer;
+
+    // check whether the feature is disabled due to security reason
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+        L"SOFTWARE\\Microsoft\\IIS Extensions\\IIS AspNetCore Module\\Parameters",
+        0,
+        KEY_READ,
+        &hKey) == NO_ERROR)
+    {
+        DWORD dwType;
+        DWORD dwData;
+        DWORD cbData;
+
+        cbData = sizeof(dwData);
+        if ((RegQueryValueEx(hKey,
+            L"DisableANCM",
+            NULL,
+            &dwType,
+            (LPBYTE)&dwData,
+            &cbData) == NO_ERROR) &&
+            (dwType == REG_DWORD))
+        {
+            fDisableANCM = (dwData != 0);
+        }
+    }
+
+    if (fDisableANCM)
+    {
+        // Logging
+        goto Finished;
+    }
 
     //
     // Create the factory before any static initialization.

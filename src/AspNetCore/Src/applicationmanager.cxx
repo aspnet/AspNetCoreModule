@@ -224,10 +224,20 @@ APPLICATION_MANAGER::RecycleApplication(
     }
     AcquireSRWLockExclusive(&m_srwLock);
     m_pApplicationInfoHash->DeleteKey(&key);
+
     if (m_pApplicationInfoHash->Count() == 0)
     {
         m_hostingModel = HOSTING_UNKNOWN;
     }
+
+    if (g_fAspnetcoreRHLoadedError)
+    {
+        // We had assembly loading failure
+        // this error blocked the start of all applications
+        // Let's recycle the worker process if user redeployed any application
+        g_pHttpServer->RecycleProcess(L"AspNetCore Recycle Process on Demand due to assembly loading failure");
+    }
+
     ReleaseSRWLockExclusive(&m_srwLock);
 
 Finished:

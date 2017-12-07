@@ -59,7 +59,7 @@ public:
     VOID
     CleanupStoredContext()
     {
-        delete this;
+        DereferenceConfiguration();
     }
 
     static
@@ -229,6 +229,16 @@ public:
         return m_fIsStandAloneApplication;
     }
 
+    VOID
+    ReferenceConfiguration(
+        VOID
+    ) const;
+
+    VOID
+    DereferenceConfiguration(
+        VOID
+    ) const;
+
 private:
 
     //
@@ -237,6 +247,7 @@ private:
     ASPNETCORE_CONFIG():
         m_fStdoutLogEnabled( FALSE ),
         m_pEnvironmentVariables( NULL ),
+        m_cRefs( 1 ),
         m_hostingModel( HOSTING_UNKNOWN )
     {
     }
@@ -246,6 +257,8 @@ private:
         IHttpServer  *pHttpServer,
         IHttpContext *pHttpContext
     );
+
+    mutable LONG           m_cRefs;
 
     DWORD                  m_dwRequestTimeoutInMS;
     DWORD                  m_dwStartupTimeLimitInMS;

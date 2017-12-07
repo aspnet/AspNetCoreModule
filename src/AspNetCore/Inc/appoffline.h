@@ -11,13 +11,13 @@ public:
     }
 
     VOID
-        ReferenceAppOfflineHtm() const
+    ReferenceAppOfflineHtm() const
     {
         InterlockedIncrement(&m_cRefs);
     }
 
     VOID
-        DereferenceAppOfflineHtm() const
+    DereferenceAppOfflineHtm() const
     {
         if (InterlockedDecrement(&m_cRefs) == 0)
         {
@@ -26,9 +26,9 @@ public:
     }
 
     BOOL
-        Load(
-            VOID
-        )
+    Load(
+        VOID
+    )
     {
         BOOL            fResult = TRUE;
         LARGE_INTEGER   li = { 0 };

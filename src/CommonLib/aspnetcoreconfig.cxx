@@ -14,6 +14,28 @@ ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
     }
 }
 
+VOID
+ASPNETCORE_CONFIG::ReferenceConfiguration(
+    VOID
+) const
+{
+    InterlockedIncrement(&m_cRefs);
+}
+
+
+VOID
+ASPNETCORE_CONFIG::DereferenceConfiguration(
+    VOID
+) const
+{
+    DBG_ASSERT(m_cRefs != 0);
+    LONG cRefs = 0;
+    if ((cRefs = InterlockedDecrement(&m_cRefs)) == 0)
+    {
+        delete this;
+    }
+}
+
 HRESULT
 ASPNETCORE_CONFIG::GetConfig(
     _In_  IHttpServer             *pHttpServer,

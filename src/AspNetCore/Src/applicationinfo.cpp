@@ -20,12 +20,22 @@ APPLICATION_INFO::~APPLICATION_INFO()
         m_pFileWatcherEntry->StopMonitor();
         m_pFileWatcherEntry = NULL;
     }
+
     if (m_pApplication != NULL)
     {
         // shutdown the application
         m_pApplication->ShutDown();
         m_pApplication->DereferenceApplication();
         m_pApplication = NULL;
+    }
+
+    // configuration should be dereferenced after application shutdown
+    // since the former will use it during shutdown
+    if (m_pConfiguration != NULL)
+    {
+        // Need to dereference the configuration instance
+        m_pConfiguration->DereferenceConfiguration();
+        m_pConfiguration = NULL;
     }
 }
 
@@ -41,6 +51,11 @@ APPLICATION_INFO::Initialize(
     DBG_ASSERT(pFileWatcher);
 
     m_pConfiguration = pConfiguration;
+
+    // reference the configuration instance to prevent it will be not release
+    // earlier in case of configuration change and shutdown
+    m_pConfiguration->ReferenceConfiguration();
+
     hr = m_applicationInfoKey.Initialize(pConfiguration->QueryConfigPath()->QueryStr());
     if (FAILED(hr))
     {
@@ -182,10 +197,20 @@ APPLICATION_INFO::FindRequestHandlerAssembly()
     BOOL    fLocked = FALSE;
     STACK_STRU(struFileName, 256);
 
-    if (!g_fAspnetcoreRHAssemblyLoaded)
+    if (g_fAspnetcoreRHLoadedError)
+    {
+        hr = E_APPLICATION_ACTIVATION_EXEC_FAILURE;
+        goto Finished;
+    }
+    else if (!g_fAspnetcoreRHAssemblyLoaded)
     {
         AcquireSRWLockExclusive(&g_srwLock);
         fLocked = TRUE;
+        if (g_fAspnetcoreRHLoadedError)
+        {
+            hr = E_APPLICATION_ACTIVATION_EXEC_FAILURE;
+            goto Finished;
+        }
         if (g_fAspnetcoreRHAssemblyLoaded)
         {
             goto Finished;
@@ -233,6 +258,7 @@ APPLICATION_INFO::FindRequestHandlerAssembly()
             hr = HRESULT_FROM_WIN32(GetLastError());
             goto Finished;
         }
+        g_fAspnetcoreRHAssemblyLoaded = TRUE;
     }
 
 Finished:
@@ -240,9 +266,12 @@ Finished:
     // Question: we remember the load failure so that we will not try again.
     // User needs to check whether the fuction pointer is NULL 
     //
-    g_fAspnetcoreRHAssemblyLoaded = TRUE;
     m_pfnAspNetCoreCreateApplication = g_pfnAspNetCoreCreateApplication;
     m_pfnAspNetCoreCreateRequestHandler = g_pfnAspNetCoreCreateRequestHandler;
+    if (!g_fAspnetcoreRHLoadedError && FAILED(hr))
+    {
+        g_fAspnetcoreRHLoadedError = TRUE;
+    }
 
     if (fLocked)
     {

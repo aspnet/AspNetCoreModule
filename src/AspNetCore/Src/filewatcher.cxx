@@ -13,10 +13,16 @@ FILE_WATCHER::~FILE_WATCHER()
 {
     if (m_hChangeNotificationThread != NULL)
     {
-        // Need to terminate thread before closing it.
-        TerminateThread(m_hChangeNotificationThread, 1);
+        PostQueuedCompletionStatus(m_hCompletionPort, 0, FILE_WATCHER_SHUTDOWN_KEY, NULL);
+        WaitForSingleObject(m_hChangeNotificationThread, INFINITE);
         CloseHandle(m_hChangeNotificationThread);
         m_hChangeNotificationThread = NULL;
+    }
+
+    if (NULL != m_hCompletionPort)
+    {
+        CloseHandle(m_hCompletionPort);
+        m_hCompletionPort = NULL;
     }
 }
 
@@ -105,7 +111,7 @@ Win32 error
 
         if (completionKey == FILE_WATCHER_SHUTDOWN_KEY)
         {
-            continue;
+            break;
         }
 
         DBG_ASSERT(pOverlapped != NULL);
@@ -119,6 +125,8 @@ Win32 error
         pOverlapped = NULL;
         cbCompletion = 0;
     }
+
+    return 0;
 }
 
 VOID

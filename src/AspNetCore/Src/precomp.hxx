@@ -141,9 +141,9 @@ HRESULT_FROM_GETLASTERROR()
            : E_FAIL;
 }
 
-extern BOOL     g_fWinHttpNonBlockingCallbackAvailable;
 extern PVOID    g_pModuleId;
 extern BOOL     g_fAspnetcoreRHAssemblyLoaded;
+extern BOOL     g_fAspnetcoreRHLoadedError;
 extern BOOL     g_fEnableReferenceCountTracing;
 extern DWORD    g_dwActiveServerProcesses;
 extern HMODULE  g_hAspnetCoreRH;
