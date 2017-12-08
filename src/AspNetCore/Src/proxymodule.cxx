@@ -181,6 +181,12 @@ ASPNET_CORE_PROXY_MODULE::OnAsyncCompletion(
     IHttpCompletionInfo *   pCompletionInfo
 )
 {
+    if (m_pHandler == NULL)
+    {
+        // TODO should we set the Response status code here?
+        return RQ_NOTIFICATION_FINISH_REQUEST;
+    }
+
     return m_pHandler->OnAsyncCompletion(
         pCompletionInfo->GetCompletionBytes(),
         pCompletionInfo->GetCompletionStatus());

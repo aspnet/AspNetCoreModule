@@ -551,7 +551,8 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
     // It all timed out
     if (dwResult == WAIT_TIMEOUT)
     {
-        // do we need kill the backend thread
+        // kill the backend thread as loading dotnet timedout
+        TerminateThread(m_hThread, 0);
         hr = HRESULT_FROM_WIN32(dwResult);
         goto Finished;
     }

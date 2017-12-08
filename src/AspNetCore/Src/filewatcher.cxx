@@ -105,7 +105,7 @@ Win32 error
             &pOverlapped,
             INFINITE);
 
-        DBG_ASSERT(fSuccess);		
+        DBG_ASSERT(fSuccess);
         DebugPrint(1, "FILE_WATCHER::ChangeNotificationThread");
         dwErrorStatus = fSuccess ? ERROR_SUCCESS : GetLastError();
 
@@ -263,7 +263,7 @@ HRESULT
     // Othersie we have to cache the file info 
     //
     if (cbCompletion == 0)
-    { 
+    {
         fFileChanged = TRUE;
     }
     else
@@ -276,9 +276,9 @@ HRESULT
             //
             // check whether the monitored file got changed
             //
-            if (_wcsnicmp(pNotificationInfo->FileName, 
-                _strFileName.QueryStr(), 
-                pNotificationInfo->FileNameLength/sizeof(WCHAR)) == 0)
+            if (_wcsnicmp(pNotificationInfo->FileName,
+                _strFileName.QueryStr(),
+                pNotificationInfo->FileNameLength / sizeof(WCHAR)) == 0)
             {
                 fFileChanged = TRUE;
                 break;
@@ -294,7 +294,7 @@ HRESULT
             {
                 pNotificationInfo = (FILE_NOTIFY_INFORMATION*)
                     ((PBYTE)pNotificationInfo +
-                    pNotificationInfo->NextEntryOffset);
+                        pNotificationInfo->NextEntryOffset);
             }
         }
     }
@@ -324,7 +324,7 @@ FILE_WATCHER_ENTRY::Monitor(VOID)
     ReferenceFileWatcherEntry();
     ZeroMemory(&_overlapped, sizeof(_overlapped));
 
-    if(!ReadDirectoryChangesW(_hDirectory,
+    if (!ReadDirectoryChangesW(_hDirectory,
         _buffDirectoryChanges.QueryPtr(),
         _buffDirectoryChanges.QuerySize(),
         FALSE,        // Watching sub dirs. Set to False now as only monitoring app_offline
