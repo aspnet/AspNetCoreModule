@@ -26,8 +26,8 @@ public:
 
         if (pInitialValue != NULL)
         {
-            pInitialValue->DereferenceRequestHandler();
             pInitialValue->TerminateRequest(TRUE);
+            pInitialValue->DereferenceRequestHandler();
         }
     }
 

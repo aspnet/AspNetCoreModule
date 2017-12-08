@@ -208,6 +208,15 @@ FORWARDING_HANDLER::OnExecuteRequestHandler()
     AcquireSRWLockShared(&m_RequestLock);
     fRequestLocked = TRUE;
 
+    //
+    // Remember the handler being processed in the current thread
+    // before staring a WinHTTP operation.
+    //
+    DBG_ASSERT(fRequestLocked);
+    DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == NULL);
+    TlsSetValue(g_dwTlsIndex, this);
+    DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
+
     if (m_hRequest == NULL)
     {
         hr = HRESULT_FROM_WIN32(WSAECONNRESET);
@@ -254,15 +263,6 @@ FORWARDING_HANDLER::OnExecuteRequestHandler()
     }
 
     m_cchLastSend = m_cchHeaders;
-
-    //
-    // Remember the handler being processed in the current thread
-    // before staring a WinHTTP operation.
-    //
-    DBG_ASSERT(fRequestLocked);
-    DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == NULL);
-    TlsSetValue(g_dwTlsIndex, this);
-    DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
 
     //FREB log
     if (ANCMEvents::ANCM_REQUEST_FORWARD_START::IsEnabled(m_pW3Context->GetTraceContext()))
@@ -2500,6 +2500,11 @@ FORWARDING_HANDLER::TerminateRequest(
 )
 {
     AcquireSRWLockExclusive(&m_RequestLock);
+    // Set tls as close winhttp handle will immediately trigger
+    // a winhttp callback on the same thread and we donot want to
+    // acquire the lock again
+    TlsSetValue(g_dwTlsIndex, this);
+    DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
 
     if (m_hRequest != NULL)
     {
@@ -2510,12 +2515,13 @@ FORWARDING_HANDLER::TerminateRequest(
     //
     // If the request is a websocket request, initiate cleanup.
     //
-
     if (m_pWebSocket != NULL)
     {
         m_pWebSocket->TerminateRequest();
     }
 
     ReleaseSRWLockExclusive(&m_RequestLock);
+    TlsSetValue(g_dwTlsIndex, NULL);
+    DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == NULL);
 }
 
