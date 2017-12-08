@@ -29,6 +29,11 @@ APPLICATION_INFO::~APPLICATION_INFO()
         m_pApplication = NULL;
     }
 
+    if (m_pHostFxrParameters != NULL)
+    {
+        delete m_pHostFxrParameters;
+    }
+
     // configuration should be dereferenced after application shutdown
     // since the former will use it during shutdown
     if (m_pConfiguration != NULL)
@@ -145,18 +150,19 @@ APPLICATION_INFO::UpdateAppOfflineFileHandle()
 HRESULT
 APPLICATION_INFO::EnsureApplicationCreated()
 {
-    HRESULT hr = S_OK;
-    BOOL    fLocked = FALSE;
-    APPLICATION* pApplication = NULL;
+    HRESULT             hr = S_OK;
+    BOOL                fLocked = FALSE;
+    APPLICATION*        pApplication = NULL;
     STACK_STRU(struFileName, 300);  // >MAX_PATH
-    STRU        hostFxrDllLocation;
+    STRU                hostFxrDllLocation;
+    HOSTFXR_PARAMETERS* pHostFxrParameters = NULL;
 
     if (m_pApplication != NULL)
     {
         goto Finished;
     }
 
-    hr = FindRequestHandlerAssembly();
+    hr = FindRequestHandlerAssembly(&pHostFxrParameters);
     if (FAILED(hr))
     {
         goto Finished;
@@ -177,14 +183,14 @@ APPLICATION_INFO::EnsureApplicationCreated()
             goto Finished;
         }
 
-        hr = m_pfnAspNetCoreCreateApplication(m_pServer, m_pConfiguration, &pApplication);
+        hr = m_pfnAspNetCoreCreateApplication(m_pServer, m_pConfiguration, pHostFxrParameters, &pApplication);
         if (FAILED(hr))
         {
             goto Finished;
         }
         m_pApplication = pApplication;
     }
-
+    m_pHostFxrParameters = pHostFxrParameters;
 Finished:
     if (fLocked)
     {
@@ -194,10 +200,11 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::FindRequestHandlerAssembly()
+APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** out_pHostfxrParameters)
 {
-    HRESULT hr = S_OK;
-    BOOL    fLocked = FALSE;
+    HRESULT             hr = S_OK;
+    BOOL                fLocked = FALSE;
+    HOSTFXR_PARAMETERS* pHostfxrParameters = NULL;
     STACK_STRU(struFileName, 256);
 
     if (g_fAspnetcoreRHLoadedError)
@@ -219,19 +226,17 @@ APPLICATION_INFO::FindRequestHandlerAssembly()
             goto Finished;
         }
 
-        // load assembly and create the application
-        if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
+        pHostfxrParameters = new HOSTFXR_PARAMETERS();
+        if (pHostfxrParameters == NULL)
         {
-            // Look at inetsvr only for now. TODO add in functionality
-            hr = FindNativeAssemblyFromGlobalLocation(&struFileName);
-
-            if (FAILED(hr))
-            {
-                goto Finished;
-            }
+            hr = E_OUTOFMEMORY;
+            goto Finished;
         }
-        else
+
+        if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(pHostfxrParameters, m_pConfiguration)) ||
+            FAILED(hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostfxrParameters)))
         {
+            // TODO eventually make this fail for in process loading.
             hr = FindNativeAssemblyFromGlobalLocation(&struFileName);
             if (FAILED(hr))
             {
@@ -262,6 +267,8 @@ APPLICATION_INFO::FindRequestHandlerAssembly()
             goto Finished;
         }
         g_fAspnetcoreRHAssemblyLoaded = TRUE;
+
+        *out_pHostfxrParameters = pHostfxrParameters;
     }
 
 Finished:
@@ -269,6 +276,13 @@ Finished:
     // Question: we remember the load failure so that we will not try again.
     // User needs to check whether the fuction pointer is NULL 
     //
+    if (FAILED(hr))
+    {
+        if (pHostfxrParameters != NULL)
+        {
+            delete pHostfxrParameters;
+        }
+    }
     m_pfnAspNetCoreCreateApplication = g_pfnAspNetCoreCreateApplication;
     m_pfnAspNetCoreCreateRequestHandler = g_pfnAspNetCoreCreateRequestHandler;
     if (!g_fAspnetcoreRHLoadedError && FAILED(hr))
@@ -322,11 +336,108 @@ APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename)
     struFilename->QueryStr()[dwPosition] = L'\0';
 
     if (FAILED(hr = struFilename->SyncWithBuffer()) ||
+        FAILED(hr = struFilename->Append(L"\\")) ||
         FAILED(hr = struFilename->Append(g_pwzAspnetcoreRequestHandlerName)))
     {
         goto Finished;
     }
 
 Finished:
+    return hr;
+}
+
+HRESULT
+APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARAMETERS* pHostFxrParameters)
+{
+    HRESULT     hr = S_OK;
+    HANDLE      nativeRequestHandlerHandle;
+    STRU        struApplicationFullPath;
+    STRU        struNativeSearchPaths;
+    STRU        nativeDllLocation;
+    HMODULE     hostFxrDll = NULL;
+    INT         hostfxrExitCode = 0;
+    INT         index = -1;
+    INT         prevIndex = 0;
+    BOOL        fFound = FALSE;
+    const DWORD BUFFER_SIZE = 1024 * 10;
+    
+    WCHAR       pszNativeSearchPathsBuffer[BUFFER_SIZE];
+    
+    DBG_ASSERT(struFileName != NULL);
+
+    hostFxrDll = ::LoadLibraryW(pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
+    
+    if (hostFxrDll == NULL)
+    {
+        // Could not load hostfxr
+        goto Finished;
+    }
+
+    hostfxr_get_native_search_directories_fn pFnHostFxrSearchDirectories = (hostfxr_get_native_search_directories_fn)
+        GetProcAddress(hostFxrDll, "hostfxr_get_native_search_directories");
+
+    if (pFnHostFxrSearchDirectories == NULL)
+    {
+        // Host fxr version does not have correct function
+        hr = E_FAIL;
+        goto Finished;
+    }
+
+    hostfxrExitCode = pFnHostFxrSearchDirectories(
+        *pHostFxrParameters->QueryArgc(), 
+        *pHostFxrParameters->QueryArguments(), 
+        pszNativeSearchPathsBuffer, 
+        BUFFER_SIZE
+    );
+
+    // Buff now contains the native serach paths
+    // Iterate through and find it.
+    if (hostfxrExitCode != 0)
+    {
+        hr = E_FAIL;
+        goto Finished;
+    }
+
+    struNativeSearchPaths.Copy(pszNativeSearchPathsBuffer);
+    while ((index = struNativeSearchPaths.IndexOf(L";", prevIndex)) != -1)
+    {
+        if (FAILED(hr = nativeDllLocation.Copy(struNativeSearchPaths.QueryStr(), index - prevIndex)))
+        {
+            goto Finished;
+        }
+        if (!nativeDllLocation.EndsWith(L"\\"))
+        {
+            hr = nativeDllLocation.Append(L"\\");
+            if (FAILED(hr))
+            {
+                goto Finished;
+            }
+        }
+
+        hr = nativeDllLocation.Append(g_pwzAspnetcoreRequestHandlerName);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+        nativeRequestHandlerHandle = UTILITY::CheckIfFileExists(&nativeDllLocation);
+        
+        if (nativeRequestHandlerHandle != INVALID_HANDLE_VALUE)
+        {
+            struFilename->Copy(nativeDllLocation);
+            fFound = TRUE;
+            CloseHandle(nativeRequestHandlerHandle);
+            break;
+        }
+        prevIndex = index + 1;
+    }
+
+    if (!fFound)
+    {
+        hr = E_FAIL;
+        goto Finished;
+    }
+
+Finished:
+
     return hr;
 }

@@ -7,12 +7,11 @@ typedef void(*request_handler_cb) (int error, IHttpContext* pHttpContext, void* 
 typedef REQUEST_NOTIFICATION_STATUS(*PFN_REQUEST_HANDLER) (IN_PROCESS_HANDLER* pInProcessHandler, void* pvRequestHandlerContext);
 typedef BOOL(*PFN_SHUTDOWN_HANDLER) (void* pvShutdownHandlerContext);
 typedef REQUEST_NOTIFICATION_STATUS(*PFN_MANAGED_CONTEXT_HANDLER)(void *pvManagedHttpContext, HRESULT hrCompletionStatus, DWORD cbCompletion);
-typedef DWORD(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
 
 class IN_PROCESS_APPLICATION : public APPLICATION
 {
 public:
-    IN_PROCESS_APPLICATION(IHttpServer* pHttpServer, ASPNETCORE_CONFIG  *pConfig);
+    IN_PROCESS_APPLICATION(IHttpServer* pHttpServer, ASPNETCORE_CONFIG* pConfig, HOSTFXR_PARAMETERS* pHostFxrParameters);
 
     ~IN_PROCESS_APPLICATION();
 
@@ -65,6 +64,7 @@ public:
 
     HRESULT
     RunDotnetApplication(
+        DWORD argc, 
         PCWSTR* argv,
         hostfxr_main_fn pProc
     );
@@ -94,6 +94,8 @@ private:
 
     // The event that gets triggered when managed initialization is complete
     HANDLE                          m_pInitalizeEvent;
+
+    HOSTFXR_PARAMETERS*             m_pHostFxrParameters;
 
     // The std log file handle
     HANDLE                          m_hLogFileHandle;

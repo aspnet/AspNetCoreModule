@@ -7,38 +7,8 @@ HOSTFXR_UTILITY::HOSTFXR_UTILITY()
 {
 }
 
-
 HOSTFXR_UTILITY::~HOSTFXR_UTILITY()
 {
-}
-
-HRESULT
-HOSTFXR_UTILITY::FindHostFxrDll(
-    ASPNETCORE_CONFIG *pConfig,
-    STRU* struHostFxrDllLocation,
-    BOOL* fStandAlone
-)
-{
-    HRESULT hr = S_OK;
-
-    // If the process path isn't dotnet, assume we are a standalone appliction.
-    // TODO: this should be a path equivalent check
-    if (!(pConfig->QueryProcessPath()->Equals(L".\\dotnet")
-        || pConfig->QueryProcessPath()->Equals(L"dotnet")
-        || pConfig->QueryProcessPath()->Equals(L".\\dotnet.exe")
-        || pConfig->QueryProcessPath()->Equals(L"dotnet.exe")))
-    {
-        // hostfxr is in the same folder, parse and use it.
-        hr = GetStandaloneHostfxrLocation(struHostFxrDllLocation, pConfig);
-        *fStandAlone = TRUE;
-    }
-    else
-    {
-        hr = GetPortableHostfxrLocation(struHostFxrDllLocation);
-        fStandAlone = FALSE;
-    }
-
-    return hr;
 }
 
 //
@@ -54,44 +24,58 @@ HOSTFXR_UTILITY::FindHostFxrDll(
 // Assuming we don't need Application.exe as the dll is the actual application.
 //
 HRESULT
-HOSTFXR_UTILITY::GetStandaloneHostfxrLocation(
-    STRU* struHostfxrPath,
+HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
+    HOSTFXR_PARAMETERS* pHostfxrParameters,
     ASPNETCORE_CONFIG *pConfig
 )
 {
-    HRESULT     hr = S_OK;
-    HANDLE      hFileHandle = INVALID_HANDLE_VALUE;
-    SECURITY_ATTRIBUTES saAttr;
+    HRESULT             hr = S_OK;
+    HANDLE              hFileHandle = INVALID_HANDLE_VALUE;
+    STRU                struHostfxrPath;
+    STRU                struExePath;
+    STRU                struArguments;
+    DWORD               dwPosition;
 
-    // Get the full path to the exe and check if it exists
-    if (FAILED(hr = UTILITY::ConvertPathToFullPath(L"\\hostfxr.dll",
+    pHostfxrParameters->QueryHostfxrLocation()->Copy(struHostfxrPath);
+
+    // Get application path and exe path
+    UTILITY::ConvertPathToFullPath(pConfig->QueryProcessPath()->QueryStr(),
         pConfig->QueryApplicationPhysicalPath()->QueryStr(),
-        struHostfxrPath)))
+        &struExePath);
+
+    // Change .exe to .dll and check if file exists
+    dwPosition = struExePath.LastIndexOf(L'.', 0);
+    if (dwPosition == -1)
     {
+        hr = ERROR_BAD_ENVIRONMENT;
         goto Finished;
     }
 
+    struExePath.QueryStr()[dwPosition] = L'\0';
 
-    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-    saAttr.bInheritHandle = TRUE;
-    saAttr.lpSecurityDescriptor = NULL;
-
-    hFileHandle = CreateFile(struHostfxrPath->QueryStr(),
-            GENERIC_READ,
-            FILE_SHARE_READ,
-            &saAttr,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL);
+    if (FAILED(hr = struExePath.SyncWithBuffer())
+        || FAILED(hr = struExePath.Append(L".dll")))
+    {
+        goto Finished;
+    }
+    
+    hFileHandle = UTILITY::CheckIfFileExists(&struExePath);
     if (hFileHandle == INVALID_HANDLE_VALUE)
     {
-        // Treat access isseu as File not found
+        // Treat access issue as File not found
         hr = ERROR_FILE_NOT_FOUND;
         goto Finished;
     }
-    else
+
+    CloseHandle(hFileHandle);
+
+    struArguments.Copy(struExePath);
+    struArguments.Append(L" ");
+    struArguments.Append(pConfig->QueryArguments());
+
+    if (FAILED(hr = GetArguments(&struArguments, &struExePath, pHostfxrParameters)))
     {
-        CloseHandle(hFileHandle);
+        goto Finished;
     }
 
 Finished:
@@ -99,107 +83,85 @@ Finished:
 }
 
 HRESULT
-HOSTFXR_UTILITY::GetPortableHostfxrLocation(
-    STRU* struHostfxrPath
+HOSTFXR_UTILITY::GetHostFxrParameters(
+    HOSTFXR_PARAMETERS* pHostFxrParameters,
+    ASPNETCORE_CONFIG *pConfig
 )
 {
     HRESULT hr = S_OK;
 
     STRU                        struSystemPathVariable;
+    STRU                        struHostFxrPath;
     STRU                        strDotnetExeLocation;
     STRU                        strHostFxrSearchExpression;
     STRU                        strHighestDotnetVersion;
-    PWSTR                       pwzDelimeterContext = NULL;
-    PCWSTR                      pszDotnetLocation = NULL;
-    PCWSTR                      pszDotnetExeString(L"dotnet.exe");
-    DWORD                       dwCopyLength;
-    BOOL                        fFound = FALSE;
     HANDLE                      hFileHandle = INVALID_HANDLE_VALUE;
-    SECURITY_ATTRIBUTES         saAttr;
     std::vector<std::wstring>   vVersionFolders;
+    DWORD                       dwPosition;
+    DWORD                       dwLength;
+    WCHAR                       pszDotnetLocation[MAX_PATH];
 
-    if (FAILED(hr))
+    // Check if the process path is an absolute path
+    // then check well known locations
+    // Split on ';', checking to see if dotnet.exe exists in any folders
+
+    if ((hFileHandle = UTILITY::CheckIfFileExists(pConfig->QueryProcessPath())) != INVALID_HANDLE_VALUE)
     {
-        goto Finished;
-    }
+        // Done, find hostfxr.dll 
+        // first check if hostfxr exists in the same folder
+        UTILITY::ConvertPathToFullPath(L"hostfxr.dll", pConfig->QueryApplicationPath()->QueryStr(), &struHostFxrPath);
 
-    // Get the System PATH value.
-    if (!UTILITY::GetSystemPathVariable(L"PATH", &struSystemPathVariable))
-    {
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    // Split on ';', checking to see if dotnet.exe exists in any folders.
-    pszDotnetLocation = wcstok_s(struSystemPathVariable.QueryStr(), L";", &pwzDelimeterContext);
-    while (pszDotnetLocation != NULL)
-    {
-        dwCopyLength = (DWORD) wcsnlen_s(pszDotnetLocation, 260);
-
-        // We store both the exe and folder locations as we eventually need to check inside of host\\fxr
-        // which doesn't need the dotnet.exe portion of the string
-        hr = strDotnetExeLocation.Copy(pszDotnetLocation, dwCopyLength);
-        if (FAILED(hr))
+        if ((hFileHandle = UTILITY::CheckIfFileExists(&struHostFxrPath)) != INVALID_HANDLE_VALUE)
         {
-            goto Finished;
-        }
-
-        if (dwCopyLength > 0 && pszDotnetLocation[dwCopyLength - 1] != L'\\')
-        {
-            hr = strDotnetExeLocation.Append(L"\\");
-            if (FAILED(hr))
+            CloseHandle(hFileHandle);
+            if (FAILED(hr = pHostFxrParameters->QueryHostfxrLocation()->Copy(struHostFxrPath)))
             {
                 goto Finished;
             }
-        }
 
-        hr = struHostfxrPath->Copy(strDotnetExeLocation);
-        if (FAILED(hr))
-        {
+            GetStandaloneHostfxrParameters(pHostFxrParameters, pConfig);
             goto Finished;
         }
-
-        hr = strDotnetExeLocation.Append(pszDotnetExeString);
-        if (FAILED(hr))
+        else
         {
-            goto Finished;
+            UTILITY::ConvertPathToFullPath(pConfig->QueryProcessPath()->QueryStr(), pConfig->QueryApplicationPath()->QueryStr(), &strDotnetExeLocation);
         }
-
-        saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-        saAttr.bInheritHandle = TRUE;
-        saAttr.lpSecurityDescriptor = NULL;
-
-        hFileHandle = CreateFile(strDotnetExeLocation.QueryStr(),
-            GENERIC_READ,
-            FILE_SHARE_READ,
-            &saAttr,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL);
-        if (hFileHandle != INVALID_HANDLE_VALUE)
-        {
-            // means we found the folder with a dotnet.exe inside of it.
-            fFound = TRUE;
-            CloseHandle(hFileHandle);
-            break;
-        }
-        pszDotnetLocation = wcstok_s(NULL, L";", &pwzDelimeterContext);
     }
-
-    if (!fFound)
+    else if ((dwLength = SearchPath(NULL, L"dotnet", L".exe", MAX_PATH, pszDotnetLocation, NULL)) == 0)
     {
-        // could not find dotnet.exe, error out
-        hr = ERROR_BAD_ENVIRONMENT;
+        hr = E_FAIL;
+        // TODO log "Could not find dotnet. Please specify....
         goto Finished;
     }
 
-    hr = struHostfxrPath->Append(L"host\\fxr");
+    if (FAILED(hr = strDotnetExeLocation.Copy(pszDotnetLocation))
+        || FAILED(hr = struHostFxrPath.Copy(strDotnetExeLocation)))
+    {
+        goto Finished;
+    }
+
+    dwPosition = struHostFxrPath.LastIndexOf(L'\\', 0);
+    if (dwPosition == -1)
+    {
+        hr = E_FAIL;
+        goto Finished;
+    }
+
+    struHostFxrPath.QueryStr()[dwPosition] = L'\0';
+
+    if (FAILED(hr = struHostFxrPath.SyncWithBuffer())
+        || FAILED(hr = struHostFxrPath.Append(L"\\")))
+    {
+        goto Finished;
+    }
+
+    hr = struHostFxrPath.Append(L"host\\fxr");
     if (FAILED(hr))
     {
         goto Finished;
     }
 
-    if (!UTILITY::DirectoryExists(struHostfxrPath))
+    if (!UTILITY::DirectoryExists(&struHostFxrPath))
     {
         // error, not found the folder
         hr = ERROR_BAD_ENVIRONMENT;
@@ -207,7 +169,7 @@ HOSTFXR_UTILITY::GetPortableHostfxrLocation(
     }
 
     // Find all folders under host\\fxr\\ for version numbers.
-    hr = strHostFxrSearchExpression.Copy(struHostfxrPath);
+    hr = strHostFxrSearchExpression.Copy(struHostFxrPath);
     if (FAILED(hr))
     {
         goto Finished;
@@ -235,25 +197,68 @@ HOSTFXR_UTILITY::GetPortableHostfxrLocation(
     {
         goto Finished;
     }
-    hr = struHostfxrPath->Append(L"\\");
-    if (FAILED(hr))
+
+    if (FAILED(hr = struHostFxrPath.Append(L"\\"))
+        || FAILED(hr = struHostFxrPath.Append(strHighestDotnetVersion.QueryStr()))
+        || FAILED(hr = struHostFxrPath.Append(L"\\hostfxr.dll")))
     {
         goto Finished;
     }
 
-    hr = struHostfxrPath->Append(strHighestDotnetVersion.QueryStr());
-    if (FAILED(hr))
+    hFileHandle = UTILITY::CheckIfFileExists(&struHostFxrPath);
+
+    if (hFileHandle == INVALID_HANDLE_VALUE)
+    {
+        hr = ERROR_FILE_INVALID;
+        goto Finished;
+    }
+    
+    if (FAILED(hr = GetArguments(pConfig->QueryArguments(), &strDotnetExeLocation, pHostFxrParameters)))
     {
         goto Finished;
-
     }
 
-    hr = struHostfxrPath->Append(L"\\hostfxr.dll");
-    if (FAILED(hr))
+    if (FAILED(pHostFxrParameters->QueryHostfxrLocation()->Copy(struHostFxrPath)))
     {
         goto Finished;
     }
 
 Finished:
+    return hr;
+}
+
+HRESULT
+HOSTFXR_UTILITY::GetArguments(STRU* struArguments, STRU* pstruExePath, HOSTFXR_PARAMETERS* pHostFxrParameters)
+{
+    HRESULT     hr = S_OK;
+    INT         argc = 0;
+    PCWSTR*     argv = NULL;
+    LPWSTR*     pwzArgs = NULL;
+
+    // First parameter to hostfxr is the exe activating it.
+    pwzArgs = CommandLineToArgvW(struArguments->QueryStr(), &argc);
+
+    argv = new PCWSTR[argc + 2];
+    if (argv == NULL)
+    {
+        hr = E_OUTOFMEMORY;
+        goto Finished;
+    }
+
+    argv[0] = SysAllocString(pstruExePath->QueryStr());
+    argv[1] = SysAllocString(L"exec");
+    for (INT i = 0; i < argc; i++)
+    {
+        argv[i + 2] = SysAllocString(pwzArgs[i]);
+    }
+
+    *pHostFxrParameters->QueryArgc() = argc + 2;
+    *pHostFxrParameters->QueryArguments() = argv;
+
+Finished:
+    if (pwzArgs != NULL)
+    {
+        LocalFree(pwzArgs);
+    }
     return hr;
 }

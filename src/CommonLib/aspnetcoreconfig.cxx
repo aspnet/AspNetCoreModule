@@ -132,6 +132,7 @@ ASPNETCORE_CONFIG::Populate(
     IHttpContext   *pHttpContext
 )
 {
+    STACK_STRU(strHostingModel, 300);
     HRESULT                         hr = S_OK;
     STRU                            strEnvName;
     STRU                            strEnvValue;
@@ -308,7 +309,7 @@ ASPNETCORE_CONFIG::Populate(
 
     hr = GetElementStringProperty(pAspNetCoreElement,
         CS_ASPNETCORE_HOSTING_MODEL,
-        &m_strHostingModel);
+        &strHostingModel);
     if (FAILED(hr))
     {
         // Swallow this error for backward compatability
@@ -316,11 +317,11 @@ ASPNETCORE_CONFIG::Populate(
         hr = S_OK;
     }
 
-    if (m_strHostingModel.IsEmpty() || m_strHostingModel.Equals(L"outofprocess", TRUE))
+    if (strHostingModel.IsEmpty() || strHostingModel.Equals(L"outofprocess", TRUE))
     {
         m_hostingModel = HOSTING_OUT_PROCESS;
     }
-    else if (m_strHostingModel.Equals(L"inprocess", TRUE))
+    else if (strHostingModel.Equals(L"inprocess", TRUE))
     {
         m_hostingModel = HOSTING_IN_PROCESS;
     }

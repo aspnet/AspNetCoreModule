@@ -3,6 +3,54 @@
 
 #pragma once
 
+typedef INT(*hostfxr_get_native_search_directories_fn) (const int argc, const WCHAR* argv[], WCHAR* dest, size_t dest_size);
+typedef INT(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
+
+class HOSTFXR_PARAMETERS
+{
+public:
+    HOSTFXR_PARAMETERS()
+    {
+    }
+
+    ~HOSTFXR_PARAMETERS()
+    {
+        if (m_pcwArguments != NULL)
+        {
+            delete[] m_pcwArguments;
+        }
+    }
+
+    PCWSTR**
+    QueryArguments(
+        VOID
+    )
+    {
+        return &m_pcwArguments;
+    }
+
+    STRU*
+    QueryHostfxrLocation(
+        VOID
+    )
+    {
+        return &m_struHostFxrLocation;
+    }
+
+    DWORD*
+    QueryArgc(
+        VOID
+    )
+    {
+        return &m_dwArgc;
+    }
+
+protected:
+    STRU    m_struHostFxrLocation;
+    PCWSTR* m_pcwArguments;
+    DWORD   m_dwArgc;
+};
+
 class HOSTFXR_UTILITY
 {
 public:
@@ -11,23 +59,19 @@ public:
 
     static
     HRESULT
-    FindHostFxrDll(
-        ASPNETCORE_CONFIG *pConfig,
-        STRU* struHostFxrDllLocation,
-        BOOL* fStandAlone
-    );
-
-    static
-    HRESULT
-    GetStandaloneHostfxrLocation(
-        STRU* struHostfxrPath,
+    GetHostFxrParameters(
+        HOSTFXR_PARAMETERS* pHostFxrParameters,
         ASPNETCORE_CONFIG *pConfig
     );
 
     static
+    HRESULT GetArguments(STRU * struArguments, STRU * pstruExePath, HOSTFXR_PARAMETERS * pHostFxrParameters);
+
+    static
     HRESULT
-    GetPortableHostfxrLocation(
-        STRU* struHostfxrPath
+    GetStandaloneHostfxrParameters(
+        HOSTFXR_PARAMETERS* pHostFxrParameters,
+        ASPNETCORE_CONFIG *pConfig
     );
 };
 

@@ -249,6 +249,7 @@ __stdcall
 CreateApplication(
     _In_  IHttpServer        *pServer,
     _In_  ASPNETCORE_CONFIG  *pConfig,
+    _In_  HOSTFXR_PARAMETERS *pHostFxrParameters,
     _Out_ APPLICATION       **ppApplication
 )
 {
@@ -259,7 +260,7 @@ CreateApplication(
 
     if (pConfig->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
     {
-        pApplication = new IN_PROCESS_APPLICATION(pServer, pConfig);
+        pApplication = new IN_PROCESS_APPLICATION(pServer, pConfig, pHostFxrParameters);
         if (pApplication == NULL)
         {
             hr = HRESULT_FROM_WIN32(ERROR_OUTOFMEMORY);

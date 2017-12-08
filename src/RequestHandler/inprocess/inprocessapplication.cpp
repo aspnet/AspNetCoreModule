@@ -1,12 +1,11 @@
 #include "..\precomp.hxx"
 
-typedef DWORD(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
-
 IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
 
 IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(
     IHttpServer*        pHttpServer, 
-    ASPNETCORE_CONFIG*  pConfig) :
+    ASPNETCORE_CONFIG*  pConfig, 
+    HOSTFXR_PARAMETERS* pHostFxrParameters) :
     APPLICATION(pHttpServer, pConfig),
     m_ProcessExitCode(0),
     m_fManagedAppLoaded(FALSE),
@@ -25,6 +24,7 @@ IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(
     // TODO we can probably initialized as I believe we are the only ones calling recycle.
     m_fInitialized = TRUE;
     m_status = APPLICATION_STATUS::RUNNING;
+    m_pHostFxrParameters = pHostFxrParameters;
 }
 
 IN_PROCESS_APPLICATION::~IN_PROCESS_APPLICATION()
@@ -495,6 +495,11 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
     {
         // Core CLR has already been loaded.
         // Cannot load more than once even there was a failure
+        if (m_fLoadManagedAppError)
+        {
+            hr = E_FAIL;
+        }
+
         goto Finished;
     }
 
@@ -505,6 +510,11 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
     fLocked = TRUE;
     if (m_fManagedAppLoaded || m_fLoadManagedAppError)
     {
+        if (m_fLoadManagedAppError)
+        {
+            hr = E_FAIL;
+        }
+
         goto Finished;
     }
 
@@ -572,16 +582,12 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
     m_fManagedAppLoaded = TRUE;
 
 Finished:
-    if (fLocked)
-    {
-        ReleaseSRWLockExclusive(&m_srwLock);
-    }
 
     if (FAILED(hr))
     {
         // Question: in case of application loading failure, should we allow retry on 
         // following request or block the activation at all
-        m_fLoadManagedAppError = FALSE; // m_hThread != NULL ?
+        m_fLoadManagedAppError = TRUE; // m_hThread != NULL ?
 
         // TODO
         //if (SUCCEEDED(strEventMsg.SafeSnwprintf(
@@ -610,6 +616,12 @@ Finished:
         //    }
         //}
     }
+
+    if (fLocked)
+    {
+        ReleaseSRWLockExclusive(&m_srwLock);
+    }
+
     return hr;
 }
 
@@ -619,14 +631,15 @@ IN_PROCESS_APPLICATION::ExecuteAspNetCoreProcess(
     _In_ LPVOID pContext
 )
 {
-
+    HRESULT hr = S_OK;
     IN_PROCESS_APPLICATION *pApplication = (IN_PROCESS_APPLICATION*)pContext;
     DBG_ASSERT(pApplication != NULL);
-    pApplication->ExecuteApplication();
+    hr = pApplication->ExecuteApplication();
     //
     // no need to log the error here as if error happened, the thread will exit
     // the error will ba catched by caller LoadManagedApplication which will log an error
     //
+
 }
 
 
@@ -635,150 +648,13 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     VOID
 )
 {
-    HRESULT     hr = S_OK;
+    HRESULT             hr = S_OK;
+    HMODULE             hModule;
+    hostfxr_main_fn     pProc;
 
-    STRU                        strFullPath;
-    STRU                        strDotnetExeLocation;
-    STRU                        strHostFxrSearchExpression;
-    STRU                        strDotnetFolderLocation;
-    STRU                        strHighestDotnetVersion;
-    STRU                        strApplicationFullPath;
-    PWSTR                       strDelimeterContext = NULL;
-    PCWSTR                      pszDotnetExeLocation = NULL;
-    PCWSTR                      pszDotnetExeString(L"dotnet.exe");
-    DWORD                       dwCopyLength;
-    HMODULE                     hModule;
-    PCWSTR                      argv[2];
-    hostfxr_main_fn             pProc;
-    std::vector<std::wstring>   vVersionFolders;
-    bool                        fFound = FALSE;
-
-    // Get the System PATH value.
-    if (!GetEnv(L"PATH", &strFullPath))
-    {
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    // Split on ';', checking to see if dotnet.exe exists in any folders.
-    pszDotnetExeLocation = wcstok_s(strFullPath.QueryStr(), L";", &strDelimeterContext);
-
-    while (pszDotnetExeLocation != NULL)
-    {
-        dwCopyLength = (DWORD) wcsnlen_s(pszDotnetExeLocation, 260);
-        if (dwCopyLength == 0)
-        {
-            continue;
-        }
-
-        // We store both the exe and folder locations as we eventually need to check inside of host\\fxr
-        // which doesn't need the dotnet.exe portion of the string
-        // TODO consider reducing allocations.
-        strDotnetExeLocation.Reset();
-        strDotnetFolderLocation.Reset();
-        hr = strDotnetExeLocation.Copy(pszDotnetExeLocation, dwCopyLength);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        hr = strDotnetFolderLocation.Copy(pszDotnetExeLocation, dwCopyLength);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        if (dwCopyLength > 0 && pszDotnetExeLocation[dwCopyLength - 1] != L'\\')
-        {
-            hr = strDotnetExeLocation.Append(L"\\");
-            if (FAILED(hr))
-            {
-                goto Finished;
-            }
-        }
-
-        hr = strDotnetExeLocation.Append(pszDotnetExeString);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        if (PathFileExists(strDotnetExeLocation.QueryStr()))
-        {
-            // means we found the folder with a dotnet.exe inside of it.
-            fFound = TRUE;
-            break;
-        }
-        pszDotnetExeLocation = wcstok_s(NULL, L";", &strDelimeterContext);
-    }
-    if (!fFound)
-    {
-        // could not find dotnet.exe, error out
-        hr = ERROR_BAD_ENVIRONMENT;
-    }
-
-    hr = strDotnetFolderLocation.Append(L"\\host\\fxr");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    if (!DirectoryExists(&strDotnetFolderLocation))
-    {
-        // error, not found the folder
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    // Find all folders under host\\fxr\\ for version numbers.
-    hr = strHostFxrSearchExpression.Copy(strDotnetFolderLocation);
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hr = strHostFxrSearchExpression.Append(L"\\*");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    // As we use the logic from core-setup, we are opting to use std here.
-    // TODO remove all uses of std?
-    FindDotNetFolders(strHostFxrSearchExpression.QueryStr(), &vVersionFolders);
-
-    if (vVersionFolders.size() == 0)
-    {
-        // no core framework was found
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    hr = FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-    hr = strDotnetFolderLocation.Append(L"\\");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hr = strDotnetFolderLocation.Append(strHighestDotnetVersion.QueryStr());
-    if (FAILED(hr))
-    {
-        goto Finished;
-
-    }
-
-    hr = strDotnetFolderLocation.Append(L"\\hostfxr.dll");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hModule = LoadLibraryW(strDotnetFolderLocation.QueryStr());
+    // should be a redudant call here, but we will be safe and call it twice.
+    // TODO AV here on m_pHostFxrParameters being null
+    hModule = LoadLibraryW(m_pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
 
     if (hModule == NULL)
     {
@@ -791,16 +667,9 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     pProc = (hostfxr_main_fn)GetProcAddress(hModule, "hostfxr_main");
     if (pProc == NULL)
     {
-        hr = ERROR_BAD_ENVIRONMENT; // better hrresult?
+        hr = ERROR_BAD_ENVIRONMENT;
         goto Finished;
     }
-
-    // The first argument is mostly ignored
-    argv[0] = strDotnetExeLocation.QueryStr();
-    UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
-        m_pConfig->QueryApplicationPhysicalPath()->QueryStr(),
-        &strApplicationFullPath);
-    argv[1] = strApplicationFullPath.QueryStr();
 
     // There can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
@@ -811,7 +680,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // set the callbacks
     s_Application = this;
 
-    RunDotnetApplication(argv, pProc);
+    RunDotnetApplication(*m_pHostFxrParameters->QueryArgc(), *m_pHostFxrParameters->QueryArguments(), pProc);
 
 Finished:
     //
@@ -862,14 +731,15 @@ Finished:
 // Calls hostfxr_main with the hostfxr and application as arguments.
 // Method should be called with only 
 // Need to have __try / __except in methods that require unwinding.
+// Note, this will not 
 // 
 HRESULT
-IN_PROCESS_APPLICATION::RunDotnetApplication(PCWSTR* argv, hostfxr_main_fn pProc)
+IN_PROCESS_APPLICATION::RunDotnetApplication(CONST DWORD argc, PCWSTR* argv, hostfxr_main_fn pProc)
 {
     HRESULT hr = S_OK;
     __try
     {
-        m_ProcessExitCode = pProc(2, argv);
+        m_ProcessExitCode = pProc(argc, argv);
     }
     __except (FilterException(GetExceptionCode(), GetExceptionInformation()))
     {

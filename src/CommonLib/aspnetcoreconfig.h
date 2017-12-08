@@ -215,20 +215,6 @@ public:
         return &m_struConfigPath;
     }
 
-    STRU*
-    QueryHostfxrPath()
-    {
-        return &m_struHostFxrPath;
-    }
-
-    BOOL
-    QueryIsStandAloneApplication(
-        VOID
-    )
-    {
-        return m_fIsStandAloneApplication;
-    }
-
     VOID
     ReferenceConfiguration(
         VOID
@@ -272,8 +258,6 @@ private:
     STRU                   m_struApplicationPhysicalPath;
     STRU                   m_struApplicationVirtualPath;
     STRU                   m_struConfigPath;
-    STRU                   m_strHostingModel;
-    STRU                   m_struHostFxrPath;
     BOOL                   m_fStdoutLogEnabled;
     BOOL                   m_fForwardWindowsAuthToken;
     BOOL                   m_fDisableStartUpErrorPage;
