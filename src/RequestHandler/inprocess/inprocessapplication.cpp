@@ -653,132 +653,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     std::vector<std::wstring>   vVersionFolders;
     bool                        fFound = FALSE;
 
-    // Get the System PATH value.
-    if (!GetEnv(L"PATH", &strFullPath))
-    {
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    // Split on ';', checking to see if dotnet.exe exists in any folders.
-    pszDotnetExeLocation = wcstok_s(strFullPath.QueryStr(), L";", &strDelimeterContext);
-
-    while (pszDotnetExeLocation != NULL)
-    {
-        dwCopyLength = (DWORD) wcsnlen_s(pszDotnetExeLocation, 260);
-        if (dwCopyLength == 0)
-        {
-            continue;
-        }
-
-        // We store both the exe and folder locations as we eventually need to check inside of host\\fxr
-        // which doesn't need the dotnet.exe portion of the string
-        // TODO consider reducing allocations.
-        strDotnetExeLocation.Reset();
-        strDotnetFolderLocation.Reset();
-        hr = strDotnetExeLocation.Copy(pszDotnetExeLocation, dwCopyLength);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        hr = strDotnetFolderLocation.Copy(pszDotnetExeLocation, dwCopyLength);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        if (dwCopyLength > 0 && pszDotnetExeLocation[dwCopyLength - 1] != L'\\')
-        {
-            hr = strDotnetExeLocation.Append(L"\\");
-            if (FAILED(hr))
-            {
-                goto Finished;
-            }
-        }
-
-        hr = strDotnetExeLocation.Append(pszDotnetExeString);
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        if (PathFileExists(strDotnetExeLocation.QueryStr()))
-        {
-            // means we found the folder with a dotnet.exe inside of it.
-            fFound = TRUE;
-            break;
-        }
-        pszDotnetExeLocation = wcstok_s(NULL, L";", &strDelimeterContext);
-    }
-    if (!fFound)
-    {
-        // could not find dotnet.exe, error out
-        hr = ERROR_BAD_ENVIRONMENT;
-    }
-
-    hr = strDotnetFolderLocation.Append(L"\\host\\fxr");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    if (!DirectoryExists(&strDotnetFolderLocation))
-    {
-        // error, not found the folder
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    // Find all folders under host\\fxr\\ for version numbers.
-    hr = strHostFxrSearchExpression.Copy(strDotnetFolderLocation);
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hr = strHostFxrSearchExpression.Append(L"\\*");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    // As we use the logic from core-setup, we are opting to use std here.
-    // TODO remove all uses of std?
-    FindDotNetFolders(strHostFxrSearchExpression.QueryStr(), &vVersionFolders);
-
-    if (vVersionFolders.size() == 0)
-    {
-        // no core framework was found
-        hr = ERROR_BAD_ENVIRONMENT;
-        goto Finished;
-    }
-
-    hr = FindHighestDotNetVersion(vVersionFolders, &strHighestDotnetVersion);
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-    hr = strDotnetFolderLocation.Append(L"\\");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hr = strDotnetFolderLocation.Append(strHighestDotnetVersion.QueryStr());
-    if (FAILED(hr))
-    {
-        goto Finished;
-
-    }
-
-    hr = strDotnetFolderLocation.Append(L"\\hostfxr.dll");
-    if (FAILED(hr))
-    {
-        goto Finished;
-    }
-
-    hModule = LoadLibraryW(strDotnetFolderLocation.QueryStr());
+    hModule = LoadLibraryW(m_pConfig->QueryHostfxrPath()->QueryStr());
 
     if (hModule == NULL)
     {
@@ -796,10 +671,11 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     }
 
     // The first argument is mostly ignored
-    argv[0] = strDotnetExeLocation.QueryStr();
+    argv[0] = /**/
     UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
         m_pConfig->QueryApplicationPhysicalPath()->QueryStr(),
         &strApplicationFullPath);
+
     argv[1] = strApplicationFullPath.QueryStr();
 
     // There can only ever be a single instance of .NET Core

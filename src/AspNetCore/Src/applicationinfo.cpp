@@ -327,3 +327,64 @@ APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename)
 Finished:
     return hr;
 }
+
+typedef int(*hostfxr_get_native_search_directories_fn) (const int argc, const WCHAR* argv[], WCHAR* dest, size_t dest_size);
+
+HRESULT
+APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename)
+{
+    HMODULE hostFxrDll;
+    HRESULT hr = S_OK;
+    DBG_ASSERT(struFileName != NULL);
+    STRU struApplicationFullPath;
+
+    //// call into hostfxr utility
+    //if (pAspNetCoreConfig->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
+    //{
+    //    if (FAILED(hr = HOSTFXR_UTILITY::FindHostFxrDll(pAspNetCoreConfig, &struHostFxrPath))
+    //        || FAILED(hr = pAspNetCoreConfig->QueryHostfxrPath()->Copy(struHostFxrPath)))
+    //    {
+    //        goto Finished;
+    //    }
+    //}
+    if (m_pConfiguration->QueryHostfxrPath()->IsEmpty())
+    {
+        goto Finished;
+    }
+    hostFxrDll = ::LoadLibraryW(m_pConfiguration->QueryHostfxrPath()->QueryStr());
+    
+    if (hostFxrDll == NULL)
+    {
+        // Could not load hostfxr
+        goto Finished;
+    }
+
+    hostfxr_get_native_search_directories_fn main_fn = (hostfxr_get_native_search_directories_fn)GetProcAddress(hostFxrDll, "hostfxr_get_native_search_directories");
+
+    if (main_fn == NULL)
+    {
+        // Host fxr version does not have correct function
+        goto Finished;
+    }
+
+    WCHAR **argv = new WCHAR*[3];
+
+    const size_t BUFFER_SIZE = 1024 * 10;
+    WCHAR buff[BUFFER_SIZE] = { 0 };
+
+    argv[0] = (WCHAR*)L"C:\\Program Files\\dotnet\\dotnet.exe";
+    argv[1] = (WCHAR*)L"exec";
+
+    UTILITY::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(),
+        m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(),
+        &struApplicationFullPath);
+    argv[2] = struApplicationFullPath.QueryStr();
+
+    int rc = main_fn(3, (const WCHAR**)argv, buff, BUFFER_SIZE);
+
+    // Buff now contains the native serach paths
+    // Iterate through and find it.
+Finished:
+
+    return hr;
+}

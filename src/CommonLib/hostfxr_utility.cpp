@@ -15,27 +15,26 @@ HOSTFXR_UTILITY::~HOSTFXR_UTILITY()
 HRESULT
 HOSTFXR_UTILITY::FindHostFxrDll(
     ASPNETCORE_CONFIG *pConfig,
-    STRU* struHostFxrDllLocation,
-    BOOL* fStandAlone
+    STRU* struHostFxrDllLocation
 )
 {
     HRESULT hr = S_OK;
 
     // If the process path isn't dotnet, assume we are a standalone appliction.
     // TODO: this should be a path equivalent check
-    if (!(pConfig->QueryProcessPath()->Equals(L".\\dotnet")
+    if (pConfig->QueryProcessPath()->Equals(L".\\dotnet")
         || pConfig->QueryProcessPath()->Equals(L"dotnet")
         || pConfig->QueryProcessPath()->Equals(L".\\dotnet.exe")
-        || pConfig->QueryProcessPath()->Equals(L"dotnet.exe")))
+        || pConfig->QueryProcessPath()->Equals(L"dotnet.exe"))
     {
         // hostfxr is in the same folder, parse and use it.
-        hr = GetStandaloneHostfxrLocation(struHostFxrDllLocation, pConfig);
-        *fStandAlone = TRUE;
+        hr = GetPortableHostfxrLocation(struHostFxrDllLocation);
     }
     else
     {
-        hr = GetPortableHostfxrLocation(struHostFxrDllLocation);
-        fStandAlone = FALSE;
+        // Check that there is a dll name with the same name as the application name.
+        // QUeryProcessPath == Dll name in application
+        hr = GetStandaloneHostfxrLocation(struHostFxrDllLocation, pConfig);
     }
 
     return hr;
@@ -70,7 +69,6 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrLocation(
     {
         goto Finished;
     }
-
 
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = TRUE;
@@ -251,6 +249,23 @@ HOSTFXR_UTILITY::GetPortableHostfxrLocation(
     hr = struHostfxrPath->Append(L"\\hostfxr.dll");
     if (FAILED(hr))
     {
+        goto Finished;
+    }
+
+    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+    saAttr.bInheritHandle = TRUE;
+    saAttr.lpSecurityDescriptor = NULL;
+
+    hFileHandle = CreateFile(struHostfxrPath->QueryStr(),
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        &saAttr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+    if (hFileHandle == INVALID_HANDLE_VALUE)
+    {
+        hr = ERROR_FILE_INVALID;
         goto Finished;
     }
 

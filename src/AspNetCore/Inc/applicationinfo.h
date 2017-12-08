@@ -145,8 +145,7 @@ public:
 private:
     HRESULT FindRequestHandlerAssembly();
     HRESULT FindNativeAssemblyFromGlobalLocation(STRU* struFilename);
-    HRESULT FindNativeAssemblyFromLocalBin(STRU* struFilename);
-    HRESULT GetRequestHandlerFromRuntimeStore(STRU* struFilename);
+    HRESULT FindNativeAssemblyFromHostfxr(STRU* struFilename);
 
     mutable LONG            m_cRefs;
     APPLICATION_INFO_KEY    m_applicationInfoKey;
