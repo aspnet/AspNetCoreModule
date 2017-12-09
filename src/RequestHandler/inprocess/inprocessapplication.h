@@ -12,7 +12,7 @@ typedef DWORD(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
 class IN_PROCESS_APPLICATION : public APPLICATION
 {
 public:
-    IN_PROCESS_APPLICATION(IHttpServer* pHttpServer, ASPNETCORE_CONFIG  *pConfig);
+    IN_PROCESS_APPLICATION(IHttpServer* pHttpServer, ASPNETCORE_CONFIG* pConfig, HOSTFXR_PARAMETERS* pHostFxrParameters);
 
     ~IN_PROCESS_APPLICATION();
 
@@ -94,6 +94,8 @@ private:
 
     // The event that gets triggered when managed initialization is complete
     HANDLE                          m_pInitalizeEvent;
+
+    HOSTFXR_PARAMETERS*             m_pHostFxrParameters;
 
     // The std log file handle
     HANDLE                          m_hLogFileHandle;

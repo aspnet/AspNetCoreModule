@@ -6,7 +6,8 @@ IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
 
 IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(
     IHttpServer*        pHttpServer, 
-    ASPNETCORE_CONFIG*  pConfig) :
+    ASPNETCORE_CONFIG*  pConfig, 
+    HOSTFXR_PARAMETERS* pHostFxrParameters) :
     APPLICATION(pHttpServer, pConfig),
     m_ProcessExitCode(0),
     m_fManagedAppLoaded(FALSE),
@@ -25,6 +26,7 @@ IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(
     // TODO we can probably initialized as I believe we are the only ones calling recycle.
     m_fInitialized = TRUE;
     m_status = APPLICATION_STATUS::RUNNING;
+    m_pHostFxrParameters = pHostFxrParameters;
 }
 
 IN_PROCESS_APPLICATION::~IN_PROCESS_APPLICATION()
@@ -653,7 +655,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     std::vector<std::wstring>   vVersionFolders;
     bool                        fFound = FALSE;
 
-    hModule = LoadLibraryW(m_pConfig->QueryHostfxrPath()->QueryStr());
+    hModule = LoadLibraryW(m_pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
 
     if (hModule == NULL)
     {
@@ -671,12 +673,9 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     }
 
     // The first argument is mostly ignored
-    argv[0] = /*path to dotnet exe or application exe path. Will set in loading*/
-    UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
-        m_pConfig->QueryApplicationPhysicalPath()->QueryStr(),
-        &strApplicationFullPath);
+    argv[0] = m_pHostFxrParameters->QueryExePath()->QueryStr();
 
-    argv[1] = strApplicationFullPath.QueryStr();
+    argv[1] = m_pHostFxrParameters->QueryArguments()->QueryStr();
 
     // There can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
