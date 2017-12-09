@@ -215,19 +215,6 @@ public:
         return &m_struConfigPath;
     }
 
-    STRU*
-    QueryHostfxrPath()
-    {
-        return &m_struHostFxrPath;
-    }
-
-    STRU*
-        QueryDotnetExeLocation()
-    {
-        return &m_struDotnetExeLocation;
-    }
-
-
     VOID
     ReferenceConfiguration(
         VOID
@@ -271,9 +258,6 @@ private:
     STRU                   m_struApplicationPhysicalPath;
     STRU                   m_struApplicationVirtualPath;
     STRU                   m_struConfigPath;
-    STRU                   m_struHostingModel;
-    STRU                   m_struHostFxrPath;
-    STRU                   m_struDotnetExeLocation;
     BOOL                   m_fStdoutLogEnabled;
     BOOL                   m_fForwardWindowsAuthToken;
     BOOL                   m_fDisableStartUpErrorPage;

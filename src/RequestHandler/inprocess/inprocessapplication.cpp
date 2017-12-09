@@ -671,7 +671,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     }
 
     // The first argument is mostly ignored
-    argv[0] = /**/
+    argv[0] = /*path to dotnet exe or application exe path. Will set in loading*/
     UTILITY::ConvertPathToFullPath(m_pConfig->QueryArguments()->QueryStr(),
         m_pConfig->QueryApplicationPhysicalPath()->QueryStr(),
         &strApplicationFullPath);

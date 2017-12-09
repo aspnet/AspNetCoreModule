@@ -2,6 +2,43 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #pragma once
+class HOSTFXR_PARAMETERS
+{
+public:
+    HOSTFXR_PARAMETERS();
+    ~HOSTFXR_PARAMETERS();
+
+    STRU*
+    QueryArguments(
+        VOID
+    )
+    {
+        return &m_struArguments;
+    }
+
+    STRU*
+    QueryExePath(
+        VOID
+    )
+    {
+        return &m_struExePath;
+    }
+
+    STRU*
+    QueryHostfxrLocation(
+        VOID
+    )
+    {
+        return &m_struHostFxrLocation;
+    }
+
+protected:
+    STRU    m_struHostFxrLocation;
+    STRU    m_struExePath;
+    STRU    m_struArguments;
+    // TODO more parameters
+
+};
 
 class HOSTFXR_UTILITY
 {
@@ -11,22 +48,26 @@ public:
 
     static
     HRESULT
-    FindHostFxrDll(
-        ASPNETCORE_CONFIG *pConfig,
-        STRU* struHostFxrDllLocation
-    );
-
-    static
-    HRESULT
-    GetStandaloneHostfxrLocation(
-        STRU* struHostfxrPath,
+        GetHostFxrParameters(
+        HOSTFXR_PARAMETERS* pHostFxrParameters,
         ASPNETCORE_CONFIG *pConfig
     );
 
     static
     HRESULT
-    GetPortableHostfxrLocation(
-        STRU* struHostfxrPath
+    GetStandaloneHostfxrParameters(
+        HOSTFXR_PARAMETERS* pHostFxrParameters,
+        ASPNETCORE_CONFIG *pConfig
     );
+
+    static
+    HRESULT
+    GetPortableHostfxrParameters(
+        HOSTFXR_PARAMETERS* pHostFxrParameters,
+        ASPNETCORE_CONFIG *pConfig
+    );
+private:
+    static
+    HANDLE CheckIfFileExists(STRU * struFile);
 };
 

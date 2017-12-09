@@ -338,20 +338,15 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename)
     DBG_ASSERT(struFileName != NULL);
     STRU struApplicationFullPath;
 
+    HOSTFXR_PARAMETERS* pHostFxrParameters = new HOSTFXR_PARAMETERS;
+
     //// call into hostfxr utility
-    //if (pAspNetCoreConfig->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
-    //{
-    //    if (FAILED(hr = HOSTFXR_UTILITY::FindHostFxrDll(pAspNetCoreConfig, &struHostFxrPath))
-    //        || FAILED(hr = pAspNetCoreConfig->QueryHostfxrPath()->Copy(struHostFxrPath)))
-    //    {
-    //        goto Finished;
-    //    }
-    //}
-    if (m_pConfiguration->QueryHostfxrPath()->IsEmpty())
+    if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(pHostFxrParameters, m_pConfiguration)))
     {
         goto Finished;
     }
-    hostFxrDll = ::LoadLibraryW(m_pConfiguration->QueryHostfxrPath()->QueryStr());
+
+    hostFxrDll = ::LoadLibraryW(pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
     
     if (hostFxrDll == NULL)
     {
@@ -359,9 +354,10 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename)
         goto Finished;
     }
 
-    hostfxr_get_native_search_directories_fn main_fn = (hostfxr_get_native_search_directories_fn)GetProcAddress(hostFxrDll, "hostfxr_get_native_search_directories");
+    hostfxr_get_native_search_directories_fn pFnHostFxrSearchDirectories = (hostfxr_get_native_search_directories_fn)
+        GetProcAddress(hostFxrDll, "hostfxr_get_native_search_directories");
 
-    if (main_fn == NULL)
+    if (pFnHostFxrSearchDirectories == NULL)
     {
         // Host fxr version does not have correct function
         goto Finished;
@@ -372,19 +368,42 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename)
     const size_t BUFFER_SIZE = 1024 * 10;
     WCHAR buff[BUFFER_SIZE] = { 0 };
 
-    argv[0] = (WCHAR*)L"C:\\Program Files\\dotnet\\dotnet.exe";
+    argv[0] = pHostFxrParameters->QueryExePath()->QueryStr();
     argv[1] = (WCHAR*)L"exec";
 
-    UTILITY::ConvertPathToFullPath(m_pConfiguration->QueryArguments()->QueryStr(),
-        m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(),
-        &struApplicationFullPath);
-    argv[2] = struApplicationFullPath.QueryStr();
+    argv[2] = pHostFxrParameters->QueryArguments()->QueryStr();
 
-    int rc = main_fn(3, (const WCHAR**)argv, buff, BUFFER_SIZE);
+    int rc = pFnHostFxrSearchDirectories(3, (const WCHAR**)argv, buff, BUFFER_SIZE);
 
     // Buff now contains the native serach paths
     // Iterate through and find it.
 Finished:
+    STRU struNativeSearchPaths;
+    struNativeSearchPaths.Copy(buff);
 
     return hr;
+}
+
+void dump_native_paths(STRU* paths)
+{
+    // List the native folders
+    HRESULT                     hr = S_OK;
+    PCWSTR                      pszDotnetLocation;
+    PWSTR                       pwzDelimeterContext = NULL;
+    DWORD                       dwCopyLength;
+    STRU                        strDotnetExeLocation;
+
+    // List the managed assemblies.
+    pszDotnetLocation = wcstok_s(paths->QueryStr(), L";", &pwzDelimeterContext);
+    while (pszDotnetLocation != NULL)
+    {
+        dwCopyLength = (DWORD)wcsnlen_s(pszDotnetLocation, 260);
+
+        // We store both the exe and folder locations as we eventually need to check inside of host\\fxr
+        // which doesn't need the dotnet.exe portion of the string
+        hr = strDotnetExeLocation.Copy(pszDotnetLocation, dwCopyLength);
+        hr = strDotnetExeLocation.Append(L"aspnetcorerh.dll");
+        // check if this dll exists, if so we are good to go :D
+
+    }
 }

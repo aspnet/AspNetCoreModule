@@ -249,6 +249,7 @@ __stdcall
 CreateApplication(
     _In_  IHttpServer        *pServer,
     _In_  ASPNETCORE_CONFIG  *pConfig,
+    _In_  HOSTFXR_PARAMETERS *pHostFxrParameters,
     _Out_ APPLICATION       **ppApplication
 )
 {
