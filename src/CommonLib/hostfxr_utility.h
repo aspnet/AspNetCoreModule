@@ -5,8 +5,13 @@
 class HOSTFXR_PARAMETERS
 {
 public:
-    HOSTFXR_PARAMETERS();
-    ~HOSTFXR_PARAMETERS();
+    HOSTFXR_PARAMETERS()
+    {
+    }
+
+    ~HOSTFXR_PARAMETERS()
+    {
+    }
 
     STRU*
     QueryArguments(
@@ -37,7 +42,6 @@ protected:
     STRU    m_struExePath;
     STRU    m_struArguments;
     // TODO more parameters
-
 };
 
 class HOSTFXR_UTILITY
@@ -66,8 +70,5 @@ public:
         HOSTFXR_PARAMETERS* pHostFxrParameters,
         ASPNETCORE_CONFIG *pConfig
     );
-private:
-    static
-    HANDLE CheckIfFileExists(STRU * struFile);
 };
 

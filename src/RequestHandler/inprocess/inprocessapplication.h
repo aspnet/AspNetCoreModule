@@ -65,6 +65,7 @@ public:
 
     HRESULT
     RunDotnetApplication(
+        DWORD argc, 
         PCWSTR* argv,
         hostfxr_main_fn pProc
     );

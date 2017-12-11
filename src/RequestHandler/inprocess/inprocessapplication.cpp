@@ -645,16 +645,12 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     STRU                        strDotnetFolderLocation;
     STRU                        strHighestDotnetVersion;
     STRU                        strApplicationFullPath;
-    PWSTR                       strDelimeterContext = NULL;
-    PCWSTR                      pszDotnetExeLocation = NULL;
-    PCWSTR                      pszDotnetExeString(L"dotnet.exe");
-    DWORD                       dwCopyLength;
     HMODULE                     hModule;
-    PCWSTR                      argv[2];
+    PCWSTR                      argv[3];
     hostfxr_main_fn             pProc;
     std::vector<std::wstring>   vVersionFolders;
-    bool                        fFound = FALSE;
 
+    // should be a redudant call here, but we will be safe and call it twice.
     hModule = LoadLibraryW(m_pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
 
     if (hModule == NULL)
@@ -674,8 +670,8 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
 
     // The first argument is mostly ignored
     argv[0] = m_pHostFxrParameters->QueryExePath()->QueryStr();
-
-    argv[1] = m_pHostFxrParameters->QueryArguments()->QueryStr();
+    argv[1] = L"exec";
+    argv[2] = m_pHostFxrParameters->QueryArguments()->QueryStr();
 
     // There can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
@@ -686,7 +682,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // set the callbacks
     s_Application = this;
 
-    RunDotnetApplication(argv, pProc);
+    RunDotnetApplication(3, argv, pProc);
 
 Finished:
     //
@@ -739,12 +735,12 @@ Finished:
 // Need to have __try / __except in methods that require unwinding.
 // 
 HRESULT
-IN_PROCESS_APPLICATION::RunDotnetApplication(PCWSTR* argv, hostfxr_main_fn pProc)
+IN_PROCESS_APPLICATION::RunDotnetApplication(CONST DWORD argc, PCWSTR* argv, hostfxr_main_fn pProc)
 {
     HRESULT hr = S_OK;
     __try
     {
-        m_ProcessExitCode = pProc(2, argv);
+        m_ProcessExitCode = pProc(argc, argv);
     }
     __except (FilterException(GetExceptionCode(), GetExceptionInformation()))
     {

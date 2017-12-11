@@ -112,6 +112,12 @@ public:
         _Out_ STRU *pstrResult
     );
 
+    static
+    HANDLE
+    CheckIfFileExists(
+        STRU* struFile
+    );
+
 private:
 
     UTILITY() {}

@@ -78,7 +78,7 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
         goto Finished;
     }
 
-    hFileHandle = CheckIfFileExists(&struHostfxrPath);
+    hFileHandle = UTILITY::CheckIfFileExists(&struHostfxrPath);
     if (hFileHandle == INVALID_HANDLE_VALUE)
     {
         // Treat access issue as File not found
@@ -96,7 +96,7 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
         pConfig->QueryApplicationPhysicalPath()->QueryStr(),
         &struExePath);
 
-    hFileHandle = CheckIfFileExists(&struExePath);
+    hFileHandle = UTILITY::CheckIfFileExists(&struExePath);
     if (hFileHandle == INVALID_HANDLE_VALUE)
     {
         // Treat access issue as File not found
@@ -125,7 +125,7 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
         goto Finished;
     }
     
-    hFileHandle = CheckIfFileExists(&struExePath);
+    hFileHandle = UTILITY::CheckIfFileExists(&struExePath);
     if (hFileHandle == INVALID_HANDLE_VALUE)
     {
         // Treat access issue as File not found
@@ -208,7 +208,7 @@ HOSTFXR_UTILITY::GetPortableHostfxrParameters(
             goto Finished;
         }
 
-        hFileHandle = CheckIfFileExists(&strDotnetExeLocation);
+        hFileHandle = UTILITY::CheckIfFileExists(&strDotnetExeLocation);
         if (hFileHandle != INVALID_HANDLE_VALUE)
         {
             // means we found the folder with a dotnet.exe inside of it.
@@ -278,7 +278,7 @@ HOSTFXR_UTILITY::GetPortableHostfxrParameters(
         goto Finished;
     }
 
-    hFileHandle = CheckIfFileExists(&struHostfxrPath);
+    hFileHandle = UTILITY::CheckIfFileExists(&struHostfxrPath);
 
     if (hFileHandle == INVALID_HANDLE_VALUE)
     {
@@ -294,25 +294,4 @@ HOSTFXR_UTILITY::GetPortableHostfxrParameters(
     }
 Finished:
     return hr;
-}
-
-HANDLE
-HOSTFXR_UTILITY::CheckIfFileExists(STRU* struFile)
-{
-    HANDLE              hFileHandle = INVALID_HANDLE_VALUE;
-    SECURITY_ATTRIBUTES saAttr;
-
-    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-    saAttr.bInheritHandle = TRUE;
-    saAttr.lpSecurityDescriptor = NULL;
-
-    hFileHandle = CreateFile(struFile->QueryStr(),
-        GENERIC_READ,
-        FILE_SHARE_READ,
-        &saAttr,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL);
-
-    return hFileHandle;
 }

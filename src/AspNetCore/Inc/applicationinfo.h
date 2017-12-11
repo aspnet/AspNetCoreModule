@@ -8,6 +8,7 @@ HRESULT
 (WINAPI * PFN_ASPNETCORE_CREATE_APPLICATION)(
     _In_  IHttpServer        *pServer,
     _In_  ASPNETCORE_CONFIG  *pConfig,
+    _In_  HOSTFXR_PARAMETERS *pParameters,
     _Out_ APPLICATION       **pApplication
     );
 
@@ -62,7 +63,6 @@ private:
 class APPLICATION_INFO
 {
 public:
-
     APPLICATION_INFO(IHttpServer *pServer) :
         m_pServer(pServer),
         m_cRefs(1), m_fAppOfflineFound(FALSE),
@@ -143,9 +143,9 @@ public:
     }
 
 private:
-    HRESULT FindRequestHandlerAssembly();
+    HRESULT FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** hostFxrParameters);
     HRESULT FindNativeAssemblyFromGlobalLocation(STRU* struFilename);
-    HRESULT FindNativeAssemblyFromHostfxr(STRU* struFilename);
+    HRESULT FindNativeAssemblyFromHostfxr(STRU* struFilename, _Out_ HOSTFXR_PARAMETERS** hostFxrParameters);
 
     mutable LONG            m_cRefs;
     APPLICATION_INFO_KEY    m_applicationInfoKey;
