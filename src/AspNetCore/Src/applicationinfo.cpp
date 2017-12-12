@@ -421,6 +421,7 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, _Out_ HOSTFX
         {
             struFilename->Copy(nativeDllLocation);
             fFound = TRUE;
+            CloseHandle(nativeRequestHandlerHandle);
             break;
         }
         prevIndex = index + 1;

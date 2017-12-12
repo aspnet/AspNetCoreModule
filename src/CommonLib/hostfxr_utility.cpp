@@ -269,8 +269,6 @@ HOSTFXR_UTILITY::GetPortableHostfxrParameters(
         goto Finished;
     }
 
-
-    hr = struHostfxrPath.Append(L"\\");
     if (FAILED(hr = struHostfxrPath.Append(L"\\"))
         || FAILED(hr = struHostfxrPath.Append(strHighestDotnetVersion.QueryStr()))
         || FAILED(hr = struHostfxrPath.Append(L"\\hostfxr.dll")))
