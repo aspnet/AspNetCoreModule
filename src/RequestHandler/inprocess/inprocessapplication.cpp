@@ -646,7 +646,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     STRU                        strHighestDotnetVersion;
     STRU                        strApplicationFullPath;
     HMODULE                     hModule;
-    PCWSTR                      argv[3];
+    PCWSTR                      argv[2];
     hostfxr_main_fn             pProc;
     std::vector<std::wstring>   vVersionFolders;
 
@@ -670,8 +670,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
 
     // The first argument is mostly ignored
     argv[0] = m_pHostFxrParameters->QueryExePath()->QueryStr();
-    argv[1] = L"exec";
-    argv[2] = m_pHostFxrParameters->QueryArguments()->QueryStr();
+    argv[1] = m_pHostFxrParameters->QueryArguments()->QueryStr();
 
     // There can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
@@ -682,7 +681,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // set the callbacks
     s_Application = this;
 
-    RunDotnetApplication(3, argv, pProc);
+    RunDotnetApplication(2, argv, pProc);
 
 Finished:
     //

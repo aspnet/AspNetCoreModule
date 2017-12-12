@@ -218,20 +218,14 @@ APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** pHostFxr
             goto Finished;
         }
 
-        // load assembly and create the application
-        if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
-        {
-            // Look at inetsvr only for now. TODO add in functionality
-            hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostFxrParameters);
+        // Look at inetsvr only for now. TODO add in functionality
+        //hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostFxrParameters);
+        hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostFxrParameters);
 
-            if (FAILED(hr))
-            {
-                goto Finished;
-            }
-        }
-        else
+        // TODO cleanup
+        if (FAILED(hr))
         {
-            hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostFxrParameters);
+            hr = FindNativeAssemblyFromGlobalLocation(&struFileName, pHostFxrParameters);
             if (FAILED(hr))
             {
                 goto Finished;
@@ -283,12 +277,14 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename)
+APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename, _Out_ HOSTFXR_PARAMETERS** pHostFxrParameters)
 {
     HRESULT hr = S_OK;
     DWORD dwSize = MAX_PATH;
     BOOL  fDone = FALSE;
     DWORD dwPosition = 0;
+
+    *pHostFxrParameters = new HOSTFXR_PARAMETERS();
 
     // Though we could call LoadLibrary(L"aspnetcorerh.dll") relying the OS to solve
     // the path (the targeted dll is the same folder of w3wp.exe/iisexpress)
@@ -323,6 +319,10 @@ APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename)
     if (FAILED(hr = struFilename->SyncWithBuffer()) ||
         FAILED(hr = struFilename->Append(L"\\")) ||
         FAILED(hr = struFilename->Append(g_pwzAspnetcoreRequestHandlerName)))
+    {
+        goto Finished;
+    }
+    if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(*pHostFxrParameters, m_pConfiguration)))
     {
         goto Finished;
     }
