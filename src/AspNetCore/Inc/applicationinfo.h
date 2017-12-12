@@ -144,8 +144,8 @@ public:
 
 private:
     HRESULT FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** hostFxrParameters);
-    HRESULT FindNativeAssemblyFromGlobalLocation(STRU* struFilename, _Out_ HOSTFXR_PARAMETERS** hostFxrParameters);
-    HRESULT FindNativeAssemblyFromHostfxr(STRU* struFilename, _Out_ HOSTFXR_PARAMETERS** hostFxrParameters);
+    HRESULT FindNativeAssemblyFromGlobalLocation(STRU* struFilename);
+    HRESULT FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARAMETERS* hostFxrParameters);
 
     mutable LONG            m_cRefs;
     APPLICATION_INFO_KEY    m_applicationInfoKey;

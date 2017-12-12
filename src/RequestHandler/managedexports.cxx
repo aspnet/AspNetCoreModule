@@ -127,7 +127,7 @@ struct IISConfigurationData
 };
 
 EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
-HRESULT // TODO probably should make this a wide string
+HRESULT
 http_get_application_properties(
     _In_ IISConfigurationData* pIISCofigurationData
 )
@@ -137,7 +137,7 @@ http_get_application_properties(
 
     if (pApplication == NULL)
     {
-        return E_FAIL;
+        return E_ABORT;
     }
 
     pConfiguration = pApplication->QueryConfig();
@@ -390,6 +390,14 @@ http_get_authentication_information(
     *pvToken = pInProcessHandler->QueryHttpContext()->GetUser()->GetPrimaryToken();
 
     return S_OK;
+}
+
+
+EXTERN_C __MIDL_DECLSPEC_DLLEXPORT
+HRESULT
+test_method()
+{
+    return 5;
 }
 
 // End of export

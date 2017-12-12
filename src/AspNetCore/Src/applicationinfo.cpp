@@ -193,10 +193,11 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** pHostFxrParameters)
+APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** out_pHostfxrParameters)
 {
     HRESULT hr = S_OK;
     BOOL    fLocked = FALSE;
+    HOSTFXR_PARAMETERS* pHostfxrParameters = NULL;
     STACK_STRU(struFileName, 256);
 
     if (g_fAspnetcoreRHLoadedError)
@@ -218,17 +219,37 @@ APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** pHostFxr
             goto Finished;
         }
 
+        pHostfxrParameters = new HOSTFXR_PARAMETERS();
+        if (pHostfxrParameters == NULL)
+        {
+            hr = E_OUTOFMEMORY;
+            goto Finished;
+        }
+
+        // call into hostfxr utility
+        if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(pHostfxrParameters, m_pConfiguration)))
+        {
+            goto Finished;
+        }
+
         // Look at inetsvr only for now. TODO add in functionality
         //hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostFxrParameters);
-        hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostFxrParameters);
+        hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostfxrParameters);
 
         // TODO cleanup
         if (FAILED(hr))
         {
-            hr = FindNativeAssemblyFromGlobalLocation(&struFileName, pHostFxrParameters);
-            if (FAILED(hr))
+            if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
             {
                 goto Finished;
+            }
+            else
+            {
+                hr = FindNativeAssemblyFromGlobalLocation(&struFileName);
+                if (FAILED(hr))
+                {
+                    goto Finished;
+                }
             }
         }
 
@@ -255,6 +276,8 @@ APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** pHostFxr
             goto Finished;
         }
         g_fAspnetcoreRHAssemblyLoaded = TRUE;
+
+        *out_pHostfxrParameters = pHostfxrParameters;
     }
 
 Finished:
@@ -277,14 +300,12 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename, _Out_ HOSTFXR_PARAMETERS** pHostFxrParameters)
+APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename)
 {
     HRESULT hr = S_OK;
     DWORD dwSize = MAX_PATH;
     BOOL  fDone = FALSE;
     DWORD dwPosition = 0;
-
-    *pHostFxrParameters = new HOSTFXR_PARAMETERS();
 
     // Though we could call LoadLibrary(L"aspnetcorerh.dll") relying the OS to solve
     // the path (the targeted dll is the same folder of w3wp.exe/iisexpress)
@@ -322,19 +343,15 @@ APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename, _Out_
     {
         goto Finished;
     }
-    if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(*pHostFxrParameters, m_pConfiguration)))
-    {
-        goto Finished;
-    }
 
 Finished:
     return hr;
 }
 
 HRESULT
-APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, _Out_ HOSTFXR_PARAMETERS** pHostFxrParams)
+APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARAMETERS* pHostFxrParameters)
 {
-    HMODULE hostFxrDll;
+    HMODULE hostFxrDll = NULL;
     HANDLE nativeRequestHandlerHandle;
     HRESULT hr = S_OK;
     DBG_ASSERT(struFileName != NULL);
@@ -343,15 +360,7 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, _Out_ HOSTFX
     STRU nativeDllLocation;
     DWORD rc = 0;
     INT index = -1;
-    HOSTFXR_PARAMETERS* pHostFxrParameters = NULL;
     BOOL fFound = FALSE;
-
-    pHostFxrParameters = new HOSTFXR_PARAMETERS();
-    // call into hostfxr utility
-    if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(pHostFxrParameters, m_pConfiguration)))
-    {
-        goto Finished;
-    }
 
     hostFxrDll = ::LoadLibraryW(pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
     
@@ -432,8 +441,8 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, _Out_ HOSTFX
         hr = E_FAIL;
         goto Finished;
     }
-    *pHostFxrParams = pHostFxrParameters;
 
 Finished:
+
     return hr;
 }

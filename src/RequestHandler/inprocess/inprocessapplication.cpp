@@ -645,6 +645,9 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     STRU                        strDotnetFolderLocation;
     STRU                        strHighestDotnetVersion;
     STRU                        strApplicationFullPath;
+    STRU firstArg;
+    STRU secondArg;
+
     HMODULE                     hModule;
     PCWSTR                      argv[2];
     hostfxr_main_fn             pProc;
@@ -668,9 +671,11 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
         goto Finished;
     }
 
+    firstArg.Copy(m_pHostFxrParameters->QueryExePath()->QueryStr());
+    secondArg.Copy(m_pHostFxrParameters->QueryArguments()->QueryStr());
     // The first argument is mostly ignored
-    argv[0] = m_pHostFxrParameters->QueryExePath()->QueryStr();
-    argv[1] = m_pHostFxrParameters->QueryArguments()->QueryStr();
+    argv[0] = firstArg.QueryStr();
+    argv[1] = secondArg.QueryStr();
 
     // There can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
@@ -682,7 +687,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     s_Application = this;
 
     RunDotnetApplication(2, argv, pProc);
-
+    
 Finished:
     //
     // this method is called by the background thread and should never exit unless shutdown
@@ -739,7 +744,7 @@ IN_PROCESS_APPLICATION::RunDotnetApplication(CONST DWORD argc, PCWSTR* argv, hos
     HRESULT hr = S_OK;
     __try
     {
-        m_ProcessExitCode = pProc(argc, argv);
+        pProc(argc, argv);
     }
     __except (FilterException(GetExceptionCode(), GetExceptionInformation()))
     {
