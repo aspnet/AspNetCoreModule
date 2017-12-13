@@ -841,7 +841,7 @@ namespace AspNetCoreModule.Test
             {
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
-                    string result = string.Empty;
+                    string responseBody = string.Empty;
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "forwardWindowsAuthToken", enabledForwardWindowsAuthToken);
                     string requestHeaders = (await SendReceive(testSite.AspNetCoreApp.GetUri("DumpRequestHeaders"))).ResponseBody;
                     Assert.DoesNotContain("MS-ASPNETCORE-WINAUTHTOKEN", requestHeaders, StringComparison.InvariantCultureIgnoreCase);
@@ -859,17 +859,17 @@ namespace AspNetCoreModule.Test
 
                         Assert.Contains("MS-ASPNETCORE-WINAUTHTOKEN", requestHeaders.ToUpper());
 
-                        result = (await SendReceive(testSite.AspNetCoreApp.GetUri("ImpersonateMiddleware"))).ResponseBody;
+                        responseBody = (await SendReceive(testSite.AspNetCoreApp.GetUri("ImpersonateMiddleware"))).ResponseBody;
                         bool compare = false;
 
                         string expectedValue1 = "ImpersonateMiddleware-UserName = " + Environment.ExpandEnvironmentVariables("%USERDOMAIN%") + "\\" + Environment.ExpandEnvironmentVariables("%USERNAME%");
-                        if (result.ToLower().Contains(expectedValue1.ToLower()))
+                        if (responseBody.ToLower().Contains(expectedValue1.ToLower()))
                         {
                             compare = true;
                         }
 
                         string expectedValue2 = "ImpersonateMiddleware-UserName = " + Environment.ExpandEnvironmentVariables("%USERNAME%");
-                        if (result.ToLower().Contains(expectedValue2.ToLower()))
+                        if (responseBody.ToLower().Contains(expectedValue2.ToLower()))
                         {
                             compare = true;
                         }
@@ -880,8 +880,8 @@ namespace AspNetCoreModule.Test
                     {
                         Assert.DoesNotContain("MS-ASPNETCORE-WINAUTHTOKEN", requestHeaders, StringComparison.InvariantCultureIgnoreCase);
 
-                        result = (await SendReceive(testSite.AspNetCoreApp.GetUri("ImpersonateMiddleware"))).ResponseBody;
-                        Assert.Contains("ImpersonateMiddleware-UserName = NoAuthentication", result);
+                        responseBody = (await SendReceive(testSite.AspNetCoreApp.GetUri("ImpersonateMiddleware"))).ResponseBody;
+                        Assert.Contains("ImpersonateMiddleware-UserName = NoAuthentication", responseBody);
                     }
                 }
 
@@ -903,7 +903,7 @@ namespace AspNetCoreModule.Test
                 {
 
                     // allocating 1024,000 KB
-                    await SendReceive(testSite.AspNetCoreApp.GetUri("MemoryLeak1024000"), HttpStatusCode.OK);
+                    await SendReceive(testSite.AspNetCoreApp.GetUri("MemoryLeak1024000"));
 
                     // get backend process id
                     string pocessIdBackendProcess = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
@@ -940,7 +940,7 @@ namespace AspNetCoreModule.Test
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "rapidFailsPerMinute", 100);
                     Thread.Sleep(3000);
 
-                    await SendReceive(testSite.RootAppContext.GetUri("small.htm"), HttpStatusCode.OK);
+                    await SendReceive(testSite.RootAppContext.GetUri("small.htm"));
                     Thread.Sleep(1000);
                     int x = Convert.ToInt32(TestUtility.GetProcessWMIAttributeValue("w3wp.exe", "Handle", userName));
 
@@ -951,7 +951,7 @@ namespace AspNetCoreModule.Test
                         // check JitDebugger before continuing 
                         foundVSJit = TestUtility.ResetHelper(ResetHelperMode.KillVSJitDebugger);
 
-                        await SendReceive(testSite.RootAppContext.GetUri("small.htm"), HttpStatusCode.OK);
+                        await SendReceive(testSite.RootAppContext.GetUri("small.htm"));
                         Thread.Sleep(3000);
                     }
 
@@ -968,7 +968,7 @@ namespace AspNetCoreModule.Test
                         foundVSJit = TestUtility.ResetHelper(ResetHelperMode.KillVSJitDebugger);
 
                         // allocating 2048,000 KB
-                        await SendReceive(testSite.AspNetCoreApp.GetUri("MemoryLeak2048000"), HttpStatusCode.OK);
+                        await SendReceive(testSite.AspNetCoreApp.GetUri("MemoryLeak2048000"));
 
                         newPocessIdBackendProcess = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                         if (foundVSJit || backupPocessIdBackendProcess != newPocessIdBackendProcess)
@@ -1036,9 +1036,10 @@ namespace AspNetCoreModule.Test
                     testSite.AspNetCoreApp.CreateFile(new string[] { "barhtm" }, @"wwwroot\pdir\bar.htm");
                     testSite.AspNetCoreApp.CreateFile(new string[] { "defaulthtm" }, @"wwwroot\default.htm");
 
+                    SendReceiveContext result = null;
                     if (!useCompressionMiddleWare && !enableIISCompression)
                     {
-                        var result = await SendReceive(testSite.AspNetCoreApp.GetUri("foo.htm"), requestHeaders: new string[] { "Accept-Encoding", "gzip" });
+                        result = await SendReceive(testSite.AspNetCoreApp.GetUri("foo.htm"), requestHeaders: new string[] { "Accept-Encoding", "gzip" });
                         Assert.True(result.ResponseBody.Contains("foohtm"), "verify response body");
                         Assert.False(result.ResponseHeader.Contains("Content-Encoding"), "verify response header");
 
@@ -1052,7 +1053,7 @@ namespace AspNetCoreModule.Test
                     }
                     else
                     {
-                        var result = await SendReceive(testSite.AspNetCoreApp.GetUri("foo.htm"), requestHeaders: new string[] { "Accept-Encoding", "gzip" });
+                        result = await SendReceive(testSite.AspNetCoreApp.GetUri("foo.htm"), requestHeaders: new string[] { "Accept-Encoding", "gzip" });
                         Assert.True(result.ResponseBody.Contains("foohtm"), "verify response body");
                         Assert.Equal("gzip", GetHeaderValue(result.ResponseHeader, "Content-Encoding"));
 
@@ -1100,18 +1101,19 @@ namespace AspNetCoreModule.Test
                     const int retryCount = 3;
                     string headerValue = string.Empty;
                     string headerValue2 = string.Empty;
+                    SendReceiveContext result = null;
                     for (int i = 0; i < retryCount; i++)
                     {
-                        var result2 = await SendReceive(testSite.AspNetCoreApp.GetUri("foo.htm"), requestHeaders: new string[] { "Accept-Encoding", "gzip" });
-                        headerValue = GetHeaderValue(result2.ResponseHeader, "MyCustomHeader");
-                        Assert.True(result2.ResponseBody.Contains("foohtm"), "verify response body");
-                        Assert.Equal("gzip", GetHeaderValue(result2.ResponseHeader, "Content-Encoding"));
+                        result = await SendReceive(testSite.AspNetCoreApp.GetUri("foo.htm"), requestHeaders: new string[] { "Accept-Encoding", "gzip" });
+                        headerValue = GetHeaderValue(result.ResponseHeader, "MyCustomHeader");
+                        Assert.True(result.ResponseBody.Contains("foohtm"), "verify response body");
+                        Assert.Equal("gzip", GetHeaderValue(result.ResponseHeader, "Content-Encoding"));
                         Thread.Sleep(1500);
 
-                        var result3 = await SendReceive(testSite.AspNetCoreApp.GetUri("foo.htm"), requestHeaders: new string[] { "Accept-Encoding", "gzip" });
-                        headerValue2 = GetHeaderValue(result3.ResponseHeader, "MyCustomHeader");
-                        Assert.True(result3.ResponseBody.Contains("foohtm"), "verify response body");
-                        Assert.Equal("gzip", GetHeaderValue(result3.ResponseHeader, "Content-Encoding"));
+                        result = await SendReceive(testSite.AspNetCoreApp.GetUri("foo.htm"), requestHeaders: new string[] { "Accept-Encoding", "gzip" });
+                        headerValue2 = GetHeaderValue(result.ResponseHeader, "MyCustomHeader");
+                        Assert.True(result.ResponseBody.Contains("foohtm"), "verify response body");
+                        Assert.Equal("gzip", GetHeaderValue(result.ResponseHeader, "Content-Encoding"));
                         if (headerValue == headerValue2)
                         {
                             break;
@@ -1120,7 +1122,7 @@ namespace AspNetCoreModule.Test
                     Assert.Equal(headerValue, headerValue2);
 
                     Thread.Sleep(12000);
-                    var result = await SendReceive(testSite.AspNetCoreApp.GetUri("foo.htm"), requestHeaders: new string[] { "Accept-Encoding", "gzip" });
+                    result = await SendReceive(testSite.AspNetCoreApp.GetUri("foo.htm"), requestHeaders: new string[] { "Accept-Encoding", "gzip" });
                     Assert.True(result.ResponseBody.Contains("foohtm"), "verify response body");
                     Assert.Equal("gzip", GetHeaderValue(result.ResponseHeader, "Content-Encoding"));
                     string headerValue3 = GetHeaderValue(result.ResponseHeader, "MyCustomHeader");
