@@ -645,15 +645,16 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     STRU                        strDotnetFolderLocation;
     STRU                        strHighestDotnetVersion;
     STRU                        strApplicationFullPath;
-    STRU firstArg;
-    STRU secondArg;
+    STRU                        firstArg;
+    STRU                        secondArg;
 
     HMODULE                     hModule;
-    PCWSTR                      argv[2];
+    PCWSTR                      argv[3];
     hostfxr_main_fn             pProc;
     std::vector<std::wstring>   vVersionFolders;
 
     // should be a redudant call here, but we will be safe and call it twice.
+    // TODO AV here on m_pHostFxrParameters being null
     hModule = LoadLibraryW(m_pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
 
     if (hModule == NULL)
@@ -675,7 +676,8 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     secondArg.Copy(m_pHostFxrParameters->QueryArguments()->QueryStr());
     // The first argument is mostly ignored
     argv[0] = firstArg.QueryStr();
-    argv[1] = secondArg.QueryStr();
+    argv[1] = L"exec";
+    argv[2] = secondArg.QueryStr();
 
     // There can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
@@ -686,7 +688,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // set the callbacks
     s_Application = this;
 
-    RunDotnetApplication(2, argv, pProc);
+    RunDotnetApplication(3, argv, pProc);
     
 Finished:
     //
