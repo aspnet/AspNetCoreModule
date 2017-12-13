@@ -51,12 +51,18 @@ Return value:
 }
 
 ASPNET_CORE_PROXY_MODULE::ASPNET_CORE_PROXY_MODULE(
-) : m_pHandler(NULL)
+) : m_pApplicationInfo(NULL), m_pHandler(NULL)
 {
 }
 
 ASPNET_CORE_PROXY_MODULE::~ASPNET_CORE_PROXY_MODULE()
 {
+    if (m_pApplicationInfo != NULL)
+    {
+        m_pApplicationInfo->DereferenceApplicationInfo();
+        m_pApplicationInfo = NULL;
+    }
+
     if (m_pHandler != NULL)
     {
         m_pHandler->DereferenceRequestHandler();
@@ -74,7 +80,6 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
     HRESULT hr = S_OK;
     ASPNETCORE_CONFIG     *pConfig = NULL;
     APPLICATION_MANAGER   *pApplicationManager = NULL;
-    APPLICATION_INFO      *pApplicationInfo = NULL;
     REQUEST_NOTIFICATION_STATUS retVal = RQ_NOTIFICATION_CONTINUE;
 
     hr = ASPNETCORE_CONFIG::GetConfig(g_pHttpServer, g_pModuleId, pHttpContext, &pConfig);
@@ -93,14 +98,14 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
     hr = pApplicationManager->GetApplicationInfo(
         g_pHttpServer,
         pConfig,
-        &pApplicationInfo);
+        &m_pApplicationInfo);
     if (FAILED(hr))
     {
         goto Finished;
     }
 
     // app_offline check to avoid loading aspnetcorerp.dll unnecessarily
-    if (pApplicationInfo->AppOfflineFound())
+    if (m_pApplicationInfo->AppOfflineFound())
     {
         // servicing app_offline
         HTTP_DATA_CHUNK   DataChunk;
@@ -108,7 +113,7 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
         APP_OFFLINE_HTM  *pAppOfflineHtm = NULL;
 
         pResponse = pHttpContext->GetResponse();
-        pAppOfflineHtm = pApplicationInfo->QueryAppOfflineHtm();
+        pAppOfflineHtm = m_pApplicationInfo->QueryAppOfflineHtm();
         DBG_ASSERT(pAppOfflineHtm);
         DBG_ASSERT(pResponse);
 
@@ -133,12 +138,12 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
         APPLICATION* pApplication = NULL;
         STACK_STRU(struFileName, 256);
 
-        hr = pApplicationInfo->EnsureApplicationCreated();
+        hr = m_pApplicationInfo->EnsureApplicationCreated();
         if (FAILED(hr))
         {
             goto Finished;
         }
-        pApplication = pApplicationInfo->QueryApplication();
+        pApplication = m_pApplicationInfo->QueryApplication();
         DBG_ASSERT(pApplication);
 
         // make sure application is in running state
@@ -150,7 +155,7 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
         }
 
         // Create RequestHandler and process the request
-        hr = pApplicationInfo->QueryCreateRequestHandler()(pHttpContext,
+        hr = m_pApplicationInfo->QueryCreateRequestHandler()(pHttpContext,
                         (HTTP_MODULE_ID*) &g_pModuleId,
                         pApplication,
                         &m_pHandler);

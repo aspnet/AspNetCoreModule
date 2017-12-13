@@ -35,7 +35,15 @@ APPLICATION_MANAGER::GetApplicationInfo(
         goto Finished;
     }
 
+    AcquireSRWLockShared(&m_srwLock);
+    if (m_fInShutdown)
+    {
+        ReleaseSRWLockShared(&m_srwLock);
+        hr = HRESULT_FROM_WIN32(ERROR_SERVER_SHUTDOWN_IN_PROGRESS);
+        goto Finished;
+    }
     m_pApplicationInfoHash->FindKey(&key, ppApplicationInfo);
+    ReleaseSRWLockShared(&m_srwLock);
 
     if (*ppApplicationInfo == NULL)
     {
@@ -67,6 +75,12 @@ APPLICATION_MANAGER::GetApplicationInfo(
 
         AcquireSRWLockExclusive(&m_srwLock);
         fExclusiveLock = TRUE;
+        if (m_fInShutdown)
+        {
+            // Already in shuting down. No need to create the application
+            hr = HRESULT_FROM_WIN32(ERROR_SERVER_SHUTDOWN_IN_PROGRESS);
+            goto Finished;
+        }
         m_pApplicationInfoHash->FindKey(&key, ppApplicationInfo);
 
         if (*ppApplicationInfo != NULL)
@@ -110,11 +124,11 @@ APPLICATION_MANAGER::GetApplicationInfo(
             m_hostingModel = pConfig->QueryHostingModel();
         }
 
+        *ppApplicationInfo = pApplicationInfo;
         ReleaseSRWLockExclusive(&m_srwLock);
         fExclusiveLock = FALSE;
 
         pApplicationInfo->StartMonitoringAppOffline();
-        *ppApplicationInfo = pApplicationInfo;
         pApplicationInfo = NULL;
     }
 
@@ -129,12 +143,6 @@ Finished:
     {
         pApplicationInfo->DereferenceApplicationInfo();
         pApplicationInfo = NULL;
-    }
-
-    if (*ppApplicationInfo != NULL)
-    {
-        // Need to decrease the ref counter as FindKey will increase it
-        (*ppApplicationInfo)->DereferenceApplicationInfo();
     }
 
     if (FAILED(hr))
@@ -243,6 +251,19 @@ APPLICATION_MANAGER::RecycleApplication(
 Finished:
 
     return hr;
+}
+
+VOID
+APPLICATION_MANAGER::ShutDown()
+{
+    m_fInShutdown = TRUE;
+    if (m_pApplicationInfoHash != NULL)
+    {
+        AcquireSRWLockExclusive(&m_srwLock);
+        // clean up the hash table so that the application will be informed on shutdown
+        m_pApplicationInfoHash->Clear();
+        ReleaseSRWLockExclusive(&m_srwLock);
+    }
 }
 
 HRESULT

@@ -21,6 +21,11 @@ PCWSTR              g_pwzAspnetcoreRequestHandlerName = L"\\aspnetcorerh.dll";
 PFN_ASPNETCORE_CREATE_APPLICATION      g_pfnAspNetCoreCreateApplication;
 PFN_ASPNETCORE_CREATE_REQUEST_HANDLER  g_pfnAspNetCoreCreateRequestHandler;
 
+VOID
+StaticCleanup()
+{
+    APPLICATION_MANAGER::Cleanup();
+}
 
 BOOL WINAPI DllMain(HMODULE hModule,
     DWORD  ul_reason_for_call,
@@ -35,6 +40,8 @@ BOOL WINAPI DllMain(HMODULE hModule,
         g_hModule = hModule;
         DisableThreadLibraryCalls(hModule);
         break;
+    case DLL_PROCESS_DETACH:
+        StaticCleanup();
     default:
         break;
     }

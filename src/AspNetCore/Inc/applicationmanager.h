@@ -49,7 +49,7 @@ public:
     );
 
     HRESULT
-    RecycleApplication( 
+    RecycleApplication(
         _In_ LPCWSTR pszApplicationId
     );
 
@@ -57,6 +57,9 @@ public:
     Get502ErrorPage(
         _Out_ HTTP_DATA_CHUNK**     ppErrorPage
     );
+
+    VOID
+    ShutDown();
 
     ~APPLICATION_MANAGER()
     {
@@ -78,7 +81,6 @@ public:
             delete m_pHttp502ErrorPage;
             m_pHttp502ErrorPage = NULL;
         }
-
     }
 
     FILE_WATCHER*
@@ -129,6 +131,7 @@ private:
     // 
     APPLICATION_MANAGER() : m_pApplicationInfoHash(NULL), m_pFileWatcher(NULL),
         m_pHttp502ErrorPage(NULL), m_hostingModel(HOSTING_UNKNOWN),
+        m_fInShutdown(FALSE),
         m_pstrErrorInfo(
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\"> \
         <html xmlns=\"http://www.w3.org/1999/xhtml\"> \
@@ -164,4 +167,5 @@ private:
     HTTP_DATA_CHUNK            *m_pHttp502ErrorPage;
     LPSTR                      m_pstrErrorInfo;
     APP_HOSTING_MODEL          m_hostingModel;
+    bool                       m_fInShutdown;
 };

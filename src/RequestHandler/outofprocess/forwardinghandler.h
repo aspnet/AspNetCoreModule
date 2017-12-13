@@ -168,6 +168,8 @@ private:
     bool                                m_fResponseHeadersReceivedAndSet;
     bool                                m_fResetConnection;
     bool                                m_fHandleClosedDueToClient;
+    bool                                m_fFinishRequest;
+    bool                                m_fHasError;
     BOOL                                m_fDoReverseRewriteHeaders;
     PCSTR                               m_pszOriginalHostHeader;
     PCWSTR                              m_pszHeaders;

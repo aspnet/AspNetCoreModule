@@ -28,6 +28,8 @@ FORWARDING_HANDLER::FORWARDING_HANDLER(
     m_fHandleClosedDueToClient(FALSE),
     m_fResponseHeadersReceivedAndSet(FALSE),
     m_fDoReverseRewriteHeaders(FALSE),
+    m_fFinishRequest(FALSE),
+    m_fHasError(FALSE),
     m_pszHeaders(NULL),
     m_cchHeaders(0),
     m_BytesToReceive(0),
@@ -63,6 +65,7 @@ FORWARDING_HANDLER::~FORWARDING_HANDLER(
     if (m_pDisconnect != NULL)
     {
         m_pDisconnect->ResetHandler();
+        m_pDisconnect = NULL;
     }
 
     FreeResponseBuffers();
@@ -81,6 +84,7 @@ FORWARDING_HANDLER::OnExecuteRequestHandler()
     REQUEST_NOTIFICATION_STATUS retVal = RQ_NOTIFICATION_CONTINUE;
     HRESULT                     hr = S_OK;
     bool                        fRequestLocked = FALSE;
+    bool                        fHandleSet = FALSE;
     BOOL                        fSecure = FALSE;
     HINTERNET                   hConnect = NULL;
     IHttpRequest               *pRequest = m_pW3Context->GetRequest();
@@ -185,7 +189,7 @@ FORWARDING_HANDLER::OnExecuteRequestHandler()
         GetConnectionModuleContext(m_pModuleId));
     if (m_pDisconnect == NULL)
     {
-        m_pDisconnect = new ASYNC_DISCONNECT_CONTEXT;
+        m_pDisconnect = new ASYNC_DISCONNECT_CONTEXT();
         if (m_pDisconnect == NULL)
         {
             hr = E_OUTOFMEMORY;
@@ -203,6 +207,7 @@ FORWARDING_HANDLER::OnExecuteRequestHandler()
     }
 
     m_pDisconnect->SetHandler(this);
+    fHandleSet = TRUE;
 
     // require lock as client disconnect callback may happen
     AcquireSRWLockShared(&m_RequestLock);
@@ -305,15 +310,20 @@ FORWARDING_HANDLER::OnExecuteRequestHandler()
 
 Failure:
     m_RequestStatus = FORWARDER_DONE;
-    pResponse->DisableKernelCache();
-    pResponse->GetRawHttpResponse()->EntityChunkCount = 0;
 
     //disbale client disconnect callback
     if (m_pDisconnect != NULL)
     {
-        m_pDisconnect->ResetHandler();
+        if (fHandleSet)
+        {
+            m_pDisconnect->ResetHandler();
+        }
+        m_pDisconnect->CleanupStoredContext();
+        m_pDisconnect = NULL;
     }
 
+    pResponse->DisableKernelCache();
+    pResponse->GetRawHttpResponse()->EntityChunkCount = 0;
     if (hr == HRESULT_FROM_WIN32(WSAECONNRESET))
     {
         pResponse->SetStatus(400, "Bad Request", 0, hr);
@@ -368,13 +378,19 @@ REQUEST_NOTIFICATION_STATUS
 --*/
 {
     HRESULT                     hr = S_OK;
-    REQUEST_NOTIFICATION_STATUS retVal = RQ_NOTIFICATION_CONTINUE;
+    REQUEST_NOTIFICATION_STATUS retVal = RQ_NOTIFICATION_PENDING;
     bool                        fLocked = FALSE;
     bool                        fClientError = FALSE;
     bool                        fClosed = FALSE;
 
     DBG_ASSERT(m_pW3Context != NULL);
     __analysis_assume(m_pW3Context != NULL);
+
+    //
+    // Take a reference so that object does not go away as a result of
+    // async completion.
+    //
+    ReferenceRequestHandler();
 
     if (sm_pTraceLog != NULL)
     {
@@ -395,25 +411,34 @@ REQUEST_NOTIFICATION_STATUS
 
         fLocked = TRUE;
     }
-    if (m_RequestStatus == FORWARDER_DONE)
+
+    if (m_hRequest == NULL)
     {
-        if (m_hRequest != NULL)
+        // Request is Done
+        if (m_fFinishRequest)
         {
-            WinHttpCloseHandle(m_hRequest);
-            m_hRequest = NULL;
+            if (m_fHasError)
+            {
+                retVal = RQ_NOTIFICATION_FINISH_REQUEST;
+            }
+            else
+            {
+                retVal = RQ_NOTIFICATION_CONTINUE;
+            }
+            goto Finished;
         }
+
+        fClientError = m_fHandleClosedDueToClient;
+        goto Failure;
     }
-    else if (m_RequestStatus == FORWARDER_FINISH_REQUEST)
+
+    //
+    // Begins normal completion handling. There is already a shared acquired
+    // for protecting the WinHTTP request handle from being closed.
+    //
+    switch (m_RequestStatus)
     {
-        if (m_fResetConnection)
-        {
-            m_pW3Context->GetResponse()->ResetConnection();
-        }
-        m_pW3Context->SetRequestHandled();
-        goto Finished;
-    }
-    else if (m_RequestStatus == FORWARDER_RECEIVED_WEBSOCKET_RESPONSE)
-    {
+    case FORWARDER_RECEIVED_WEBSOCKET_RESPONSE:
         DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
             "FORWARDING_HANDLER::OnAsyncCompletion, Send completed for 101 response");
         //
@@ -435,11 +460,8 @@ REQUEST_NOTIFICATION_STATUS
         //
         // WebSocket upgrade is successful. Close the WinHttpRequest Handle
         //
-        WinHttpSetStatusCallback(m_hRequest,
-            FORWARDING_HANDLER::OnWinHttpCompletion,
-            WINHTTP_CALLBACK_FLAG_HANDLES,
-            NULL);
         fClosed = WinHttpCloseHandle(m_hRequest);
+
         DBG_ASSERT(fClosed);
         if (fClosed)
         {
@@ -450,18 +472,9 @@ REQUEST_NOTIFICATION_STATUS
             hr = HRESULT_FROM_WIN32(GetLastError());
             goto Failure;
         }
-        retVal = RQ_NOTIFICATION_PENDING;
-        goto Finished;
-    }
+        break;
 
-    //
-    // Begins normal completion handling. There is already a shared acquired
-    // for protecting the WinHTTP request handle from being closed.
-    //
-    switch (m_RequestStatus)
-    {
     case FORWARDER_RECEIVING_RESPONSE:
-
         //
         // This is a completion of a write (send) to http.sys, abort in case of
         // failure, if there is more data available from WinHTTP, read it
@@ -482,7 +495,6 @@ REQUEST_NOTIFICATION_STATUS
         break;
 
     case FORWARDER_SENDING_REQUEST:
-
         hr = OnSendingRequest(cbCompletion,
             hrCompletionStatus,
             &fClientError);
@@ -507,10 +519,16 @@ REQUEST_NOTIFICATION_STATUS
 
 Failure:
 
-    //
-    // Reset status for consistency.
-    //
+    m_fHasError = TRUE;
     m_RequestStatus = FORWARDER_DONE;
+
+    //disbale client disconnect callback
+    if (m_pDisconnect != NULL)
+    {
+        m_pDisconnect->ResetHandler();
+        m_pDisconnect = NULL;
+    }
+
     //
     // Do the right thing based on where the error originated from.
     //
@@ -578,6 +596,14 @@ Failure:
         {
             m_hRequest = NULL;
         }
+        else
+        {
+            // Failed to close the handle 
+            // which should never happen as we registered a callback with WinHttp
+            // For this unexpected failure, let conitnue IIS pipeline
+           /* retVal = RQ_NOTIFICATION_FINISH_REQUEST;
+            DebugBreak();*/
+        }
     }
     retVal = RQ_NOTIFICATION_PENDING;
 
@@ -585,27 +611,15 @@ Finished:
     if (fLocked)
     {
         DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
-
         TlsSetValue(g_dwTlsIndex, NULL);
         ReleaseSRWLockShared(&m_RequestLock);
         DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == NULL);
     }
 
-    if (retVal != RQ_NOTIFICATION_PENDING)
-    {
-        //
-        // Remove request so that load-balancing algorithms like minCurrentRequests/minAverageResponseTime
-        // get the correct time when we received the last byte of response, rather than when we received
-        // ack from client about last byte of response - which could be much later.
-        //
-        // RemoveRequest;
-        //
-        if (m_pDisconnect != NULL)
-        {
-            m_pDisconnect->ResetHandler();
-        }
-    }
-
+    DereferenceRequestHandler();
+    //
+    // No code after this point, as the handle might be gone
+    //
     return retVal;
 }
 
@@ -1128,13 +1142,18 @@ None
 --*/
 {
     HRESULT hr = S_OK;
-    bool fIsCompletionThread = FALSE;
+    bool fLockAcquired = FALSE;
     bool fClientError = FALSE;
     bool fAnotherCompletionExpected = FALSE;
+    bool fDoPostCompletion = FALSE;
+    bool fEndRequest = (dwInternetStatus == WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING);
+
     DBG_ASSERT(m_pW3Context != NULL);
     __analysis_assume(m_pW3Context != NULL);
     IHttpResponse * pResponse = m_pW3Context->GetResponse();
-    BOOL fEndRequest = FALSE;
+
+    // Reference the request handler to prevent it from being released prematurely
+    ReferenceRequestHandler();
 
     UNREFERENCED_PARAMETER(dwStatusInformationLength);
 
@@ -1172,14 +1191,25 @@ None
 
         AcquireSRWLockShared(&m_RequestLock);
         TlsSetValue(g_dwTlsIndex, this);
-        fIsCompletionThread = TRUE;
+        fLockAcquired = TRUE;
         DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
     }
 
 #ifdef DEBUG
     DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
-        "FORWARDING_HANDLER::OnWinHttpCompletionInternal %x -- %d --%p\n", dwInternetStatus, FALSE, m_pW3Context);
+        "FORWARDING_HANDLER::OnWinHttpCompletionInternal %x -- %d --%p\n", dwInternetStatus, GetCurrentThreadId(), m_pW3Context);
 #endif // DEBUG
+
+    if (!fEndRequest)
+    {
+        if (!m_pW3Context->GetConnection()->IsConnected())
+        {
+            hr = ERROR_CONNECTION_ABORTED;
+            fClientError = m_fHandleClosedDueToClient = TRUE;
+            fAnotherCompletionExpected = TRUE;
+            goto Failure;
+        }
+    }
 
     //
     // In case of websocket, http request handle (m_hRequest) will be closed immediately after upgrading success
@@ -1273,24 +1303,21 @@ None
         break;
 
     case WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING:
-        DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
-            "FORWARDING_HANDLER::OnWinHttpCompletionInternal : WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING\n");
         if (ANCMEvents::ANCM_REQUEST_FORWARD_END::IsEnabled(m_pW3Context->GetTraceContext()))
         {
             ANCMEvents::ANCM_REQUEST_FORWARD_END::RaiseEvent(
                 m_pW3Context->GetTraceContext(),
                 NULL);
         }
-        fEndRequest = TRUE;
+        if (m_RequestStatus != FORWARDER_DONE || m_fHandleClosedDueToClient)
+        {
+            hr = ERROR_CONNECTION_ABORTED;
+            fClientError = m_fHandleClosedDueToClient;
+        }
         m_hRequest = NULL;
         fAnotherCompletionExpected = FALSE;
-        if (m_fHandleClosedDueToClient)
-        {
-            // client disconnected
-            goto Failure;
-        }
-
         break;
+
     case WINHTTP_CALLBACK_STATUS_CONNECTION_CLOSED:
         hr = ERROR_CONNECTION_ABORTED;
         break;
@@ -1327,16 +1354,18 @@ None
     goto Finished;
 
 Failure:
-    m_RequestStatus = FORWARDER_DONE;
 
+    m_RequestStatus = FORWARDER_DONE;
+    m_fHasError = TRUE;
+
+    pResponse->DisableKernelCache();
+    pResponse->GetRawHttpResponse()->EntityChunkCount = 0;
 
     if (hr == HRESULT_FROM_WIN32(ERROR_WINHTTP_INVALID_SERVER_RESPONSE))
     {
         m_fResetConnection = TRUE;
     }
 
-    pResponse->DisableKernelCache();
-    pResponse->GetRawHttpResponse()->EntityChunkCount = 0;
     if (fClientError || m_fHandleClosedDueToClient)
     {
         if (!m_fResponseHeadersReceivedAndSet)
@@ -1398,7 +1427,7 @@ Failure:
 
 Finished:
 
-    if (fIsCompletionThread)
+    if (fLockAcquired)
     {
         DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == this);
         TlsSetValue(g_dwTlsIndex, NULL);
@@ -1406,18 +1435,15 @@ Finished:
         DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == NULL);
     }
 
-    //
-    // Do not use this object after dereferencing it, it may be gone.
-    //
-
-    //
-    // Completion may had been already posted to IIS if an async
-    // operation was started in this method (either WinHTTP or IIS e.g. ReadyEntityBody)
-    // If fAnotherCompletionExpected is false, this method must post the completion.
-    //
-
     if (m_RequestStatus == FORWARDER_DONE)
     {
+        //disbale client disconnect callback
+        if (m_pDisconnect != NULL)
+        {
+            m_pDisconnect->ResetHandler();
+            m_pDisconnect = NULL;
+        }
+
         if (m_hRequest != NULL)
         {
             WinHttpSetStatusCallback(m_hRequest,
@@ -1427,6 +1453,13 @@ Finished:
             if (WinHttpCloseHandle(m_hRequest))
             {
                 m_hRequest = NULL;
+            }
+            else
+            {
+                // unexpected WinHttp error, log it
+                /*DebugBreak();
+                m_RequestStatus = FORWARDER_FINISH_REQUEST;
+                fDoPostCompletion = TRUE;*/
             }
         }
 
@@ -1440,29 +1473,32 @@ Finished:
 
         if (fEndRequest)
         {
-            //
-            // Only postCompletion after WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING
+            // only postCompletion after WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING
             // so that no further WinHttp callback will be called
             // in case of websocket, m_hRequest has already been closed after upgrade
             // websocket will handle completion
-            //
-            m_RequestStatus = FORWARDER_FINISH_REQUEST;
-            m_pW3Context->PostCompletion(0);
-
+            m_fFinishRequest = TRUE;
+            fDoPostCompletion = TRUE;
         }
     }
+    //
+    // Completion may had been already posted to IIS if an async
+    // operation was started in this method (either WinHTTP or IIS e.g. ReadyEntityBody)
+    // If fAnotherCompletionExpected is false, this method must post the completion.
+    //
     else if (!fAnotherCompletionExpected)
     {
         //
         // Since we use TLS to guard WinHttp operation, call PostCompletion instead of
         // IndicateCompletion to allow cleaning up the TLS before thread reuse.
         //
+        fDoPostCompletion = TRUE;
+    }
 
+    DereferenceRequestHandler();
+    if (fDoPostCompletion)
+    {
         m_pW3Context->PostCompletion(0);
-
-        //
-        // No code executed after posting the completion.
-        //
     }
 }
 
@@ -2499,6 +2535,7 @@ FORWARDING_HANDLER::TerminateRequest(
     bool    fClientInitiated
 )
 {
+    UNREFERENCED_PARAMETER(fClientInitiated);
     AcquireSRWLockExclusive(&m_RequestLock);
     // Set tls as close winhttp handle will immediately trigger
     // a winhttp callback on the same thread and we donot want to
@@ -2508,8 +2545,12 @@ FORWARDING_HANDLER::TerminateRequest(
 
     if (m_hRequest != NULL)
     {
-        WinHttpCloseHandle(m_hRequest);
+#ifdef DEBUG
+        DebugPrintf(ASPNETCORE_DEBUG_FLAG_INFO,
+            "FORWARDING_HANDLER::TerminateRequest %d --%p\n", GetCurrentThreadId(), m_pW3Context);
+#endif // DEBUG
         m_fHandleClosedDueToClient = fClientInitiated;
+        WinHttpCloseHandle(m_hRequest);
     }
 
     //
@@ -2520,8 +2561,8 @@ FORWARDING_HANDLER::TerminateRequest(
         m_pWebSocket->TerminateRequest();
     }
 
-    ReleaseSRWLockExclusive(&m_RequestLock);
     TlsSetValue(g_dwTlsIndex, NULL);
+    ReleaseSRWLockExclusive(&m_RequestLock);
     DBG_ASSERT(TlsGetValue(g_dwTlsIndex) == NULL);
 }
 

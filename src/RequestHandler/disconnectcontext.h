@@ -12,14 +12,14 @@ public:
     }
 
     VOID
-        CleanupStoredContext()
+    CleanupStoredContext()
     {
         DBG_ASSERT(m_pHandler == NULL);
         delete this;
     }
 
     VOID
-        NotifyDisconnect()
+    NotifyDisconnect()
     {
         REQUEST_HANDLER *pInitialValue = (REQUEST_HANDLER*)
             InterlockedExchangePointer((PVOID*)&m_pHandler, NULL);

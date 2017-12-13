@@ -19,9 +19,9 @@ ASPNET_CORE_GLOBAL_MODULE::OnGlobalStopListening(
 
     if (m_pApplicationManager != NULL)
     {
-        // this deletion will clear all application info entries
-        // and thus shudown all applications.
-        delete m_pApplicationManager;
+        // we should let application manager to shudown all allication
+        // and dereference it as some requests may still reference to application manager
+        m_pApplicationManager->ShutDown();
         m_pApplicationManager = NULL;
     }
 
