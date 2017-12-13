@@ -746,7 +746,7 @@ IN_PROCESS_APPLICATION::RunDotnetApplication(CONST DWORD argc, PCWSTR* argv, hos
     HRESULT hr = S_OK;
     __try
     {
-        pProc(argc, argv);
+        m_ProcessExitCode = pProc(argc, argv);
     }
     __except (FilterException(GetExceptionCode(), GetExceptionInformation()))
     {

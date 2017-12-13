@@ -25,6 +25,7 @@ HRESULT
 //
 class APPLICATION_INFO_KEY
 {
+    
 public:
 
     APPLICATION_INFO_KEY(

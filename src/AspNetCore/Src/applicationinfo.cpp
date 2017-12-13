@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #include "precomp.hxx"
+
 typedef int(*hostfxr_get_native_search_directories_fn) (const int argc, const WCHAR* argv[], WCHAR* dest, size_t dest_size);
 
 APPLICATION_INFO::~APPLICATION_INFO()
@@ -143,11 +144,11 @@ APPLICATION_INFO::UpdateAppOfflineFileHandle()
 HRESULT
 APPLICATION_INFO::EnsureApplicationCreated()
 {
-    HRESULT hr = S_OK;
-    BOOL    fLocked = FALSE;
-    APPLICATION* pApplication = NULL;
+    HRESULT             hr = S_OK;
+    BOOL                fLocked = FALSE;
+    APPLICATION*        pApplication = NULL;
     STACK_STRU(struFileName, 300);  // >MAX_PATH
-    STRU        hostFxrDllLocation;
+    STRU                hostFxrDllLocation;
     HOSTFXR_PARAMETERS* pHostFxrParameters = NULL;
 
     if (m_pApplication != NULL)
@@ -195,8 +196,8 @@ Finished:
 HRESULT
 APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** out_pHostfxrParameters)
 {
-    HRESULT hr = S_OK;
-    BOOL    fLocked = FALSE;
+    HRESULT             hr = S_OK;
+    BOOL                fLocked = FALSE;
     HOSTFXR_PARAMETERS* pHostfxrParameters = NULL;
     STACK_STRU(struFileName, 256);
 
@@ -204,7 +205,7 @@ APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** out_pHos
     {
         hr = E_APPLICATION_ACTIVATION_EXEC_FAILURE;
         goto Finished;
-    } 
+    }
     else if (!g_fAspnetcoreRHAssemblyLoaded)
     {
         AcquireSRWLockExclusive(&g_srwLock);
