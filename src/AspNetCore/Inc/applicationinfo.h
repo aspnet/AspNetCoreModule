@@ -25,7 +25,6 @@ HRESULT
 //
 class APPLICATION_INFO_KEY
 {
-    
 public:
 
     APPLICATION_INFO_KEY(
@@ -63,6 +62,7 @@ private:
 
 class APPLICATION_INFO
 {
+    
 public:
     APPLICATION_INFO(IHttpServer *pServer) :
         m_pServer(pServer),
