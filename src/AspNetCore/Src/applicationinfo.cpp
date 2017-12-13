@@ -227,30 +227,14 @@ APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** out_pHos
             goto Finished;
         }
 
-        // call into hostfxr utility
-        if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(pHostfxrParameters, m_pConfiguration)))
+        if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(pHostfxrParameters, m_pConfiguration)) ||
+            FAILED(hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostfxrParameters)))
         {
-            goto Finished;
-        }
-
-        // Look at inetsvr only for now. TODO add in functionality
-        //hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostFxrParameters);
-        hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostfxrParameters);
-
-        // TODO cleanup
-        if (FAILED(hr))
-        {
-            if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
+            // TODO eventually make this fail for in process loading.
+            hr = FindNativeAssemblyFromGlobalLocation(&struFileName);
+            if (FAILED(hr))
             {
                 goto Finished;
-            }
-            else
-            {
-                hr = FindNativeAssemblyFromGlobalLocation(&struFileName);
-                if (FAILED(hr))
-                {
-                    goto Finished;
-                }
             }
         }
 
