@@ -281,6 +281,7 @@ HOSTFXR_UTILITY::GetPortableHostfxrParameters(
     if (hFileHandle == INVALID_HANDLE_VALUE)
     {
         hr = ERROR_FILE_INVALID;
+        CloseHandle(hFileHandle);
         goto Finished;
     }
 
