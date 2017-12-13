@@ -336,16 +336,22 @@ Finished:
 HRESULT
 APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARAMETERS* pHostFxrParameters)
 {
-    HMODULE hostFxrDll = NULL;
-    HANDLE nativeRequestHandlerHandle;
-    HRESULT hr = S_OK;
+    HRESULT     hr = S_OK;
+    HANDLE      nativeRequestHandlerHandle;
+    STRU        struApplicationFullPath;
+    STRU        struNativeSearchPaths;
+    STRU        nativeDllLocation;
+    HMODULE     hostFxrDll = NULL;
+    INT         hostfxrExitCode = 0;
+    INT         index = -1;
+    INT         prevIndex = 0;
+    BOOL        fFound = FALSE;
+    PWSTR       argv[3];
+    const DWORD BUFFER_SIZE = 1024 * 10;
+    
+    WCHAR       pszNativeSearchPathsBuffer[BUFFER_SIZE];
+    
     DBG_ASSERT(struFileName != NULL);
-    STRU struApplicationFullPath;
-    STRU struNativeSearchPaths;
-    STRU nativeDllLocation;
-    DWORD rc = 0;
-    INT index = -1;
-    BOOL fFound = FALSE;
 
     hostFxrDll = ::LoadLibraryW(pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
     
@@ -365,29 +371,22 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARA
         goto Finished;
     }
 
-    WCHAR **argv = new WCHAR*[3];
-
-    const size_t BUFFER_SIZE = 1024 * 10;
-    WCHAR buff[BUFFER_SIZE] = { 0 };
-
     argv[0] = pHostFxrParameters->QueryExePath()->QueryStr();
-    argv[1] = (WCHAR*)L"exec";
-
+    argv[1] = L"exec";
     argv[2] = pHostFxrParameters->QueryArguments()->QueryStr();
 
-    rc = pFnHostFxrSearchDirectories(3, (const WCHAR**)argv, buff, BUFFER_SIZE);
+    hostfxrExitCode = pFnHostFxrSearchDirectories(3, (const WCHAR**)argv, pszNativeSearchPathsBuffer, BUFFER_SIZE);
 
     // Buff now contains the native serach paths
     // Iterate through and find it.
-    if (rc != 0)
+    if (hostfxrExitCode != 0)
     {
         hr = E_FAIL;
         goto Finished;
     }
 
     // TODO have dll deployed in application.
-    struNativeSearchPaths.Copy(buff);
-    INT prevIndex = 0;
+    struNativeSearchPaths.Copy(pszNativeSearchPathsBuffer);
     while ((index = struNativeSearchPaths.IndexOf(L";", prevIndex)) != -1)
     {
         if (FAILED(hr = nativeDllLocation.Copy(struNativeSearchPaths.QueryStr(), index - prevIndex)))
