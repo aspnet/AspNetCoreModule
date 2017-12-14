@@ -2,6 +2,9 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #pragma once
+
+#define DOTNET_HOME_ENV_STR "DOTNET_HOME"
+
 class HOSTFXR_PARAMETERS
 {
 public:
