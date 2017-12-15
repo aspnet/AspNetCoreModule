@@ -260,8 +260,10 @@ APPLICATION_MANAGER::ShutDown()
     if (m_pApplicationInfoHash != NULL)
     {
         AcquireSRWLockExclusive(&m_srwLock);
+
         // clean up the hash table so that the application will be informed on shutdown
         m_pApplicationInfoHash->Clear();
         ReleaseSRWLockExclusive(&m_srwLock);
     }
+
 }

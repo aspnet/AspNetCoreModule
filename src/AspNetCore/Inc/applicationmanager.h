@@ -20,12 +20,12 @@ public:
         VOID
     )
     {
-        if( sm_pApplicationManager == NULL )
+        if ( sm_pApplicationManager == NULL )
         {
             sm_pApplicationManager = new APPLICATION_MANAGER();
         }
 
-        return  sm_pApplicationManager;
+        return sm_pApplicationManager;
     }
 
     static

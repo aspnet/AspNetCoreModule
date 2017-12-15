@@ -81,6 +81,8 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
     ASPNETCORE_CONFIG     *pConfig = NULL;
     APPLICATION_MANAGER   *pApplicationManager = NULL;
     REQUEST_NOTIFICATION_STATUS retVal = RQ_NOTIFICATION_CONTINUE;
+    APPLICATION* pApplication = NULL;
+    STACK_STRU(struFileName, 256);
 
     hr = ASPNETCORE_CONFIG::GetConfig(g_pHttpServer, g_pModuleId, pHttpContext, &pConfig);
     if (FAILED(hr))
@@ -104,7 +106,7 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
         goto Finished;
     }
 
-    // app_offline check to avoid loading aspnetcorerp.dll unnecessarily
+    // app_offline check to avoid loading aspnetcorerh.dll unnecessarily
     if (m_pApplicationInfo->AppOfflineFound())
     {
         // servicing app_offline
@@ -134,40 +136,36 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
         retVal = RQ_NOTIFICATION_FINISH_REQUEST;
         goto Finished;
     }
-    else
+
+    // make sure assmebly is loaded and application is created
+
+    hr = m_pApplicationInfo->EnsureApplicationCreated();
+    if (FAILED(hr))
     {
-        // make sure assmebly is loaded and application is created
-        APPLICATION* pApplication = NULL;
-        STACK_STRU(struFileName, 256);
-
-        hr = m_pApplicationInfo->EnsureApplicationCreated();
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-        pApplication = m_pApplicationInfo->QueryApplication();
-        DBG_ASSERT(pApplication);
-
-        // make sure application is in running state
-        // cannot recreate the application as we cannot reload clr for inprocess
-        if (pApplication->QueryStatus() != APPLICATION_STATUS::RUNNING)
-        {
-                hr = HRESULT_FROM_WIN32(ERROR_SERVER_DISABLED);
-                goto Finished;
-        }
-
-        // Create RequestHandler and process the request
-        hr = m_pApplicationInfo->QueryCreateRequestHandler()(pHttpContext,
-                        (HTTP_MODULE_ID*) &g_pModuleId,
-                        pApplication,
-                        &m_pHandler);
-
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-        retVal = m_pHandler->OnExecuteRequestHandler();
+        goto Finished;
     }
+    pApplication = m_pApplicationInfo->QueryApplication();
+    DBG_ASSERT(pApplication);
+
+    // make sure application is in running state
+    // cannot recreate the application as we cannot reload clr for inprocess
+    if (pApplication->QueryStatus() != APPLICATION_STATUS::RUNNING)
+    {
+            hr = HRESULT_FROM_WIN32(ERROR_SERVER_DISABLED);
+            goto Finished;
+    }
+
+    // Create RequestHandler and process the request
+    hr = m_pApplicationInfo->QueryCreateRequestHandler()(pHttpContext,
+                    (HTTP_MODULE_ID*) &g_pModuleId,
+                    pApplication,
+                    &m_pHandler);
+
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+    retVal = m_pHandler->OnExecuteRequestHandler();
 
 Finished: 
     if (FAILED(hr))
