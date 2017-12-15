@@ -117,8 +117,9 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
         DBG_ASSERT(pAppOfflineHtm);
         DBG_ASSERT(pResponse);
 
-        // ignore failure hresults as nothing we can do
-        pResponse->SetStatus(503, "Service Unavailable", 0, hr);
+        // Ignore failure hresults as nothing we can do
+        // Set fTrySkipCustomErrors to true as we want client see the offline content
+        pResponse->SetStatus(503, "Service Unavailable", 0, hr, NULL, TRUE);
         pResponse->SetHeader("Content-Type",
             "text/html",
             (USHORT)strlen("text/html"),
@@ -129,6 +130,7 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
         DataChunk.FromMemory.pBuffer = (PVOID)pAppOfflineHtm->m_Contents.QueryStr();
         DataChunk.FromMemory.BufferLength = pAppOfflineHtm->m_Contents.QueryCB();
         pResponse->WriteEntityChunkByReference(&DataChunk);
+
         retVal = RQ_NOTIFICATION_FINISH_REQUEST;
         goto Finished;
     }

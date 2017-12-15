@@ -3,8 +3,6 @@
 
 #include "..\precomp.hxx"
 
-RESPONSE_HEADER_HASH *  g_pResponseHeaderHash = NULL;
-
 HEADER_RECORD RESPONSE_HEADER_HASH::sm_rgHeaders[] = 
 {
     { "Cache-Control",       HttpHeaderCacheControl       },
