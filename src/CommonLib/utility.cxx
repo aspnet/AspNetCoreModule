@@ -628,3 +628,19 @@ UTILITY::CheckIfFileExists(STRU* struFile)
 
     return hFileHandle;
 }
+
+std::vector<std::wstring>
+UTILITY::SplitStringOnWhitespace(STRU* struFile)
+{
+    // Splitting a string on white space is too difficult and risky without stdlib.
+    std::wstringstream ss(struFile->QueryStr());
+    std::wstring item;
+    std::vector<std::wstring> outputVector;
+    ss >> item;
+    while (ss)
+    {
+        outputVector.push_back(item);
+        ss >> item;
+    }
+    return outputVector;
+}

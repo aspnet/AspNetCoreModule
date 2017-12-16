@@ -3,8 +3,6 @@
 
 #include "precomp.hxx"
 
-typedef int(*hostfxr_get_native_search_directories_fn) (const int argc, const WCHAR* argv[], WCHAR* dest, size_t dest_size);
-
 APPLICATION_INFO::~APPLICATION_INFO()
 {
     if (m_pAppOfflineHtm != NULL)
@@ -385,7 +383,6 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARA
         goto Finished;
     }
 
-    // TODO have dll deployed in application.
     struNativeSearchPaths.Copy(pszNativeSearchPathsBuffer);
     while ((index = struNativeSearchPaths.IndexOf(L";", prevIndex)) != -1)
     {
@@ -393,7 +390,6 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARA
         {
             goto Finished;
         }
-        // Check nativeDll location;
         if (!nativeDllLocation.EndsWith(L"\\"))
         {
             hr = nativeDllLocation.Append(L"\\");

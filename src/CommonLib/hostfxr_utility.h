@@ -3,7 +3,8 @@
 
 #pragma once
 
-#define DOTNET_HOME_ENV_STR "DOTNET_HOME"
+typedef INT(*hostfxr_get_native_search_directories_fn) (const int argc, const WCHAR* argv[], WCHAR* dest, size_t dest_size);
+typedef INT(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
 
 class HOSTFXR_PARAMETERS
 {
@@ -55,7 +56,7 @@ public:
 
     static
     HRESULT
-        GetHostFxrParameters(
+    GetHostFxrParameters(
         HOSTFXR_PARAMETERS* pHostFxrParameters,
         ASPNETCORE_CONFIG *pConfig
     );
@@ -63,13 +64,6 @@ public:
     static
     HRESULT
     GetStandaloneHostfxrParameters(
-        HOSTFXR_PARAMETERS* pHostFxrParameters,
-        ASPNETCORE_CONFIG *pConfig
-    );
-
-    static
-    HRESULT
-    GetPortableHostfxrParameters(
         HOSTFXR_PARAMETERS* pHostFxrParameters,
         ASPNETCORE_CONFIG *pConfig
     );

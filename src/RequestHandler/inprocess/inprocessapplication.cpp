@@ -1,7 +1,5 @@
 #include "..\precomp.hxx"
 
-typedef DWORD(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
-
 IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
 
 IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(
@@ -497,6 +495,11 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
     {
         // Core CLR has already been loaded.
         // Cannot load more than once even there was a failure
+        if (m_fLoadManagedAppError)
+        {
+            hr = E_FAIL;
+        }
+
         goto Finished;
     }
 
@@ -507,6 +510,11 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
     fLocked = TRUE;
     if (m_fManagedAppLoaded || m_fLoadManagedAppError)
     {
+        if (m_fLoadManagedAppError)
+        {
+            hr = E_FAIL;
+        }
+
         goto Finished;
     }
 
@@ -574,16 +582,12 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
     m_fManagedAppLoaded = TRUE;
 
 Finished:
-    if (fLocked)
-    {
-        ReleaseSRWLockExclusive(&m_srwLock);
-    }
 
     if (FAILED(hr))
     {
         // Question: in case of application loading failure, should we allow retry on 
         // following request or block the activation at all
-        m_fLoadManagedAppError = FALSE; // m_hThread != NULL ?
+        m_fLoadManagedAppError = TRUE; // m_hThread != NULL ?
 
         // TODO
         //if (SUCCEEDED(strEventMsg.SafeSnwprintf(
@@ -612,6 +616,12 @@ Finished:
         //    }
         //}
     }
+
+    if (fLocked)
+    {
+        ReleaseSRWLockExclusive(&m_srwLock);
+    }
+
     return hr;
 }
 
@@ -621,14 +631,15 @@ IN_PROCESS_APPLICATION::ExecuteAspNetCoreProcess(
     _In_ LPVOID pContext
 )
 {
-
+    HRESULT hr = S_OK;
     IN_PROCESS_APPLICATION *pApplication = (IN_PROCESS_APPLICATION*)pContext;
     DBG_ASSERT(pApplication != NULL);
-    pApplication->ExecuteApplication();
+    hr = pApplication->ExecuteApplication();
     //
     // no need to log the error here as if error happened, the thread will exit
     // the error will ba catched by caller LoadManagedApplication which will log an error
     //
+
 }
 
 
@@ -645,13 +656,13 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     STRU                        strDotnetFolderLocation;
     STRU                        strHighestDotnetVersion;
     STRU                        strApplicationFullPath;
-    STRU                        firstArg;
-    STRU                        secondArg;
-
+    STRU                        strArgList;
     HMODULE                     hModule;
-    PCWSTR                      argv[3];
+    PCWSTR*                     argv = NULL;
     hostfxr_main_fn             pProc;
+    DWORD                       argc;
     std::vector<std::wstring>   vVersionFolders;
+    std::vector<std::wstring>   vArgList;
 
     // should be a redudant call here, but we will be safe and call it twice.
     // TODO AV here on m_pHostFxrParameters being null
@@ -668,17 +679,18 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     pProc = (hostfxr_main_fn)GetProcAddress(hModule, "hostfxr_main");
     if (pProc == NULL)
     {
-        hr = ERROR_BAD_ENVIRONMENT; // better hrresult?
+        hr = ERROR_BAD_ENVIRONMENT;
         goto Finished;
     }
-
-    firstArg.Copy(m_pHostFxrParameters->QueryExePath()->QueryStr());
-    secondArg.Copy(m_pHostFxrParameters->QueryArguments()->QueryStr());
-    // The first argument is mostly ignored
-    argv[0] = firstArg.QueryStr();
+    vArgList = UTILITY::SplitStringOnWhitespace(m_pConfig->QueryArguments());
+    argc = 2 + (DWORD)vArgList.size();
+    argv = new PCWSTR[argc];
+    argv[0] = m_pHostFxrParameters->QueryExePath()->QueryStr();
     argv[1] = L"exec";
-    argv[2] = secondArg.QueryStr();
-
+    for (INT i = 0; i < vArgList.size(); i++)
+    {
+        argv[i + 2] = vArgList[i].c_str();
+    }
     // There can only ever be a single instance of .NET Core
     // loaded in the process but we need to get config information to boot it up in the
     // first place. This is happening in an execute request handler and everyone waits
@@ -688,8 +700,8 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // set the callbacks
     s_Application = this;
 
-    RunDotnetApplication(3, argv, pProc);
-    
+    RunDotnetApplication(argc, argv, pProc);
+
 Finished:
     //
     // this method is called by the background thread and should never exit unless shutdown
@@ -731,6 +743,10 @@ Finished:
         {
             Recycle();
         }
+    }
+    if (argv != NULL)
+    {
+        delete argv;
     }
     return hr;
 }

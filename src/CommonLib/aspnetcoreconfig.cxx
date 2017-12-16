@@ -47,7 +47,7 @@ ASPNETCORE_CONFIG::GetConfig(
     HRESULT                 hr = S_OK;
     IHttpApplication       *pHttpApplication = pHttpContext->GetApplication();
     ASPNETCORE_CONFIG      *pAspNetCoreConfig = NULL;
-    
+
     if (ppAspNetCoreConfig == NULL)
     {
         hr = E_INVALIDARG;

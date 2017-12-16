@@ -118,6 +118,11 @@ public:
         STRU* struFile
     );
 
+    static
+    std::vector<std::wstring> SplitStringOnWhitespace(
+        STRU * struFile
+    );
+
 private:
 
     UTILITY() {}
