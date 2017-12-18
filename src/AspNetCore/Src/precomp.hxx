@@ -110,6 +110,8 @@ inline bool IsSpace(char ch)
 #include <reftrace.h>
 #include <acache.h>
 #include <time.h>
+#include <io.h>
+#include <stdio.h>
 
 #include "environmentvariablehash.h"
 #include "..\aspnetcore_msg.h"

@@ -60,6 +60,13 @@ public:
         delete this;
     }
 
+    HRESULT
+    CreateLogFile(
+        _In_  BOOL    fIgnoreDisableInConfig,
+        _Out_ STRU*   pstruFullFileName,
+        _Out_ HANDLE* pHandle
+    );
+
     static
     HRESULT
     GetConfig(

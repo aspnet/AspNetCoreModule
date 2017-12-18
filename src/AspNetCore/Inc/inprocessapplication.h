@@ -45,6 +45,11 @@ public:
         _In_ VOID* pvShutdownHandlerContext
     );
 
+    VOID
+    SetStdOut(
+        VOID
+    );
+
     // Executes the .NET Core process
     HRESULT
     ExecuteApplication(
@@ -89,7 +94,8 @@ private:
 
     // The event that gets triggered when managed initialization is complete
     HANDLE                          m_pInitalizeEvent;
-
+    HANDLE                          m_hLogFileHandle;
+    STRU                            m_struLogFilePath;
     // The exit code of the .NET Core process
     INT                             m_ProcessExitCode;
 
@@ -97,6 +103,9 @@ private:
     BOOL                            m_fLoadManagedAppError;
     BOOL                            m_fInitialized;
     BOOL                            m_fIsWebSocketsConnection;
+    BOOL                            m_fDoneStdRedirect;
+    FILE*                           m_pStdFile;
+    STTIMER                         m_Timer;
 
     static IN_PROCESS_APPLICATION*   s_Application;
 

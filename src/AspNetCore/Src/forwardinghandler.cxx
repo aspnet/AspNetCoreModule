@@ -5,7 +5,6 @@
 #include <dbgutil.h>
 #include <comdef.h>
 
-
 // Just to be aware of the FORWARDING_HANDLER object size.
 C_ASSERT(sizeof(FORWARDING_HANDLER) <= 632);
 
@@ -1142,7 +1141,8 @@ FORWARDING_HANDLER::OnExecuteRequestHandler(
     {
     case HOSTING_IN_PROCESS:
     {
-
+        // Set Stdout
+        ((IN_PROCESS_APPLICATION*)m_pApplication)->SetStdOut();
         hr = ((IN_PROCESS_APPLICATION*)m_pApplication)->LoadManagedApplication();
         if (FAILED(hr))
         {

@@ -1189,121 +1189,84 @@ SERVER_PROCESS::SetupStdHandles(
     LPSTARTUPINFOW pStartupInfo
 )
 {
-    SECURITY_ATTRIBUTES     saAttr = {0};
     HRESULT                 hr = S_OK;
     SYSTEMTIME              systemTime;
-    STRU                    struLogFileName;
     BOOL                    fStdoutLoggingFailed = FALSE;
     STRU                    strEventMsg;
     LPCWSTR                 apsz[1];
-    STRU                    struAbsLogFilePath;
+    ASPNETCORE_CONFIG*      pConfig = NULL;
 
     DBG_ASSERT(pStartupInfo);
 
-    if (m_fStdoutLogEnabled)
+    if (m_hStdoutHandle != NULL && m_hStdoutHandle != INVALID_HANDLE_VALUE)
     {
-        saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
-        saAttr.bInheritHandle = TRUE; 
-        saAttr.lpSecurityDescriptor = NULL;
-
-        if (m_hStdoutHandle != NULL)
+        if (!CloseHandle(m_hStdoutHandle))
         {
-            if (!CloseHandle(m_hStdoutHandle))
-            {
-                hr = HRESULT_FROM_GETLASTERROR();
-                goto Finished;
-            }
-
-            m_hStdoutHandle = NULL;
-        }
-
-        hr = PATH::ConvertPathToFullPath(m_struLogFile.QueryStr(),
-                                         context->GetApplication()->GetApplicationPhysicalPath(),
-                                         &struAbsLogFilePath );
-        if (FAILED(hr))
-        {
+            hr = HRESULT_FROM_GETLASTERROR();
             goto Finished;
         }
-
-        GetSystemTime(&systemTime);
-        hr = struLogFileName.SafeSnwprintf(L"%s_%d%02d%02d%02d%02d%02d_%d.log",
-                                           struAbsLogFilePath.QueryStr(),
-                                           systemTime.wYear,
-                                           systemTime.wMonth,
-                                           systemTime.wDay,
-                                           systemTime.wHour,
-                                           systemTime.wMinute,
-                                           systemTime.wSecond,
-                                           GetCurrentProcessId() );
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-
-        m_hStdoutHandle = CreateFileW(struLogFileName.QueryStr(),
-                                      FILE_WRITE_DATA,
-                                      FILE_SHARE_READ,
-                                      &saAttr,
-                                      CREATE_ALWAYS,
-                                      FILE_ATTRIBUTE_NORMAL,
-                                      NULL);
-        if (m_hStdoutHandle == INVALID_HANDLE_VALUE)
-        {
-            fStdoutLoggingFailed = TRUE;
-            m_hStdoutHandle = NULL;
-
-            if (SUCCEEDED(strEventMsg.SafeSnwprintf(
-                          ASPNETCORE_EVENT_INVALID_STDOUT_LOG_FILE_MSG,
-                          struLogFileName.QueryStr(),
-                          HRESULT_FROM_GETLASTERROR())))
-            {
-                apsz[0] = strEventMsg.QueryStr();
-
-                //
-                // not checking return code because if ReportEvent
-                // fails, we cannot do anything.
-                //
-                if (FORWARDING_HANDLER::QueryEventLog() != NULL)
-                {
-                    ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
-                        EVENTLOG_WARNING_TYPE,
-                        0,
-                        ASPNETCORE_EVENT_CONFIG_ERROR,
-                        NULL,
-                        1,
-                        0,
-                        apsz,
-                        NULL);
-                }
-            }
-        }
-
-        if (!fStdoutLoggingFailed)
-        {
-            pStartupInfo->dwFlags = STARTF_USESTDHANDLES;
-            pStartupInfo->hStdInput = INVALID_HANDLE_VALUE;
-            pStartupInfo->hStdError = m_hStdoutHandle;
-            pStartupInfo->hStdOutput = m_hStdoutHandle;
-
-            m_struFullLogFile.Copy(struLogFileName);
-
-            // start timer to open and close handles regularly.
-            m_Timer.InitializeTimer(SERVER_PROCESS::TimerCallback, this, 3000, 3000);
-        }
+        m_hStdoutHandle = NULL;
     }
 
-    if ((!m_fStdoutLogEnabled || fStdoutLoggingFailed) &&
-        m_pProcessManager->QueryNULHandle() != NULL &&
-        m_pProcessManager->QueryNULHandle() != INVALID_HANDLE_VALUE)
+    hr = ASPNETCORE_CONFIG::GetConfig(context, &pConfig);
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+
+    hr = pConfig->CreateLogFile(TRUE, &m_struFullLogFile, &m_hStdoutHandle);
+
+    if (m_hStdoutHandle == INVALID_HANDLE_VALUE)
+    {
+        m_hStdoutHandle = NULL;
+        goto Finished;
+    }
+
+    if (m_fStdoutLogEnabled)
     {
         pStartupInfo->dwFlags = STARTF_USESTDHANDLES;
         pStartupInfo->hStdInput = INVALID_HANDLE_VALUE;
-        pStartupInfo->hStdError = m_pProcessManager->QueryNULHandle();
-        pStartupInfo->hStdOutput = m_pProcessManager->QueryNULHandle();
+        pStartupInfo->hStdError = m_hStdoutHandle;
+        pStartupInfo->hStdOutput = m_hStdoutHandle;
+        // start timer to open and close handles regularly.
+        m_Timer.InitializeTimer(SERVER_PROCESS::TimerCallback, &m_struFullLogFile, 3000, 3000);
+    }
+    else
+    {   // only enable stderr
+        pStartupInfo->dwFlags = STARTF_USESTDHANDLES;
+        pStartupInfo->hStdInput = INVALID_HANDLE_VALUE;
+        pStartupInfo->hStdError = m_hStdoutHandle;
+        pStartupInfo->hStdOutput = INVALID_HANDLE_VALUE;
     }
 
 Finished:
+    if (m_fStdoutLogEnabled && FAILED(hr))
+    {
+        if (SUCCEEDED(strEventMsg.SafeSnwprintf(
+            ASPNETCORE_EVENT_INVALID_STDOUT_LOG_FILE_MSG,
+            m_struFullLogFile.QueryStr(),
+            HRESULT_FROM_GETLASTERROR())))
+        {
+            apsz[0] = strEventMsg.QueryStr();
 
+            //
+            // not checking return code because if ReportEvent
+            // fails, we cannot do anything.
+            //
+            if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+            {
+                ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
+                    EVENTLOG_WARNING_TYPE,
+                    0,
+                    ASPNETCORE_EVENT_CONFIG_ERROR,
+                    NULL,
+                    1,
+                    0,
+                    apsz,
+                    NULL);
+            }
+        }
+    }
     return hr;
 }
 
@@ -1317,7 +1280,7 @@ SERVER_PROCESS::TimerCallback(
 {
     Instance;
     Timer;
-    SERVER_PROCESS*         pServerProcess = (SERVER_PROCESS*) Context;
+    STRU*                   pstruLogFilePath = (STRU*)Context;
     HANDLE                  hStdoutHandle = NULL;
     SECURITY_ATTRIBUTES     saAttr = {0};
     HRESULT                 hr = S_OK;
@@ -1326,7 +1289,7 @@ SERVER_PROCESS::TimerCallback(
     saAttr.bInheritHandle = TRUE; 
     saAttr.lpSecurityDescriptor = NULL;
 
-    hStdoutHandle = CreateFileW(pServerProcess->QueryFullLogPath(),
+    hStdoutHandle = CreateFileW(pstruLogFilePath->QueryStr(),
                                 FILE_READ_DATA,
                                 FILE_SHARE_WRITE,
                                 &saAttr,
@@ -1990,6 +1953,21 @@ SERVER_PROCESS::~SERVER_PROCESS()
             CloseHandle(m_hStdoutHandle);
         }
         m_hStdoutHandle = NULL;
+    }
+
+    if (!m_fStdoutLogEnabled && !m_struFullLogFile.IsEmpty())
+    {
+        WIN32_FIND_DATA fileData;
+        HANDLE handle = FindFirstFile(m_struFullLogFile.QueryStr(), &fileData);
+        if (handle != INVALID_HANDLE_VALUE &&
+            fileData.nFileSizeHigh == 0 &&
+            fileData.nFileSizeLow == 0)
+        {
+            FindClose(handle);
+            // no need to check whether the deletion succeeds
+            // as nothing can be done
+            DeleteFile(m_struFullLogFile.QueryStr());
+        }
     }
 
     if (m_fStdoutLogEnabled)
