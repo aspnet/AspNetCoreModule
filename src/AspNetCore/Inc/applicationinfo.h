@@ -68,9 +68,7 @@ public:
         m_pServer(pServer),
         m_cRefs(1), m_fAppOfflineFound(FALSE),
         m_pAppOfflineHtm(NULL), m_pFileWatcherEntry(NULL),
-        m_pConfiguration(NULL),
-        m_pfnAspNetCoreCreateApplication(NULL),
-        m_pfnAspNetCoreCreateRequestHandler(NULL)
+        m_pConfiguration(NULL)
     {
         InitializeSRWLock(&m_srwLock);
     }
@@ -136,16 +134,18 @@ public:
 
     HRESULT
     EnsureApplicationCreated();
-
-    PFN_ASPNETCORE_CREATE_REQUEST_HANDLER
-    QueryCreateRequestHandler()
-    {
-        return m_pfnAspNetCoreCreateRequestHandler;
-    }
-
 private:
     HRESULT FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** hostFxrParameters);
+    static
     HRESULT FindNativeAssemblyFromGlobalLocation(STRU* struFilename);
+    HRESULT LoadManagedApplication(VOID);
+    HRESULT ExecuteApplication(VOID);
+    HRESULT RunDotnetApplication(CONST DWORD argc, PCWSTR * argv, hostfxr_main_fn pProc);
+    INT FilterException(unsigned int, _EXCEPTION_POINTERS *);
+    static
+    int CallbackFromHostfxr(const int argc, const WCHAR * argv[]);
+    static
+    VOID ExecuteAspNetCoreProcess(LPVOID pContext);
     HRESULT FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARAMETERS* hostFxrParameters);
 
     mutable LONG            m_cRefs;
@@ -157,8 +157,9 @@ private:
     APPLICATION            *m_pApplication;
     SRWLOCK                 m_srwLock;
     IHttpServer            *m_pServer;
-    PFN_ASPNETCORE_CREATE_APPLICATION      m_pfnAspNetCoreCreateApplication;
-    PFN_ASPNETCORE_CREATE_REQUEST_HANDLER  m_pfnAspNetCoreCreateRequestHandler;
+    HANDLE                          m_hThread;
+    HANDLE                          m_pInitalizeEvent;
+
     HOSTFXR_PARAMETERS*                    m_pHostFxrParameters;
 };
 

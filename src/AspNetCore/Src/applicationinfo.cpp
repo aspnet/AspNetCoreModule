@@ -177,13 +177,7 @@ APPLICATION_INFO::EnsureApplicationCreated()
             goto Finished;
         }
 
-        if (m_pfnAspNetCoreCreateApplication == NULL)
-        {
-            hr = HRESULT_FROM_WIN32(ERROR_INVALID_FUNCTION);
-            goto Finished;
-        }
-
-        hr = m_pfnAspNetCoreCreateApplication(m_pServer, m_pConfiguration, pHostFxrParameters, &pApplication);
+        hr = g_pfnAspNetCoreCreateApplication(m_pServer, m_pConfiguration, pHostFxrParameters, &pApplication);
         if (FAILED(hr))
         {
             goto Finished;
@@ -226,22 +220,23 @@ APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** out_pHos
             goto Finished;
         }
 
-        pHostfxrParameters = new HOSTFXR_PARAMETERS();
-        if (pHostfxrParameters == NULL)
+        if (m_pConfiguration->QueryHostingModel() == APP_HOSTING_MODEL::HOSTING_IN_PROCESS)
         {
-            hr = E_OUTOFMEMORY;
-            goto Finished;
-        }
-
-        if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(pHostfxrParameters, m_pConfiguration)) ||
-            FAILED(hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostfxrParameters)))
-        {
-            // TODO eventually make this fail for in process loading.
-            hr = FindNativeAssemblyFromGlobalLocation(&struFileName);
-            if (FAILED(hr))
+            pHostfxrParameters = new HOSTFXR_PARAMETERS();
+            if (pHostfxrParameters == NULL)
             {
+                hr = E_OUTOFMEMORY;
                 goto Finished;
             }
+
+            if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(pHostfxrParameters, m_pConfiguration)))
+            {
+                // TODO eventually make this fail for in process loading.
+
+            }
+            m_pHostFxrParameters = pHostfxrParameters;
+            LoadManagedApplication();
+            goto Finished;
         }
 
         g_hAspnetCoreRH = LoadLibraryW(struFileName.QueryStr());
@@ -283,8 +278,6 @@ Finished:
             delete pHostfxrParameters;
         }
     }
-    m_pfnAspNetCoreCreateApplication = g_pfnAspNetCoreCreateApplication;
-    m_pfnAspNetCoreCreateRequestHandler = g_pfnAspNetCoreCreateRequestHandler;
     if (!g_fAspnetcoreRHLoadedError && FAILED(hr))
     {
         g_fAspnetcoreRHLoadedError = TRUE;
@@ -346,59 +339,247 @@ Finished:
     return hr;
 }
 
+// Will be called by the inprocesshandler
 HRESULT
-APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARAMETERS* pHostFxrParameters)
+APPLICATION_INFO::LoadManagedApplication
+(
+    VOID
+)
 {
-    HRESULT     hr = S_OK;
-    HANDLE      nativeRequestHandlerHandle;
-    STRU        struApplicationFullPath;
-    STRU        struNativeSearchPaths;
-    STRU        nativeDllLocation;
-    HMODULE     hostFxrDll = NULL;
-    INT         hostfxrExitCode = 0;
-    INT         index = -1;
-    INT         prevIndex = 0;
-    BOOL        fFound = FALSE;
-    const DWORD BUFFER_SIZE = 1024 * 10;
-    
-    WCHAR       pszNativeSearchPathsBuffer[BUFFER_SIZE];
-    
-    DBG_ASSERT(struFileName != NULL);
+    HRESULT    hr = S_OK;
+    DWORD      dwTimeout;
+    DWORD      dwResult;
+    BOOL       fLocked = FALSE;
+    //PCWSTR     apsz[1];
+    //STACK_STRU(strEventMsg, 256);
 
-    hostFxrDll = ::LoadLibraryW(pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
-    
-    if (hostFxrDll == NULL)
+    //if (m_fManagedAppLoaded || m_fLoadManagedAppError)
+    //{
+    //    // Core CLR has already been loaded.
+    //    // Cannot load more than once even there was a failure
+    //    if (m_fLoadManagedAppError)
+    //    {
+    //        hr = E_FAIL;
+    //    }
+
+    //    goto Finished;
+    //}
+
+    // Set up stdout redirect
+    //SetStdOut();
+
+    AcquireSRWLockExclusive(&m_srwLock);
+    fLocked = TRUE;
+    //if (m_fManagedAppLoaded || m_fLoadManagedAppError)
+    //{
+    //    if (m_fLoadManagedAppError)
+    //    {
+    //        hr = E_FAIL;
+    //    }
+
+    //    goto Finished;
+    //}
+
+    m_hThread = CreateThread(
+        NULL,       // default security attributes
+        0,          // default stack size
+        (LPTHREAD_START_ROUTINE)ExecuteAspNetCoreProcess,
+        this,       // thread function arguments
+        0,          // default creation flags
+        NULL);      // receive thread identifier
+
+    if (m_hThread == NULL)
     {
-        // Could not load hostfxr
+        hr = HRESULT_FROM_WIN32(GetLastError());
         goto Finished;
     }
 
-    hostfxr_get_native_search_directories_fn pFnHostFxrSearchDirectories = (hostfxr_get_native_search_directories_fn)
-        GetProcAddress(hostFxrDll, "hostfxr_get_native_search_directories");
+    m_pInitalizeEvent = CreateEvent(
+        NULL,   // default security attributes
+        TRUE,   // manual reset event
+        FALSE,  // not set
+        NULL);  // name
 
-    if (pFnHostFxrSearchDirectories == NULL)
+    if (m_pInitalizeEvent == NULL)
     {
-        // Host fxr version does not have correct function
+        hr = HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    // If the debugger is attached, never timeout
+    if (IsDebuggerPresent())
+    {
+        dwTimeout = INFINITE;
+    }
+    else
+    {
+        dwTimeout = m_pConfiguration->QueryStartupTimeLimitInMS();
+    }
+
+    const HANDLE pHandles[2]{ m_hThread, m_pInitalizeEvent };
+
+    // Wait on either the thread to complete or the event to be set
+    dwResult = WaitForMultipleObjects(2, pHandles, FALSE, dwTimeout);
+
+    // It all timed out
+    if (dwResult == WAIT_TIMEOUT)
+    {
+        // kill the backend thread as loading dotnet timedout
+        TerminateThread(m_hThread, 0);
+        hr = HRESULT_FROM_WIN32(dwResult);
+        goto Finished;
+    }
+    else if (dwResult == WAIT_FAILED)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        goto Finished;
+    }
+
+    // The thread ended it means that something failed
+    if (dwResult == WAIT_OBJECT_0)
+    {
+        hr = E_APPLICATION_ACTIVATION_EXEC_FAILURE;
+        goto Finished;
+    }
+
+    //m_fManagedAppLoaded = TRUE;
+
+Finished:
+
+    if (FAILED(hr))
+    {
+        // Question: in case of application loading failure, should we allow retry on 
+        // following request or block the activation at all
+        //m_fLoadManagedAppError = TRUE; // m_hThread != NULL ?
+
+                                       // TODO
+                                       //if (SUCCEEDED(strEventMsg.SafeSnwprintf(
+                                       //    ASPNETCORE_EVENT_LOAD_CLR_FALIURE_MSG,
+                                       //    m_pConfiguration->QueryApplicationPath()->QueryStr(),
+                                       //    m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(),
+                                       //    hr)))
+                                       //{
+                                       //    apsz[0] = strEventMsg.QueryStr();
+
+                                       //    //
+                                       //    // not checking return code because if ReportEvent
+                                       //    // fails, we cannot do anything.
+                                       //    //
+                                       //    if (FORWARDING_HANDLER::QueryEventLog() != NULL)
+                                       //    {
+                                       //        ReportEventW(FORWARDING_HANDLER::QueryEventLog(),
+                                       //            EVENTLOG_ERROR_TYPE,
+                                       //            0,
+                                       //            ASPNETCORE_EVENT_LOAD_CLR_FALIURE,
+                                       //            NULL,
+                                       //            1,
+                                       //            0,
+                                       //            apsz,
+                                       //            NULL);
+                                       //    }
+                                       //}
+    }
+
+    if (fLocked)
+    {
+        ReleaseSRWLockExclusive(&m_srwLock);
+    }
+
+    return hr;
+}
+
+HRESULT
+APPLICATION_INFO::ExecuteApplication(
+    VOID
+)
+{
+    HRESULT             hr = S_OK;
+    HMODULE             hModule;
+    hostfxr_main_fn     pProc;
+
+    // should be a redudant call here, but we will be safe and call it twice.
+    // TODO AV here on m_pHostFxrParameters being null
+    hModule = LoadLibraryW(m_pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
+
+    if (hModule == NULL)
+    {
+        // .NET Core not installed (we can log a more detailed error message here)
+        hr = ERROR_BAD_ENVIRONMENT;
+        goto Finished;
+    }
+
+    // Get the entry point for main
+    pProc = (hostfxr_main_fn)GetProcAddress(hModule, "hostfxr_main_with_callback");
+    if (pProc == NULL)
+    {
+        hr = ERROR_BAD_ENVIRONMENT;
+        goto Finished;
+    }
+
+    // There can only ever be a single instance of .NET Core
+    // loaded in the process but we need to get config information to boot it up in the
+    // first place. This is happening in an execute request handler and everyone waits
+    // until this initialization is done.
+
+    // We set a static so that managed code can call back into this instance and
+    // set the callbacks
+
+    RunDotnetApplication(*m_pHostFxrParameters->QueryArgc(), *m_pHostFxrParameters->QueryArguments(), pProc);
+
+Finished:
+    //
+    // this method is called by the background thread and should never exit unless shutdown
+    //
+    return hr;
+}
+
+
+//
+// Calls hostfxr_main with the hostfxr and application as arguments.
+// Method should be called with only 
+// Need to have __try / __except in methods that require unwinding.
+// Note, this will not 
+// 
+HRESULT
+APPLICATION_INFO::RunDotnetApplication(CONST DWORD argc, PCWSTR* argv, hostfxr_main_fn pProc)
+{
+    HRESULT hr = S_OK;
+    __try
+    {
+        pProc(argc, argv, CallbackFromHostfxr);
+    }
+    __except (FilterException(GetExceptionCode(), GetExceptionInformation()))
+    {
+        // TODO Log error message here.
         hr = E_FAIL;
-        goto Finished;
     }
+    return hr;
+}
 
-    hostfxrExitCode = pFnHostFxrSearchDirectories(
-        *pHostFxrParameters->QueryArgc(), 
-        *pHostFxrParameters->QueryArguments(), 
-        pszNativeSearchPathsBuffer, 
-        BUFFER_SIZE
-    );
+// static
+INT
+APPLICATION_INFO::FilterException(unsigned int, struct _EXCEPTION_POINTERS*)
+{
+    // We assume that any exception is a failure as the applicaiton didn't start or there was a startup error.
+    // TODO, log error based on exception code.
+    return EXCEPTION_EXECUTE_HANDLER;
+}
 
-    // Buff now contains the native serach paths
-    // Iterate through and find it.
-    if (hostfxrExitCode != 0)
+int 
+APPLICATION_INFO::CallbackFromHostfxr(const int argc, const WCHAR* argv[])
+{
+    HRESULT hr = S_OK;
+    STRU struNativeSearchPaths;
+    STRU nativeDllLocation;
+    DWORD index = 0;
+    DWORD prevIndex = 0;
+    HANDLE nativeRequestHandlerHandle = INVALID_HANDLE_VALUE;
+    BOOL fFound = FALSE;
+    if (argc <= 2)
     {
-        hr = E_FAIL;
-        goto Finished;
+        return 1;
     }
 
-    struNativeSearchPaths.Copy(pszNativeSearchPathsBuffer);
+    struNativeSearchPaths.Copy(argv[2]);
     while ((index = struNativeSearchPaths.IndexOf(L";", prevIndex)) != -1)
     {
         if (FAILED(hr = nativeDllLocation.Copy(struNativeSearchPaths.QueryStr(), index - prevIndex)))
@@ -420,10 +601,9 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARA
             goto Finished;
         }
         nativeRequestHandlerHandle = UTILITY::CheckIfFileExists(&nativeDllLocation);
-        
+
         if (nativeRequestHandlerHandle != INVALID_HANDLE_VALUE)
         {
-            struFilename->Copy(nativeDllLocation);
             fFound = TRUE;
             CloseHandle(nativeRequestHandlerHandle);
             break;
@@ -433,11 +613,73 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARA
 
     if (!fFound)
     {
-        hr = E_FAIL;
+        hr = FindNativeAssemblyFromGlobalLocation(&nativeDllLocation);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
+    }
+
+    g_hAspnetCoreRH = LoadLibraryW(nativeDllLocation.QueryStr());
+    if (g_hAspnetCoreRH == NULL)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
         goto Finished;
     }
 
-Finished:
+    g_pfnAspNetCoreCreateApplication = (PFN_ASPNETCORE_CREATE_APPLICATION)
+        GetProcAddress(g_hAspnetCoreRH, "CreateApplication");
+    if (g_pfnAspNetCoreCreateApplication == NULL)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        goto Finished;
+    }
 
+    g_pfnAspNetCoreCreateRequestHandler = (PFN_ASPNETCORE_CREATE_REQUEST_HANDLER)
+        GetProcAddress(g_hAspnetCoreRH, "CreateRequestHandler");
+    if (g_pfnAspNetCoreCreateRequestHandler == NULL)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        goto Finished;
+    }
+    g_fAspnetcoreRHAssemblyLoaded = TRUE;
+
+
+Finished:
+    //
+    // Question: we remember the load failure so that we will not try again.
+    // User needs to check whether the fuction pointer is NULL 
+    //
+    /*if (FAILED(hr))
+    {
+        if (m_pHostFxrParameters != NULL)
+        {
+            delete m_pHostFxrParameters;
+        }
+    }*/
+    if (!g_fAspnetcoreRHLoadedError && FAILED(hr))
+    {
+        g_fAspnetcoreRHLoadedError = TRUE;
+    }
+
+    ReleaseSRWLockExclusive(&g_srwLock);
     return hr;
 }
+
+// static
+VOID
+APPLICATION_INFO::ExecuteAspNetCoreProcess(
+    _In_ LPVOID pContext
+)
+{
+    HRESULT hr = S_OK;
+    APPLICATION_INFO *pApplication = (APPLICATION_INFO*)pContext;
+    DBG_ASSERT(pApplication != NULL);
+    hr = pApplication->ExecuteApplication();
+    //
+    // no need to log the error here as if error happened, the thread will exit
+    // the error will ba catched by caller LoadManagedApplication which will log an error
+    //
+
+}
+

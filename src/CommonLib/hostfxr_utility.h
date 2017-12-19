@@ -3,8 +3,9 @@
 
 #pragma once
 
+typedef INT(*external_host_callback_fn) (const int argc, const WCHAR* argv[]);
 typedef INT(*hostfxr_get_native_search_directories_fn) (const int argc, const WCHAR* argv[], WCHAR* dest, size_t dest_size);
-typedef INT(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
+typedef INT(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[], external_host_callback_fn callback);
 
 class HOSTFXR_PARAMETERS
 {

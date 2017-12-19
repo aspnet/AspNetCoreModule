@@ -35,14 +35,21 @@ public:
 
     // Executes the .NET Core process
     HRESULT
-    ExecuteApplication(
-        VOID
-    );
+        ExecuteApplication(
+            VOID
+        )
+    {
+        return S_OK;
+
+    }
 
     HRESULT
-    LoadManagedApplication(
-        VOID
-    );
+        LoadManagedApplication(
+            VOID
+        )
+    {
+        return S_OK;
+    }
 
     REQUEST_NOTIFICATION_STATUS
     OnAsyncCompletion(
@@ -56,17 +63,6 @@ public:
     (
         IHttpContext* pHttpContext,
         IN_PROCESS_HANDLER* pInProcessHandler
-    );
-
-    static 
-    INT
-    FilterException(unsigned int code, struct _EXCEPTION_POINTERS *ep);
-
-    HRESULT
-    RunDotnetApplication(
-        DWORD argc, 
-        PCWSTR* argv,
-        hostfxr_main_fn pProc
     );
 
     static
