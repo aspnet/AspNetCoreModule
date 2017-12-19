@@ -51,12 +51,18 @@ Return value:
 }
 
 ASPNET_CORE_PROXY_MODULE::ASPNET_CORE_PROXY_MODULE(
-) : m_pHandler(NULL)
+) : m_pApplicationInfo(NULL), m_pHandler(NULL)
 {
 }
 
 ASPNET_CORE_PROXY_MODULE::~ASPNET_CORE_PROXY_MODULE()
 {
+    if (m_pApplicationInfo != NULL)
+    {
+        m_pApplicationInfo->DereferenceApplicationInfo();
+        m_pApplicationInfo = NULL;
+    }
+
     if (m_pHandler != NULL)
     {
         m_pHandler->DereferenceRequestHandler();
@@ -74,8 +80,9 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
     HRESULT hr = S_OK;
     ASPNETCORE_CONFIG     *pConfig = NULL;
     APPLICATION_MANAGER   *pApplicationManager = NULL;
-    APPLICATION_INFO      *pApplicationInfo = NULL;
     REQUEST_NOTIFICATION_STATUS retVal = RQ_NOTIFICATION_CONTINUE;
+    APPLICATION* pApplication = NULL;
+    STACK_STRU(struFileName, 256);
 
     hr = ASPNETCORE_CONFIG::GetConfig(g_pHttpServer, g_pModuleId, pHttpContext, &pConfig);
     if (FAILED(hr))
@@ -93,14 +100,14 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
     hr = pApplicationManager->GetApplicationInfo(
         g_pHttpServer,
         pConfig,
-        &pApplicationInfo);
+        &m_pApplicationInfo);
     if (FAILED(hr))
     {
         goto Finished;
     }
 
-    // app_offline check to avoid loading aspnetcorerp.dll unnecessarily
-    if (pApplicationInfo->AppOfflineFound())
+    // app_offline check to avoid loading aspnetcorerh.dll unnecessarily
+    if (m_pApplicationInfo->AppOfflineFound())
     {
         // servicing app_offline
         HTTP_DATA_CHUNK   DataChunk;
@@ -108,12 +115,13 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
         APP_OFFLINE_HTM  *pAppOfflineHtm = NULL;
 
         pResponse = pHttpContext->GetResponse();
-        pAppOfflineHtm = pApplicationInfo->QueryAppOfflineHtm();
+        pAppOfflineHtm = m_pApplicationInfo->QueryAppOfflineHtm();
         DBG_ASSERT(pAppOfflineHtm);
         DBG_ASSERT(pResponse);
 
-        // ignore failure hresults as nothing we can do
-        pResponse->SetStatus(503, "Service Unavailable", 0, hr);
+        // Ignore failure hresults as nothing we can do
+        // Set fTrySkipCustomErrors to true as we want client see the offline content
+        pResponse->SetStatus(503, "Service Unavailable", 0, hr, NULL, TRUE);
         pResponse->SetHeader("Content-Type",
             "text/html",
             (USHORT)strlen("text/html"),
@@ -124,43 +132,40 @@ ASPNET_CORE_PROXY_MODULE::OnExecuteRequestHandler(
         DataChunk.FromMemory.pBuffer = (PVOID)pAppOfflineHtm->m_Contents.QueryStr();
         DataChunk.FromMemory.BufferLength = pAppOfflineHtm->m_Contents.QueryCB();
         pResponse->WriteEntityChunkByReference(&DataChunk);
+
         retVal = RQ_NOTIFICATION_FINISH_REQUEST;
         goto Finished;
     }
-    else
+
+    // make sure assmebly is loaded and application is created
+
+    hr = m_pApplicationInfo->EnsureApplicationCreated();
+    if (FAILED(hr))
     {
-        // make sure assmebly is loaded and application is created
-        APPLICATION* pApplication = NULL;
-        STACK_STRU(struFileName, 256);
-
-        hr = pApplicationInfo->EnsureApplicationCreated();
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-        pApplication = pApplicationInfo->QueryApplication();
-        DBG_ASSERT(pApplication);
-
-        // make sure application is in running state
-        // cannot recreate the application as we cannot reload clr for inprocess
-        if (pApplication->QueryStatus() != APPLICATION_STATUS::RUNNING)
-        {
+        goto Finished;
+    }
+    pApplication = m_pApplicationInfo->QueryApplication();
+    DBG_ASSERT(pApplication);
+    
+    // make sure application is in running state
+    // cannot recreate the application as we cannot reload clr for inprocess
+    if (pApplication->QueryStatus() != APPLICATION_STATUS::RUNNING)
+    {
             hr = HRESULT_FROM_WIN32(ERROR_SERVER_DISABLED);
             goto Finished;
-        }
-
-        // Create RequestHandler and process the request
-        hr = pApplicationInfo->QueryCreateRequestHandler()(pHttpContext,
-                        (HTTP_MODULE_ID*) &g_pModuleId,
-                        pApplication,
-                        &m_pHandler);
-
-        if (FAILED(hr))
-        {
-            goto Finished;
-        }
-        retVal = m_pHandler->OnExecuteRequestHandler();
     }
+
+    // Create RequestHandler and process the request
+    hr = m_pApplicationInfo->QueryCreateRequestHandler()(pHttpContext,
+                    (HTTP_MODULE_ID*) &g_pModuleId,
+                    pApplication,
+                    &m_pHandler);
+
+    if (FAILED(hr))
+    {
+        goto Finished;
+    }
+    retVal = m_pHandler->OnExecuteRequestHandler();
 
 Finished: 
     if (FAILED(hr))
@@ -181,12 +186,6 @@ ASPNET_CORE_PROXY_MODULE::OnAsyncCompletion(
     IHttpCompletionInfo *   pCompletionInfo
 )
 {
-    if (m_pHandler == NULL)
-    {
-        // TODO should we set the Response status code here?
-        return RQ_NOTIFICATION_FINISH_REQUEST;
-    }
-
     return m_pHandler->OnAsyncCompletion(
         pCompletionInfo->GetCompletionBytes(),
         pCompletionInfo->GetCompletionStatus());

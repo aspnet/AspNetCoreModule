@@ -35,7 +35,15 @@ APPLICATION_MANAGER::GetApplicationInfo(
         goto Finished;
     }
 
+    AcquireSRWLockShared(&m_srwLock);
+    if (m_fInShutdown)
+    {
+        ReleaseSRWLockShared(&m_srwLock);
+        hr = HRESULT_FROM_WIN32(ERROR_SERVER_SHUTDOWN_IN_PROGRESS);
+        goto Finished;
+    }
     m_pApplicationInfoHash->FindKey(&key, ppApplicationInfo);
+    ReleaseSRWLockShared(&m_srwLock);
 
     if (*ppApplicationInfo == NULL)
     {
@@ -67,6 +75,12 @@ APPLICATION_MANAGER::GetApplicationInfo(
 
         AcquireSRWLockExclusive(&m_srwLock);
         fExclusiveLock = TRUE;
+        if (m_fInShutdown)
+        {
+            // Already in shuting down. No need to create the application
+            hr = HRESULT_FROM_WIN32(ERROR_SERVER_SHUTDOWN_IN_PROGRESS);
+            goto Finished;
+        }
         m_pApplicationInfoHash->FindKey(&key, ppApplicationInfo);
 
         if (*ppApplicationInfo != NULL)
@@ -110,11 +124,11 @@ APPLICATION_MANAGER::GetApplicationInfo(
             m_hostingModel = pConfig->QueryHostingModel();
         }
 
+        *ppApplicationInfo = pApplicationInfo;
         ReleaseSRWLockExclusive(&m_srwLock);
         fExclusiveLock = FALSE;
 
         pApplicationInfo->StartMonitoringAppOffline();
-        *ppApplicationInfo = pApplicationInfo;
         pApplicationInfo = NULL;
     }
 
@@ -129,12 +143,6 @@ Finished:
     {
         pApplicationInfo->DereferenceApplicationInfo();
         pApplicationInfo = NULL;
-    }
-
-    if (*ppApplicationInfo != NULL)
-    {
-        // Need to decrease the ref counter as FindKey will increase it
-        (*ppApplicationInfo)->DereferenceApplicationInfo();
     }
 
     if (FAILED(hr))
@@ -245,65 +253,17 @@ Finished:
     return hr;
 }
 
-HRESULT
-APPLICATION_MANAGER::Get502ErrorPage(
-    _Out_ HTTP_DATA_CHUNK**     ppErrorPage
-)
+VOID
+APPLICATION_MANAGER::ShutDown()
 {
-    HRESULT           hr = S_OK;
-    BOOL              fExclusiveLock = FALSE;
-    HTTP_DATA_CHUNK  *pHttp502ErrorPage = NULL;
-
-    DBG_ASSERT(ppErrorPage != NULL);
-
-    //on-demand create the error page
-    if (m_pHttp502ErrorPage != NULL)
-    {
-        *ppErrorPage = m_pHttp502ErrorPage;
-    }
-    else
+    m_fInShutdown = TRUE;
+    if (m_pApplicationInfoHash != NULL)
     {
         AcquireSRWLockExclusive(&m_srwLock);
-        fExclusiveLock = TRUE;
-        if (m_pHttp502ErrorPage != NULL)
-        {
-            *ppErrorPage = m_pHttp502ErrorPage;
-        }
-        else
-        {
-            size_t maxsize = 5000;
-            pHttp502ErrorPage = new HTTP_DATA_CHUNK();
-            if (pHttp502ErrorPage == NULL)
-            {
-                hr = HRESULT_FROM_WIN32(ERROR_NOT_ENOUGH_MEMORY);
-                goto Finished;
-            }
-            pHttp502ErrorPage->DataChunkType = HttpDataChunkFromMemory;
-            pHttp502ErrorPage->FromMemory.pBuffer = (PVOID)m_pstrErrorInfo;
 
-            pHttp502ErrorPage->FromMemory.BufferLength = (ULONG)strnlen(m_pstrErrorInfo, maxsize); //(ULONG)(wcslen(m_pstrErrorInfo)); // *sizeof(WCHAR);
-            if(m_pHttp502ErrorPage != NULL)
-            {
-                delete m_pHttp502ErrorPage;
-            }
-            m_pHttp502ErrorPage = pHttp502ErrorPage;
-            *ppErrorPage = m_pHttp502ErrorPage;
-        }
-    }
-
-Finished:
-    if (fExclusiveLock)
-    {
+        // clean up the hash table so that the application will be informed on shutdown
+        m_pApplicationInfoHash->Clear();
         ReleaseSRWLockExclusive(&m_srwLock);
     }
 
-    if (FAILED(hr))
-    {
-        if (pHttp502ErrorPage != NULL)
-        {
-            delete pHttp502ErrorPage;
-        }
-    }
-
-    return hr;
 }

@@ -98,11 +98,14 @@ VOID
 APPLICATION_INFO::UpdateAppOfflineFileHandle()
 {
     STRU strFilePath;
-    UTILITY::ConvertPathToFullPath(L".\\app_offline.htm", m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(), &strFilePath);
+    UTILITY::ConvertPathToFullPath(L".\\app_offline.htm", 
+        m_pConfiguration->QueryApplicationPhysicalPath()->QueryStr(), 
+        &strFilePath);
     APP_OFFLINE_HTM *pOldAppOfflineHtm = NULL;
     APP_OFFLINE_HTM *pNewAppOfflineHtm = NULL;
 
-    if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(strFilePath.QueryStr()) && GetLastError() == ERROR_FILE_NOT_FOUND)
+    if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(strFilePath.QueryStr()) && 
+        GetLastError() == ERROR_FILE_NOT_FOUND)
     {
         m_fAppOfflineFound = FALSE;
     }

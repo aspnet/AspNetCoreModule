@@ -45,6 +45,7 @@ class ASPNET_CORE_PROXY_MODULE : public CHttpModule
 
  private:
 
+    APPLICATION_INFO *m_pApplicationInfo;
     APPLICATION      *m_pApplication;
     REQUEST_HANDLER  *m_pHandler;
 };

@@ -106,5 +106,3 @@ private:
     RESPONSE_HEADER_HASH(const RESPONSE_HEADER_HASH &);
     void operator=(const RESPONSE_HEADER_HASH &);
 };
-
-extern RESPONSE_HEADER_HASH *   g_pResponseHeaderHash;

@@ -61,9 +61,9 @@ public:
         BOOL fEnableReferenceCountTracing
     );
 
-    //static
-    //    VOID
-    //    StaticTerminate();
+    static
+    VOID
+    StaticTerminate();
 
     VOID
     TerminateRequest(
@@ -155,7 +155,6 @@ private:
         _Inout_ DWORD *                 pcchHeaders
     );
 
-
     DWORD                               m_Signature;
     //
     // WinHTTP request handle is protected using a read-write lock.
@@ -168,6 +167,8 @@ private:
     bool                                m_fResponseHeadersReceivedAndSet;
     bool                                m_fResetConnection;
     bool                                m_fHandleClosedDueToClient;
+    bool                                m_fFinishRequest;
+    bool                                m_fHasError;
     BOOL                                m_fDoReverseRewriteHeaders;
     PCSTR                               m_pszOriginalHostHeader;
     PCWSTR                              m_pszHeaders;
@@ -186,11 +187,13 @@ private:
     static const SIZE_T                 INLINE_ENTITY_BUFFERS = 8;
     BUFFER_T<BYTE*, INLINE_ENTITY_BUFFERS> m_buffEntityBuffers;
 
-    //static HINTERNET                    sm_hSession;
     static ALLOC_CACHE_HANDLER *        sm_pAlloc;
     static PROTOCOL_CONFIG              sm_ProtocolConfig;
+    static RESPONSE_HEADER_HASH *       sm_pResponseHeaderHash;
     //
     // Reference cout tracing for debugging purposes.
     //
     static TRACE_LOG *                  sm_pTraceLog;
+
+    static STRA                         sm_pStra502ErrorMsg;
 };

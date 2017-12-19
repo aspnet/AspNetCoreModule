@@ -62,6 +62,7 @@
 #include "resource.h"
 #include ".\inprocess\InProcessHandler.h"
 #include ".\inprocess\inprocessapplication.h"
+#include ".\outofprocess\responseheaderhash.h"
 #include ".\outofprocess\protocolconfig.h"
 #include ".\outofprocess\forwarderconnection.h"
 #include ".\outofprocess\serverprocess.h"
@@ -69,7 +70,6 @@
 #include ".\outofprocess\websockethandler.h"
 #include ".\outofprocess\forwardinghandler.h"
 #include ".\outofprocess\outprocessapplication.h"
-#include ".\outofprocess\responseheaderhash.h"
 #include ".\outofprocess\winhttphelper.h"
 
 #ifdef max
