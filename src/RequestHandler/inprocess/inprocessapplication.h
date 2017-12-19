@@ -124,32 +124,6 @@ private:
 
     static
     VOID
-    FindDotNetFolders(
-        _In_ PCWSTR pszPath,
-        _Out_ std::vector<std::wstring> *pvFolders
-    );
-
-    static
-    HRESULT
-    FindHighestDotNetVersion(
-        _In_ std::vector<std::wstring> vFolders,
-        _Out_ STRU *pstrResult
-    );
-
-    static
-    BOOL
-    DirectoryExists(
-        _In_ STRU *pstrPath  //todo: this does not need to be stru, can be PCWSTR
-    );
-
-    static BOOL
-    GetEnv(
-        _In_ PCWSTR pszEnvironmentVariable,
-        _Out_ STRU *pstrResult
-    );
-
-    static
-    VOID
     ExecuteAspNetCoreProcess(
         _In_ LPVOID pContext
     );

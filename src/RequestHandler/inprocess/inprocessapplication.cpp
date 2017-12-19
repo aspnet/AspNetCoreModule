@@ -180,84 +180,6 @@ IN_PROCESS_APPLICATION::OnExecuteRequest(
     return RQ_NOTIFICATION_FINISH_REQUEST;
 }
 
-BOOL
-IN_PROCESS_APPLICATION::DirectoryExists(
-    _In_ STRU *pstrPath
-)
-{
-    WIN32_FILE_ATTRIBUTE_DATA data;
-
-    if (pstrPath->IsEmpty())
-    {
-        return false;
-    }
-
-    return GetFileAttributesExW(pstrPath->QueryStr(), GetFileExInfoStandard, &data);
-}
-
-BOOL
-IN_PROCESS_APPLICATION::GetEnv(
-    _In_ PCWSTR pszEnvironmentVariable,
-    _Out_ STRU *pstrResult
-)
-{
-    DWORD dwLength;
-    PWSTR pszBuffer = NULL;
-    BOOL fSucceeded = FALSE;
-
-    if (pszEnvironmentVariable == NULL)
-    {
-        goto Finished;
-    }
-    pstrResult->Reset();
-    dwLength = GetEnvironmentVariableW(pszEnvironmentVariable, NULL, 0);
-
-    if (dwLength == 0)
-    {
-        goto Finished;
-    }
-
-    pszBuffer = new WCHAR[dwLength];
-    if (GetEnvironmentVariableW(pszEnvironmentVariable, pszBuffer, dwLength) == 0)
-    {
-        goto Finished;
-    }
-
-    pstrResult->Copy(pszBuffer);
-
-    fSucceeded = TRUE;
-
-Finished:
-    if (pszBuffer != NULL) {
-        delete[] pszBuffer;
-    }
-    return fSucceeded;
-}
-
-VOID
-IN_PROCESS_APPLICATION::FindDotNetFolders(
-    _In_ PCWSTR pszPath,
-    _Out_ std::vector<std::wstring> *pvFolders
-)
-{
-    HANDLE handle = NULL;
-    WIN32_FIND_DATAW data = { 0 };
-
-    handle = FindFirstFileExW(pszPath, FindExInfoStandard, &data, FindExSearchNameMatch, NULL, 0);
-    if (handle == INVALID_HANDLE_VALUE)
-    {
-        return;
-    }
-
-    do
-    {
-        std::wstring folder(data.cFileName);
-        pvFolders->push_back(folder);
-    } while (FindNextFileW(handle, &data));
-
-    FindClose(handle);
-}
-
 VOID
 IN_PROCESS_APPLICATION::SetCallbackHandles(
     _In_ PFN_REQUEST_HANDLER request_handler,
@@ -275,30 +197,6 @@ IN_PROCESS_APPLICATION::SetCallbackHandles(
 
     // Initialization complete
     SetEvent(m_pInitalizeEvent);
-}
-
-HRESULT
-IN_PROCESS_APPLICATION::FindHighestDotNetVersion(
-    _In_ std::vector<std::wstring> vFolders,
-    _Out_ STRU *pstrResult
-)
-{
-    HRESULT hr = S_OK;
-    fx_ver_t max_ver(-1, -1, -1);
-    for (const auto& dir : vFolders)
-    {
-        fx_ver_t fx_ver(-1, -1, -1);
-        if (fx_ver_t::parse(dir, &fx_ver, false))
-        {
-            // TODO using max instead of std::max works
-            max_ver = max(max_ver, fx_ver);
-        }
-    }
-
-    hr = pstrResult->Copy(max_ver.as_str().c_str());
-
-    // we check FAILED(hr) outside of function
-    return hr;
 }
 
 VOID
