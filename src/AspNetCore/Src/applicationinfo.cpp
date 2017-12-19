@@ -29,11 +29,6 @@ APPLICATION_INFO::~APPLICATION_INFO()
         m_pApplication = NULL;
     }
 
-    if (m_pHostFxrParameters != NULL)
-    {
-        delete m_pHostFxrParameters;
-    }
-
     // configuration should be dereferenced after application shutdown
     // since the former will use it during shutdown
     if (m_pConfiguration != NULL)
@@ -155,14 +150,13 @@ APPLICATION_INFO::EnsureApplicationCreated()
     APPLICATION*        pApplication = NULL;
     STACK_STRU(struFileName, 300);  // >MAX_PATH
     STRU                hostFxrDllLocation;
-    HOSTFXR_PARAMETERS* pHostFxrParameters = NULL;
 
     if (m_pApplication != NULL)
     {
         goto Finished;
     }
 
-    hr = FindRequestHandlerAssembly(&pHostFxrParameters);
+    hr = FindRequestHandlerAssembly();
     if (FAILED(hr))
     {
         goto Finished;
@@ -183,14 +177,13 @@ APPLICATION_INFO::EnsureApplicationCreated()
             goto Finished;
         }
 
-        hr = m_pfnAspNetCoreCreateApplication(m_pServer, m_pConfiguration, pHostFxrParameters, &pApplication);
+        hr = m_pfnAspNetCoreCreateApplication(m_pServer, m_pConfiguration, &pApplication);
         if (FAILED(hr))
         {
             goto Finished;
         }
         m_pApplication = pApplication;
     }
-    m_pHostFxrParameters = pHostFxrParameters;
 Finished:
     if (fLocked)
     {
@@ -200,11 +193,10 @@ Finished:
 }
 
 HRESULT
-APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** out_pHostfxrParameters)
+APPLICATION_INFO::FindRequestHandlerAssembly()
 {
     HRESULT             hr = S_OK;
     BOOL                fLocked = FALSE;
-    HOSTFXR_PARAMETERS* pHostfxrParameters = NULL;
     STACK_STRU(struFileName, 256);
 
     if (g_fAspnetcoreRHLoadedError)
@@ -226,15 +218,8 @@ APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** out_pHos
             goto Finished;
         }
 
-        pHostfxrParameters = new HOSTFXR_PARAMETERS();
-        if (pHostfxrParameters == NULL)
-        {
-            hr = E_OUTOFMEMORY;
-            goto Finished;
-        }
-
-        if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(pHostfxrParameters, m_pConfiguration)) ||
-            FAILED(hr = FindNativeAssemblyFromHostfxr(&struFileName, pHostfxrParameters)))
+        if (FAILED(hr = HOSTFXR_UTILITY::GetHostFxrParameters(m_pConfiguration)) ||
+            FAILED(hr = FindNativeAssemblyFromHostfxr(&struFileName)))
         {
             // TODO eventually make this fail for in process loading.
             hr = FindNativeAssemblyFromGlobalLocation(&struFileName);
@@ -267,8 +252,6 @@ APPLICATION_INFO::FindRequestHandlerAssembly(_Out_ HOSTFXR_PARAMETERS** out_pHos
             goto Finished;
         }
         g_fAspnetcoreRHAssemblyLoaded = TRUE;
-
-        *out_pHostfxrParameters = pHostfxrParameters;
     }
 
 Finished:
@@ -276,13 +259,6 @@ Finished:
     // Question: we remember the load failure so that we will not try again.
     // User needs to check whether the fuction pointer is NULL 
     //
-    if (FAILED(hr))
-    {
-        if (pHostfxrParameters != NULL)
-        {
-            delete pHostfxrParameters;
-        }
-    }
     m_pfnAspNetCoreCreateApplication = g_pfnAspNetCoreCreateApplication;
     m_pfnAspNetCoreCreateRequestHandler = g_pfnAspNetCoreCreateRequestHandler;
     if (!g_fAspnetcoreRHLoadedError && FAILED(hr))
@@ -354,8 +330,7 @@ Finished:
 
 HRESULT
 APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
-    STRU* struFilename,
-    HOSTFXR_PARAMETERS* pHostFxrParameters
+    STRU* struFilename
 )
 {
     HRESULT     hr = S_OK;
@@ -374,7 +349,7 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
     DBG_ASSERT(struFileName != NULL);
     DBG_ASSERT(pHostFxrParameters != NULL);
 
-    hmHostFxrDll = LoadLibraryW(pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
+    hmHostFxrDll = LoadLibraryW(m_pConfiguration->QueryHostFxrLocation()->QueryStr());
     
     if (hmHostFxrDll == NULL)
     {
@@ -393,8 +368,8 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
     }
 
     intHostFxrExitCode = pFnHostFxrSearchDirectories(
-        *pHostFxrParameters->QueryArgCount(), 
-        *pHostFxrParameters->QueryArguments(), 
+        *m_pConfiguration->QueryHostFxrArgCount(),
+        *m_pConfiguration->QueryHostFxrArguments(),
         pwszNativeSearchPathsBuffer, 
         BUFFER_SIZE
     );

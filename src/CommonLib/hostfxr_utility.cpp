@@ -25,7 +25,6 @@ HOSTFXR_UTILITY::~HOSTFXR_UTILITY()
 //
 HRESULT
 HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
-    HOSTFXR_PARAMETERS* pHostfxrParameters,
     ASPNETCORE_CONFIG *pConfig
 )
 {
@@ -37,7 +36,7 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
     STRU                struArguments;
     DWORD               dwPosition;
 
-    pHostfxrParameters->QueryHostfxrLocation()->Copy(struHostfxrPath);
+    pConfig->QueryHostFxrLocation()->Copy(struHostfxrPath);
 
     hr = UTILITY::ConvertPathToFullPath(pConfig->QueryProcessPath()->QueryStr(),
         pConfig->QueryApplicationPhysicalPath()->QueryStr(),
@@ -82,7 +81,7 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
         goto Finished;
     }
 
-    if (FAILED(hr = GetArguments(&struArguments, &struExePath, pHostfxrParameters)))
+    if (FAILED(hr = GetArguments(&struArguments, &struExePath, pConfig)))
     {
         goto Finished;
     }
@@ -97,7 +96,6 @@ Finished:
 
 HRESULT
 HOSTFXR_UTILITY::GetHostFxrParameters(
-    HOSTFXR_PARAMETERS* pHostFxrParameters,
     ASPNETCORE_CONFIG *pConfig
 )
 {
@@ -124,12 +122,12 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
         if ((hFileHandle = UTILITY::CheckIfFileExists(&struHostFxrPath)) != INVALID_HANDLE_VALUE)
         {
             // Standalone application
-            if (FAILED(hr = pHostFxrParameters->QueryHostfxrLocation()->Copy(struHostFxrPath)))
+            if (FAILED(hr = pConfig->QueryHostFxrLocation()->Copy(struHostFxrPath)))
             {
                 goto Finished;
             }
 
-            hr = GetStandaloneHostfxrParameters(pHostFxrParameters, pConfig);
+            hr = GetStandaloneHostfxrParameters(pConfig);
             goto Finished;
         }
         else
@@ -223,12 +221,12 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
         goto Finished;
     }
     
-    if (FAILED(hr = GetArguments(pConfig->QueryArguments(), &strDotnetExeLocation, pHostFxrParameters)))
+    if (FAILED(hr = GetArguments(pConfig->QueryArguments(), &strDotnetExeLocation, pConfig)))
     {
         goto Finished;
     }
 
-    if (FAILED(pHostFxrParameters->QueryHostfxrLocation()->Copy(struHostFxrPath)))
+    if (FAILED(pConfig->QueryHostFxrLocation()->Copy(struHostFxrPath)))
     {
         goto Finished;
     }
@@ -254,7 +252,7 @@ HRESULT
 HOSTFXR_UTILITY::GetArguments(
     STRU* struArgumentsFromConfig, 
     STRU* pstruExePath, 
-    HOSTFXR_PARAMETERS* pHostFxrParameters
+    ASPNETCORE_CONFIG* pConfig
 )
 {
     HRESULT     hr = S_OK;
@@ -279,8 +277,8 @@ HOSTFXR_UTILITY::GetArguments(
         argv[i + 2] = SysAllocString(pwzArgs[i]);
     }
 
-    *pHostFxrParameters->QueryArgCount() = argc + 2;
-    *pHostFxrParameters->QueryArguments() = argv;
+    *pConfig->QueryHostFxrArgCount() = argc + 2;
+    *pConfig->QueryHostFxrArguments() = argv;
 
 Finished:
     if (pwzArgs != NULL)

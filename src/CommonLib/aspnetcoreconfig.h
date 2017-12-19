@@ -68,7 +68,7 @@ public:
         _In_  IHttpServer             *pHttpServer,
         _In_  HTTP_MODULE_ID           pModuleId,
         _In_  IHttpContext            *pHttpContext,
-        _Out_ ASPNETCORE_CONFIG     **ppAspNetCoreConfig
+        _Out_ ASPNETCORE_CONFIG       **ppAspNetCoreConfig
     );
 
     ENVIRONMENT_VAR_HASH*
@@ -215,6 +215,30 @@ public:
         return &m_struConfigPath;
     }
 
+    PCWSTR**
+    QueryHostFxrArguments(
+        VOID
+    )
+    {
+        return &m_pcwArguments;
+    }
+
+    STRU*
+    QueryHostFxrLocation(
+        VOID
+    )
+    {
+        return &m_struHostFxrLocation;
+    }
+
+    DWORD*
+    QueryHostFxrArgCount(
+        VOID
+    )
+    {
+        return &m_dwArgc;
+    }
+
     VOID
     ReferenceConfiguration(
         VOID
@@ -267,4 +291,7 @@ private:
     BOOL                   m_fIsStandAloneApplication;
     APP_HOSTING_MODEL      m_hostingModel;
     ENVIRONMENT_VAR_HASH*  m_pEnvironmentVariables;
+    STRU                   m_struHostFxrLocation;
+    PCWSTR*                m_pcwArguments;
+    DWORD                  m_dwArgc;
 };

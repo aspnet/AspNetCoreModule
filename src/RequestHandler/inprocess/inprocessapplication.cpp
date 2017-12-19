@@ -4,8 +4,7 @@ IN_PROCESS_APPLICATION*  IN_PROCESS_APPLICATION::s_Application = NULL;
 
 IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(
     IHttpServer*        pHttpServer, 
-    ASPNETCORE_CONFIG*  pConfig, 
-    HOSTFXR_PARAMETERS* pHostFxrParameters) :
+    ASPNETCORE_CONFIG*  pConfig) :
     APPLICATION(pHttpServer, pConfig),
     m_ProcessExitCode(0),
     m_fManagedAppLoaded(FALSE),
@@ -24,7 +23,6 @@ IN_PROCESS_APPLICATION::IN_PROCESS_APPLICATION(
     // TODO we can probably initialized as I believe we are the only ones calling recycle.
     m_fInitialized = TRUE;
     m_status = APPLICATION_STATUS::RUNNING;
-    m_pHostFxrParameters = pHostFxrParameters;
 }
 
 IN_PROCESS_APPLICATION::~IN_PROCESS_APPLICATION()
@@ -552,7 +550,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
 
     // should be a redudant call here, but we will be safe and call it twice.
     // TODO AV here on m_pHostFxrParameters being null
-    hModule = LoadLibraryW(m_pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
+    hModule = LoadLibraryW(m_pConfig->QueryHostFxrLocation()->QueryStr());
 
     if (hModule == NULL)
     {
@@ -578,7 +576,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // set the callbacks
     s_Application = this;
 
-    RunDotnetApplication(*m_pHostFxrParameters->QueryArgCount(), *m_pHostFxrParameters->QueryArguments(), pProc);
+    RunDotnetApplication(*m_pConfig->QueryHostFxrArgCount(), *m_pConfig->QueryHostFxrArguments(), pProc);
 
 Finished:
     //

@@ -6,6 +6,12 @@
 
 ASPNETCORE_CONFIG::~ASPNETCORE_CONFIG()
 {
+    if (m_pcwArguments != NULL)
+    {
+        delete[] m_pcwArguments;
+        m_pcwArguments = NULL;
+    }
+
     if (m_pEnvironmentVariables != NULL)
     {
         m_pEnvironmentVariables->Clear();
