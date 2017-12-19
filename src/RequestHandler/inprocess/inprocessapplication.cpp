@@ -680,7 +680,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // set the callbacks
     s_Application = this;
 
-    RunDotnetApplication(*m_pHostFxrParameters->QueryArgc(), *m_pHostFxrParameters->QueryArguments(), pProc);
+    RunDotnetApplication(*m_pHostFxrParameters->QueryArgCount(), *m_pHostFxrParameters->QueryArguments(), pProc);
 
 Finished:
     //

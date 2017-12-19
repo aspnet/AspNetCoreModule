@@ -346,89 +346,102 @@ Finished:
     return hr;
 }
 
+// 
+// Tries to find aspnetcorerh.dll from the application
+// Calls into hostfxr.dll to find it.
+// Will leave hostfxr.dll loaded as it will be used again to call hostfxr_main.
+// 
+
 HRESULT
-APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARAMETERS* pHostFxrParameters)
+APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
+    STRU* struFilename,
+    HOSTFXR_PARAMETERS* pHostFxrParameters
+)
 {
     HRESULT     hr = S_OK;
-    HANDLE      nativeRequestHandlerHandle;
+    HANDLE      hNativeRequestHandler = INVALID_HANDLE_VALUE;
     STRU        struApplicationFullPath;
     STRU        struNativeSearchPaths;
-    STRU        nativeDllLocation;
-    HMODULE     hostFxrDll = NULL;
-    INT         hostfxrExitCode = 0;
-    INT         index = -1;
-    INT         prevIndex = 0;
+    STRU        struNativeDllLocation;
+    HMODULE     hmHostFxrDll = NULL;
+    INT         intHostFxrExitCode = 0;
+    INT         intIndex = -1;
+    INT         intPrevIndex = 0;
     BOOL        fFound = FALSE;
     const DWORD BUFFER_SIZE = 1024 * 10;
-    
-    WCHAR       pszNativeSearchPathsBuffer[BUFFER_SIZE];
+    WCHAR       pwszNativeSearchPathsBuffer[BUFFER_SIZE];
     
     DBG_ASSERT(struFileName != NULL);
+    DBG_ASSERT(pHostFxrParameters != NULL);
 
-    hostFxrDll = ::LoadLibraryW(pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
+    hmHostFxrDll = LoadLibraryW(pHostFxrParameters->QueryHostfxrLocation()->QueryStr());
     
-    if (hostFxrDll == NULL)
+    if (hmHostFxrDll == NULL)
     {
         // Could not load hostfxr
         goto Finished;
     }
 
     hostfxr_get_native_search_directories_fn pFnHostFxrSearchDirectories = (hostfxr_get_native_search_directories_fn)
-        GetProcAddress(hostFxrDll, "hostfxr_get_native_search_directories");
+        GetProcAddress(hmHostFxrDll, "hostfxr_get_native_search_directories");
 
     if (pFnHostFxrSearchDirectories == NULL)
     {
-        // Host fxr version does not have correct function
+        // Host fxr version is incorrect
         hr = E_FAIL;
         goto Finished;
     }
 
-    hostfxrExitCode = pFnHostFxrSearchDirectories(
-        *pHostFxrParameters->QueryArgc(), 
+    intHostFxrExitCode = pFnHostFxrSearchDirectories(
+        *pHostFxrParameters->QueryArgCount(), 
         *pHostFxrParameters->QueryArguments(), 
-        pszNativeSearchPathsBuffer, 
+        pwszNativeSearchPathsBuffer, 
         BUFFER_SIZE
     );
 
-    // Buff now contains the native serach paths
-    // Iterate through and find it.
-    if (hostfxrExitCode != 0)
+    if (intHostFxrExitCode != 0)
     {
+        // Call to hostfxr failed.
         hr = E_FAIL;
         goto Finished;
     }
 
-    struNativeSearchPaths.Copy(pszNativeSearchPathsBuffer);
-    while ((index = struNativeSearchPaths.IndexOf(L";", prevIndex)) != -1)
+    if (FAILED(hr = struNativeSearchPaths.Copy(pwszNativeSearchPathsBuffer)))
     {
-        if (FAILED(hr = nativeDllLocation.Copy(struNativeSearchPaths.QueryStr(), index - prevIndex)))
+        goto Finished;
+    }
+    
+    // The native search directories are semicolon delimited.
+    // Split on semicolons, append aspnetcorerh.dll, and check if the file exists.
+    while ((intIndex = struNativeSearchPaths.IndexOf(L";", intPrevIndex)) != -1)
+    {
+        if (FAILED(hr = struNativeDllLocation.Copy(struNativeSearchPaths.QueryStr(), intIndex - intPrevIndex)))
         {
             goto Finished;
         }
-        if (!nativeDllLocation.EndsWith(L"\\"))
+
+        if (!struNativeDllLocation.EndsWith(L"\\"))
         {
-            hr = nativeDllLocation.Append(L"\\");
-            if (FAILED(hr))
+            if (FAILED(hr = struNativeDllLocation.Append(L"\\")))
             {
                 goto Finished;
             }
         }
 
-        hr = nativeDllLocation.Append(g_pwzAspnetcoreRequestHandlerName);
-        if (FAILED(hr))
+        if (FAILED(struNativeDllLocation.Append(g_pwzAspnetcoreRequestHandlerName)))
         {
             goto Finished;
         }
-        nativeRequestHandlerHandle = UTILITY::CheckIfFileExists(&nativeDllLocation);
-        
-        if (nativeRequestHandlerHandle != INVALID_HANDLE_VALUE)
+
+        hNativeRequestHandler = UTILITY::CheckIfFileExists(&struNativeDllLocation);
+        if (hNativeRequestHandler != INVALID_HANDLE_VALUE)
         {
-            struFilename->Copy(nativeDllLocation);
+            struFilename->Copy(struNativeDllLocation);
             fFound = TRUE;
-            CloseHandle(nativeRequestHandlerHandle);
             break;
         }
-        prevIndex = index + 1;
+
+        intPrevIndex = intIndex + 1;
     }
 
     if (!fFound)
@@ -438,6 +451,10 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARA
     }
 
 Finished:
+    if (hNativeRequestHandler != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(hNativeRequestHandler);
+    }
 
     return hr;
 }

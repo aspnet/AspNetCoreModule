@@ -33,33 +33,41 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
     HANDLE              hFileHandle = INVALID_HANDLE_VALUE;
     STRU                struHostfxrPath;
     STRU                struExePath;
+    STRU                struDllPath;
     STRU                struArguments;
     DWORD               dwPosition;
 
     pHostfxrParameters->QueryHostfxrLocation()->Copy(struHostfxrPath);
 
-    // Get application path and exe path
-    UTILITY::ConvertPathToFullPath(pConfig->QueryProcessPath()->QueryStr(),
+    hr = UTILITY::ConvertPathToFullPath(pConfig->QueryProcessPath()->QueryStr(),
         pConfig->QueryApplicationPhysicalPath()->QueryStr(),
         &struExePath);
-
-    // Change .exe to .dll and check if file exists
-    dwPosition = struExePath.LastIndexOf(L'.', 0);
-    if (dwPosition == -1)
+    if (FAILED(hr))
     {
-        hr = ERROR_BAD_ENVIRONMENT;
         goto Finished;
     }
 
-    struExePath.QueryStr()[dwPosition] = L'\0';
+    if (FAILED(hr = struDllPath.Copy(struExePath)))
+    {
+        goto Finished;
+    }
 
-    if (FAILED(hr = struExePath.SyncWithBuffer())
-        || FAILED(hr = struExePath.Append(L".dll")))
+    dwPosition = struDllPath.LastIndexOf(L'.', 0);
+    if (dwPosition == -1)
+    {
+        hr = E_FAIL;
+        goto Finished;
+    }
+
+    struDllPath.QueryStr()[dwPosition] = L'\0';
+
+    if (FAILED(hr = struDllPath.SyncWithBuffer())
+        || FAILED(hr = struDllPath.Append(L".dll")))
     {
         goto Finished;
     }
     
-    hFileHandle = UTILITY::CheckIfFileExists(&struExePath);
+    hFileHandle = UTILITY::CheckIfFileExists(&struDllPath);
     if (hFileHandle == INVALID_HANDLE_VALUE)
     {
         // Treat access issue as File not found
@@ -67,11 +75,12 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
         goto Finished;
     }
 
-    CloseHandle(hFileHandle);
-
-    struArguments.Copy(struExePath);
-    struArguments.Append(L" ");
-    struArguments.Append(pConfig->QueryArguments());
+    if (FAILED(hr = struArguments.Copy(struDllPath))
+        || FAILED(hr = struArguments.Append(L" "))
+        || struArguments.Append(pConfig->QueryArguments()))
+    {
+        goto Finished;
+    }
 
     if (FAILED(hr = GetArguments(&struArguments, &struExePath, pHostfxrParameters)))
     {
@@ -79,6 +88,10 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
     }
 
 Finished:
+    if (hFileHandle != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(hFileHandle);
+    }
     return hr;
 }
 
@@ -88,8 +101,7 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
     ASPNETCORE_CONFIG *pConfig
 )
 {
-    HRESULT hr = S_OK;
-
+    HRESULT                     hr = S_OK;
     STRU                        struSystemPathVariable;
     STRU                        struHostFxrPath;
     STRU                        strDotnetExeLocation;
@@ -101,25 +113,23 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
     DWORD                       dwLength;
     WCHAR                       pszDotnetLocation[MAX_PATH];
 
-    // Check if the process path is an absolute path
-    // then check well known locations
-    // Split on ';', checking to see if dotnet.exe exists in any folders
-
     if ((hFileHandle = UTILITY::CheckIfFileExists(pConfig->QueryProcessPath())) != INVALID_HANDLE_VALUE)
     {
-        // Done, find hostfxr.dll 
-        // first check if hostfxr exists in the same folder
-        UTILITY::ConvertPathToFullPath(L"hostfxr.dll", pConfig->QueryApplicationPath()->QueryStr(), &struHostFxrPath);
+        hr = UTILITY::ConvertPathToFullPath(L"hostfxr.dll", pConfig->QueryApplicationPath()->QueryStr(), &struHostFxrPath);
+        if (FAILED(hr))
+        {
+            goto Finished;
+        }
 
         if ((hFileHandle = UTILITY::CheckIfFileExists(&struHostFxrPath)) != INVALID_HANDLE_VALUE)
         {
-            CloseHandle(hFileHandle);
+            // Standalone application
             if (FAILED(hr = pHostFxrParameters->QueryHostfxrLocation()->Copy(struHostFxrPath)))
             {
                 goto Finished;
             }
 
-            GetStandaloneHostfxrParameters(pHostFxrParameters, pConfig);
+            hr = GetStandaloneHostfxrParameters(pHostFxrParameters, pConfig);
             goto Finished;
         }
         else
@@ -130,7 +140,7 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
     else if ((dwLength = SearchPath(NULL, L"dotnet", L".exe", MAX_PATH, pszDotnetLocation, NULL)) == 0)
     {
         hr = E_FAIL;
-        // TODO log "Could not find dotnet. Please specify....
+        // Could not find dotnet
         goto Finished;
     }
 
@@ -163,7 +173,7 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
 
     if (!UTILITY::DirectoryExists(&struHostFxrPath))
     {
-        // error, not found the folder
+        // error, not found in folder
         hr = ERROR_BAD_ENVIRONMENT;
         goto Finished;
     }
@@ -224,19 +234,35 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
     }
 
 Finished:
+
+    if (hFileHandle != INVALID_HANDLE_VALUE)
+    {
+        CloseHandle(hFileHandle);
+    }
     return hr;
 }
 
+//
+// Forms the argument list in HOSTFXR_PARAMETERS.
+// Sets the ArgCount and Arguments.
+// Arg structure:
+// argv[0] = Path to exe activating hostfxr.
+// argv[1] = L"exec"
+// argv[2] = first argument specified in the arguments portion of aspnetcore config. 
+// 
 HRESULT
-HOSTFXR_UTILITY::GetArguments(STRU* struArguments, STRU* pstruExePath, HOSTFXR_PARAMETERS* pHostFxrParameters)
+HOSTFXR_UTILITY::GetArguments(
+    STRU* struArgumentsFromConfig, 
+    STRU* pstruExePath, 
+    HOSTFXR_PARAMETERS* pHostFxrParameters
+)
 {
     HRESULT     hr = S_OK;
     INT         argc = 0;
     PCWSTR*     argv = NULL;
     LPWSTR*     pwzArgs = NULL;
 
-    // First parameter to hostfxr is the exe activating it.
-    pwzArgs = CommandLineToArgvW(struArguments->QueryStr(), &argc);
+    pwzArgs = CommandLineToArgvW(struArgumentsFromConfig->QueryStr(), &argc);
 
     argv = new PCWSTR[argc + 2];
     if (argv == NULL)
@@ -247,18 +273,20 @@ HOSTFXR_UTILITY::GetArguments(STRU* struArguments, STRU* pstruExePath, HOSTFXR_P
 
     argv[0] = SysAllocString(pstruExePath->QueryStr());
     argv[1] = SysAllocString(L"exec");
+
     for (INT i = 0; i < argc; i++)
     {
         argv[i + 2] = SysAllocString(pwzArgs[i]);
     }
 
-    *pHostFxrParameters->QueryArgc() = argc + 2;
+    *pHostFxrParameters->QueryArgCount() = argc + 2;
     *pHostFxrParameters->QueryArguments() = argv;
 
 Finished:
     if (pwzArgs != NULL)
     {
         LocalFree(pwzArgs);
+        DBG_ASSERT(pwzArgs == NULL);
     }
     return hr;
 }

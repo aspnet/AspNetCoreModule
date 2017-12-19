@@ -38,7 +38,7 @@ public:
     }
 
     DWORD*
-    QueryArgc(
+    QueryArgCount(
         VOID
     )
     {
@@ -65,8 +65,13 @@ public:
     );
 
     static
-    HRESULT GetArguments(STRU * struArguments, STRU * pstruExePath, HOSTFXR_PARAMETERS * pHostFxrParameters);
+    HRESULT GetArguments(
+        STRU * struArguments, 
+        STRU * pstruExePath, 
+        HOSTFXR_PARAMETERS * pHostFxrParameters
+    );
 
+private:
     static
     HRESULT
     GetStandaloneHostfxrParameters(
