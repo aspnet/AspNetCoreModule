@@ -33,6 +33,7 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
     HANDLE              hFileHandle = INVALID_HANDLE_VALUE;
     STRU                struHostfxrPath;
     STRU                struExePath;
+    STRU                struArguments;
     DWORD               dwPosition;
 
     pHostfxrParameters->QueryHostfxrLocation()->Copy(struHostfxrPath);
@@ -41,12 +42,6 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
     UTILITY::ConvertPathToFullPath(pConfig->QueryProcessPath()->QueryStr(),
         pConfig->QueryApplicationPhysicalPath()->QueryStr(),
         &struExePath);
-
-  
-    if (FAILED(hr = pHostfxrParameters->QueryExePath()->Copy(struExePath)))
-    {
-        goto Finished;
-    }
 
     // Change .exe to .dll and check if file exists
     dwPosition = struExePath.LastIndexOf(L'.', 0);
@@ -71,13 +66,18 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
         hr = ERROR_FILE_NOT_FOUND;
         goto Finished;
     }
-    else
+
+    CloseHandle(hFileHandle);
+
+    struArguments.Copy(struExePath);
+    struArguments.Append(L" ");
+    struArguments.Append(pConfig->QueryArguments());
+
+    if (FAILED(hr = GetArguments(&struArguments, &struExePath, pHostfxrParameters)))
     {
-        CloseHandle(hFileHandle);
-        pHostfxrParameters->QueryArguments()->Copy(struExePath);
-        pHostfxrParameters->QueryArguments()->Append(L" ");
-        pHostfxrParameters->QueryArguments()->Append(pConfig->QueryArguments());
+        goto Finished;
     }
+
 Finished:
     return hr;
 }
@@ -149,8 +149,8 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
 
     struHostFxrPath.QueryStr()[dwPosition] = L'\0';
 
-    if (FAILED(hr = struHostFxrPath.SyncWithBuffer()) ||
-        FAILED(hr = struHostFxrPath.Append(L"\\")))
+    if (FAILED(hr = struHostFxrPath.SyncWithBuffer())
+        || FAILED(hr = struHostFxrPath.Append(L"\\")))
     {
         goto Finished;
     }
@@ -212,14 +212,53 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
         hr = ERROR_FILE_INVALID;
         goto Finished;
     }
+    
+    if (FAILED(hr = GetArguments(pConfig->QueryArguments(), &strDotnetExeLocation, pHostFxrParameters)))
+    {
+        goto Finished;
+    }
 
-    if (FAILED(pHostFxrParameters->QueryHostfxrLocation()->Copy(struHostFxrPath))
-        || FAILED(pHostFxrParameters->QueryExePath()->Copy(strDotnetExeLocation))
-        || FAILED(pHostFxrParameters->QueryArguments()->Copy(pConfig->QueryArguments())))
+    if (FAILED(pHostFxrParameters->QueryHostfxrLocation()->Copy(struHostFxrPath)))
     {
         goto Finished;
     }
 
 Finished:
+    return hr;
+}
+
+HRESULT
+HOSTFXR_UTILITY::GetArguments(STRU* struArguments, STRU* pstruExePath, HOSTFXR_PARAMETERS* pHostFxrParameters)
+{
+    HRESULT     hr = S_OK;
+    INT         argc = 0;
+    PCWSTR*     argv = NULL;
+    LPWSTR*     pwzArgs = NULL;
+
+    // First parameter to hostfxr is the exe activating it.
+    pwzArgs = CommandLineToArgvW(struArguments->QueryStr(), &argc);
+
+    argv = new PCWSTR[argc + 2];
+    if (argv == NULL)
+    {
+        hr = E_OUTOFMEMORY;
+        goto Finished;
+    }
+
+    argv[0] = SysAllocString(pstruExePath->QueryStr());
+    argv[1] = SysAllocString(L"exec");
+    for (INT i = 0; i < argc; i++)
+    {
+        argv[i + 2] = SysAllocString(pwzArgs[i]);
+    }
+
+    *pHostFxrParameters->QueryArgc() = argc + 2;
+    *pHostFxrParameters->QueryArguments() = argv;
+
+Finished:
+    if (pwzArgs != NULL)
+    {
+        LocalFree(pwzArgs);
+    }
     return hr;
 }

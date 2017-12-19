@@ -159,6 +159,7 @@ private:
     IHttpServer            *m_pServer;
     PFN_ASPNETCORE_CREATE_APPLICATION      m_pfnAspNetCoreCreateApplication;
     PFN_ASPNETCORE_CREATE_REQUEST_HANDLER  m_pfnAspNetCoreCreateRequestHandler;
+    HOSTFXR_PARAMETERS*                    m_pHostFxrParameters;
 };
 
 class APPLICATION_INFO_HASH :

@@ -545,45 +545,6 @@ UTILITY::DirectoryExists(
     return GetFileAttributesExW(pstrPath->QueryStr(), GetFileExInfoStandard, &data);
 }
 
-BOOL
-UTILITY::GetSystemPathVariable(
-    _In_ PCWSTR pszEnvironmentVariable,
-    _Out_ STRU *pstrResult
-)
-{
-    DWORD dwLength;
-    PWSTR pszBuffer = NULL;
-    BOOL fSucceeded = FALSE;
-
-    if (pszEnvironmentVariable == NULL)
-    {
-        goto Finished;
-    }
-    pstrResult->Reset();
-    dwLength = GetEnvironmentVariableW(pszEnvironmentVariable, NULL, 0);
-
-    if (dwLength == 0)
-    {
-        goto Finished;
-    }
-
-    pszBuffer = new WCHAR[dwLength];
-    if (GetEnvironmentVariableW(pszEnvironmentVariable, pszBuffer, dwLength) == 0)
-    {
-        goto Finished;
-    }
-
-    pstrResult->Copy(pszBuffer);
-
-    fSucceeded = TRUE;
-
-Finished:
-    if (pszBuffer != NULL) {
-        delete[] pszBuffer;
-    }
-    return fSucceeded;
-}
-
 VOID
 UTILITY::FindDotNetFolders(
     _In_ PCWSTR pszPath,
@@ -627,20 +588,4 @@ UTILITY::CheckIfFileExists(STRU* struFile)
         NULL);
 
     return hFileHandle;
-}
-
-std::vector<std::wstring>
-UTILITY::SplitStringOnWhitespace(STRU* struFile)
-{
-    // Splitting a string on white space is too difficult and risky without stdlib.
-    std::wstringstream ss(struFile->QueryStr());
-    std::wstring item;
-    std::vector<std::wstring> outputVector;
-    ss >> item;
-    while (ss)
-    {
-        outputVector.push_back(item);
-        ss >> item;
-    }
-    return outputVector;
 }

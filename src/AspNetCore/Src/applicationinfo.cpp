@@ -29,6 +29,11 @@ APPLICATION_INFO::~APPLICATION_INFO()
         m_pApplication = NULL;
     }
 
+    if (m_pHostFxrParameters != NULL)
+    {
+        delete m_pHostFxrParameters;
+    }
+
     // configuration should be dereferenced after application shutdown
     // since the former will use it during shutdown
     if (m_pConfiguration != NULL)
@@ -182,7 +187,7 @@ APPLICATION_INFO::EnsureApplicationCreated()
         }
         m_pApplication = pApplication;
     }
-
+    m_pHostFxrParameters = pHostFxrParameters;
 Finished:
     if (fLocked)
     {
@@ -268,6 +273,13 @@ Finished:
     // Question: we remember the load failure so that we will not try again.
     // User needs to check whether the fuction pointer is NULL 
     //
+    if (FAILED(hr))
+    {
+        if (pHostfxrParameters != NULL)
+        {
+            delete pHostfxrParameters;
+        }
+    }
     m_pfnAspNetCoreCreateApplication = g_pfnAspNetCoreCreateApplication;
     m_pfnAspNetCoreCreateRequestHandler = g_pfnAspNetCoreCreateRequestHandler;
     if (!g_fAspnetcoreRHLoadedError && FAILED(hr))
@@ -344,7 +356,6 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARA
     INT         index = -1;
     INT         prevIndex = 0;
     BOOL        fFound = FALSE;
-    PWSTR       argv[3];
     const DWORD BUFFER_SIZE = 1024 * 10;
     
     WCHAR       pszNativeSearchPathsBuffer[BUFFER_SIZE];
@@ -369,11 +380,12 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(STRU* struFilename, HOSTFXR_PARA
         goto Finished;
     }
 
-    argv[0] = pHostFxrParameters->QueryExePath()->QueryStr();
-    argv[1] = L"exec";
-    argv[2] = pHostFxrParameters->QueryArguments()->QueryStr();
-
-    hostfxrExitCode = pFnHostFxrSearchDirectories(3, (const WCHAR**)argv, pszNativeSearchPathsBuffer, BUFFER_SIZE);
+    hostfxrExitCode = pFnHostFxrSearchDirectories(
+        *pHostFxrParameters->QueryArgc(), 
+        *pHostFxrParameters->QueryArguments(), 
+        pszNativeSearchPathsBuffer, 
+        BUFFER_SIZE
+    );
 
     // Buff now contains the native serach paths
     // Iterate through and find it.

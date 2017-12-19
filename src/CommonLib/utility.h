@@ -92,13 +92,6 @@ public:
     );
 
     static
-    BOOL
-    GetSystemPathVariable(
-        _In_ PCWSTR pszEnvironmentVariable,
-        _Out_ STRU *pstrResult
-    );
-
-    static
     VOID
     FindDotNetFolders(
         _In_ PCWSTR pszPath,
@@ -116,11 +109,6 @@ public:
     HANDLE
     CheckIfFileExists(
         STRU* struFile
-    );
-
-    static
-    std::vector<std::wstring> SplitStringOnWhitespace(
-        STRU * struFile
     );
 
 private:

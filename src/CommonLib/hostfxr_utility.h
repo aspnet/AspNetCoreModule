@@ -15,22 +15,18 @@ public:
 
     ~HOSTFXR_PARAMETERS()
     {
+        if (m_pcwArguments != NULL)
+        {
+            delete[] m_pcwArguments;
+        }
     }
 
-    STRU*
+    PCWSTR**
     QueryArguments(
         VOID
     )
     {
-        return &m_struArguments;
-    }
-
-    STRU*
-    QueryExePath(
-        VOID
-    )
-    {
-        return &m_struExePath;
+        return &m_pcwArguments;
     }
 
     STRU*
@@ -41,11 +37,18 @@ public:
         return &m_struHostFxrLocation;
     }
 
+    DWORD*
+    QueryArgc(
+        VOID
+    )
+    {
+        return &m_dwArgc;
+    }
+
 protected:
     STRU    m_struHostFxrLocation;
-    STRU    m_struExePath;
-    STRU    m_struArguments;
-    // TODO more parameters
+    PCWSTR* m_pcwArguments;
+    DWORD   m_dwArgc;
 };
 
 class HOSTFXR_UTILITY
@@ -60,6 +63,9 @@ public:
         HOSTFXR_PARAMETERS* pHostFxrParameters,
         ASPNETCORE_CONFIG *pConfig
     );
+
+    static
+    HRESULT GetArguments(STRU * struArguments, STRU * pstruExePath, HOSTFXR_PARAMETERS * pHostFxrParameters);
 
     static
     HRESULT
