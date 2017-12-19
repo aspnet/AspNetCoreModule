@@ -62,8 +62,8 @@ private:
 
 class APPLICATION_INFO
 {
-    
 public:
+
     APPLICATION_INFO(IHttpServer *pServer) :
         m_pServer(pServer),
         m_cRefs(1), m_fAppOfflineFound(FALSE),
