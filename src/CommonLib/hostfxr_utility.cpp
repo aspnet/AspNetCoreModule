@@ -36,7 +36,10 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
     STRU                struArguments;
     DWORD               dwPosition;
 
-    pConfig->QueryHostFxrLocation()->Copy(struHostfxrPath);
+    if (FAILED(hr = pConfig->QueryHostFxrFullPath()->Copy(struHostfxrPath)))
+    {
+        goto Finished;
+    }
 
     hr = UTILITY::ConvertPathToFullPath(pConfig->QueryProcessPath()->QueryStr(),
         pConfig->QueryApplicationPhysicalPath()->QueryStr(),
@@ -60,23 +63,22 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
 
     struDllPath.QueryStr()[dwPosition] = L'\0';
 
-    if (FAILED(hr = struDllPath.SyncWithBuffer())
-        || FAILED(hr = struDllPath.Append(L".dll")))
+    if (FAILED(hr = struDllPath.SyncWithBuffer()) ||
+        FAILED(hr = struDllPath.Append(L".dll")))
     {
         goto Finished;
     }
     
-    hFileHandle = UTILITY::CheckIfFileExists(&struDllPath);
-    if (hFileHandle == INVALID_HANDLE_VALUE)
+    if (!UTILITY::CheckIfFileExists(struDllPath.QueryStr()))
     {
         // Treat access issue as File not found
         hr = ERROR_FILE_NOT_FOUND;
         goto Finished;
     }
 
-    if (FAILED(hr = struArguments.Copy(struDllPath))
-        || FAILED(hr = struArguments.Append(L" "))
-        || struArguments.Append(pConfig->QueryArguments()))
+    if (FAILED(hr = struArguments.Copy(struDllPath)) ||
+        FAILED(hr = struArguments.Append(L" ")) ||
+        FAILED(hr = struArguments.Append(pConfig->QueryArguments())))
     {
         goto Finished;
     }
@@ -105,13 +107,13 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
     STRU                        strDotnetExeLocation;
     STRU                        strHostFxrSearchExpression;
     STRU                        strHighestDotnetVersion;
-    HANDLE                      hFileHandle = INVALID_HANDLE_VALUE;
     std::vector<std::wstring>   vVersionFolders;
     DWORD                       dwPosition;
-    DWORD                       dwLength;
-    WCHAR                       pszDotnetLocation[MAX_PATH];
+    DWORD                       dwPathLength = MAX_PATH;
+    DWORD                       dwDotnetLength = 0;
+    BOOL                        fFound = FALSE;
 
-    if ((hFileHandle = UTILITY::CheckIfFileExists(pConfig->QueryProcessPath())) != INVALID_HANDLE_VALUE)
+    if (UTILITY::CheckIfFileExists(pConfig->QueryProcessPath()->QueryStr()))
     {
         hr = UTILITY::ConvertPathToFullPath(L"hostfxr.dll", pConfig->QueryApplicationPath()->QueryStr(), &struHostFxrPath);
         if (FAILED(hr))
@@ -119,10 +121,10 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
             goto Finished;
         }
 
-        if ((hFileHandle = UTILITY::CheckIfFileExists(&struHostFxrPath)) != INVALID_HANDLE_VALUE)
+        if (UTILITY::CheckIfFileExists(struHostFxrPath.QueryStr()))
         {
             // Standalone application
-            if (FAILED(hr = pConfig->QueryHostFxrLocation()->Copy(struHostFxrPath)))
+            if (FAILED(hr = pConfig->QueryHostFxrFullPath()->Copy(struHostFxrPath)))
             {
                 goto Finished;
             }
@@ -132,17 +134,48 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
         }
         else
         {
-            UTILITY::ConvertPathToFullPath(pConfig->QueryProcessPath()->QueryStr(), pConfig->QueryApplicationPath()->QueryStr(), &strDotnetExeLocation);
+            hr = UTILITY::ConvertPathToFullPath(
+                pConfig->QueryProcessPath()->QueryStr(), 
+                pConfig->QueryApplicationPath()->QueryStr(), 
+                &strDotnetExeLocation
+            );
+            if (FAILED(hr))
+            {
+                goto Finished;
+            }
         }
     }
-    else if ((dwLength = SearchPath(NULL, L"dotnet", L".exe", MAX_PATH, pszDotnetLocation, NULL)) == 0)
+
+    if (FAILED(hr = strDotnetExeLocation.Resize(MAX_PATH)))
     {
-        hr = E_FAIL;
-        // Could not find dotnet
         goto Finished;
     }
 
-    if (FAILED(hr = strDotnetExeLocation.Copy(pszDotnetLocation))
+    while (!fFound)
+    {
+        dwDotnetLength = SearchPath(NULL, L"dotnet", L".exe", dwPathLength, strDotnetExeLocation.QueryStr(), NULL);
+        if (dwDotnetLength == 0)
+        {
+            hr = GetLastError();
+            // Could not find dotnet
+            goto Finished;
+        }
+        else if (dwDotnetLength == dwPathLength)
+        {
+            // Increase size
+            dwPathLength *= 2;
+            if (FAILED(hr = strDotnetExeLocation.Resize(dwPathLength)))
+            {
+                goto Finished;
+            }
+        }
+        else
+        {
+            fFound = TRUE;
+        }
+    }
+
+    if (FAILED(hr = strDotnetExeLocation.SyncWithBuffer())
         || FAILED(hr = struHostFxrPath.Copy(strDotnetExeLocation)))
     {
         goto Finished;
@@ -213,9 +246,9 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
         goto Finished;
     }
 
-    hFileHandle = UTILITY::CheckIfFileExists(&struHostFxrPath);
+   ;
 
-    if (hFileHandle == INVALID_HANDLE_VALUE)
+    if (!UTILITY::CheckIfFileExists(struHostFxrPath.QueryStr()))
     {
         hr = ERROR_FILE_INVALID;
         goto Finished;
@@ -226,17 +259,13 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
         goto Finished;
     }
 
-    if (FAILED(pConfig->QueryHostFxrLocation()->Copy(struHostFxrPath)))
+    if (FAILED(hr = pConfig->QueryHostFxrFullPath()->Copy(struHostFxrPath)))
     {
         goto Finished;
     }
 
 Finished:
 
-    if (hFileHandle != INVALID_HANDLE_VALUE)
-    {
-        CloseHandle(hFileHandle);
-    }
     return hr;
 }
 
@@ -250,8 +279,8 @@ Finished:
 // 
 HRESULT
 HOSTFXR_UTILITY::GetArguments(
-    STRU* struArgumentsFromConfig, 
-    STRU* pstruExePath, 
+    STRU* struArgumentsFromConfig,
+    STRU* pstruExePath,
     ASPNETCORE_CONFIG* pConfig
 )
 {
@@ -261,6 +290,11 @@ HOSTFXR_UTILITY::GetArguments(
     LPWSTR*     pwzArgs = NULL;
 
     pwzArgs = CommandLineToArgvW(struArgumentsFromConfig->QueryStr(), &argc);
+
+    if (pwzArgs == NULL)
+    {
+        goto Finished;
+    }
 
     argv = new PCWSTR[argc + 2];
     if (argv == NULL)
@@ -277,8 +311,7 @@ HOSTFXR_UTILITY::GetArguments(
         argv[i + 2] = SysAllocString(pwzArgs[i]);
     }
 
-    *pConfig->QueryHostFxrArgCount() = argc + 2;
-    *pConfig->QueryHostFxrArguments() = argv;
+    pConfig->SetHostFxrArguments(argc + 2, argv);
 
 Finished:
     if (pwzArgs != NULL)

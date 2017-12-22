@@ -393,7 +393,7 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
         // Cannot load more than once even there was a failure
         if (m_fLoadManagedAppError)
         {
-            hr = E_FAIL;
+            hr = E_APPLICATION_ACTIVATION_EXEC_FAILURE;
         }
 
         goto Finished;
@@ -408,7 +408,7 @@ IN_PROCESS_APPLICATION::LoadManagedApplication
     {
         if (m_fLoadManagedAppError)
         {
-            hr = E_FAIL;
+            hr = E_APPLICATION_ACTIVATION_EXEC_FAILURE;
         }
 
         goto Finished;
@@ -538,7 +538,6 @@ IN_PROCESS_APPLICATION::ExecuteAspNetCoreProcess(
 
 }
 
-
 HRESULT
 IN_PROCESS_APPLICATION::ExecuteApplication(
     VOID
@@ -550,7 +549,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
 
     // should be a redudant call here, but we will be safe and call it twice.
     // TODO AV here on m_pHostFxrParameters being null
-    hModule = LoadLibraryW(m_pConfig->QueryHostFxrLocation()->QueryStr());
+    hModule = LoadLibraryW(m_pConfig->QueryHostFxrFullPath()->QueryStr());
 
     if (hModule == NULL)
     {
@@ -576,7 +575,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
     // set the callbacks
     s_Application = this;
 
-    RunDotnetApplication(*m_pConfig->QueryHostFxrArgCount(), *m_pConfig->QueryHostFxrArguments(), pProc);
+    RunDotnetApplication(m_pConfig->QueryHostFxrArgCount(), m_pConfig->QueryHostFxrArguments(), pProc);
 
 Finished:
     //
@@ -640,7 +639,7 @@ IN_PROCESS_APPLICATION::RunDotnetApplication(CONST DWORD argc, PCWSTR* argv, hos
     __except (FilterException(GetExceptionCode(), GetExceptionInformation()))
     {
         // TODO Log error message here.
-        hr = E_FAIL;
+        hr = E_APPLICATION_ACTIVATION_EXEC_FAILURE;
     }
     return hr;
 }

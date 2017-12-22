@@ -284,6 +284,11 @@ APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename)
     // Though we could call LoadLibrary(L"aspnetcorerh.dll") relying the OS to solve
     // the path (the targeted dll is the same folder of w3wp.exe/iisexpress)
     // let's still load with full path to avoid security issue
+    if (FAILED(hr = struFilename->Resize(dwSize + 20)))
+    {
+        goto Finished;
+    }
+
     while (!fDone)
     {
         DWORD dwReturnedSize = GetModuleFileName(NULL, struFilename->QueryStr(), dwSize);
@@ -296,7 +301,10 @@ APPLICATION_INFO::FindNativeAssemblyFromGlobalLocation(STRU* struFilename)
         else if ((dwReturnedSize == dwSize) && (GetLastError() == ERROR_INSUFFICIENT_BUFFER))
         {
             dwSize *= 2; // smaller buffer. increase the buffer and retry
-            struFilename->Resize(dwSize + 20); // aspnetcorerh.dll
+            if (FAILED(hr = struFilename->Resize(dwSize + 20))) // + 20 for aspnetcorerh.dll
+            {
+                goto Finished;
+            }
         }
         else
         {
@@ -334,7 +342,6 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
 )
 {
     HRESULT     hr = S_OK;
-    HANDLE      hNativeRequestHandler = INVALID_HANDLE_VALUE;
     STRU        struApplicationFullPath;
     STRU        struNativeSearchPaths;
     STRU        struNativeDllLocation;
@@ -343,13 +350,14 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
     INT         intIndex = -1;
     INT         intPrevIndex = 0;
     BOOL        fFound = FALSE;
-    const DWORD BUFFER_SIZE = 1024 * 10;
-    WCHAR       pwszNativeSearchPathsBuffer[BUFFER_SIZE];
-    
+    DWORD       dwBufferSize = 1024 * 10;
+
     DBG_ASSERT(struFileName != NULL);
     DBG_ASSERT(pHostFxrParameters != NULL);
 
-    hmHostFxrDll = LoadLibraryW(m_pConfiguration->QueryHostFxrLocation()->QueryStr());
+
+
+    hmHostFxrDll = LoadLibraryW(m_pConfiguration->QueryHostFxrFullPath()->QueryStr());
     
     if (hmHostFxrDll == NULL)
     {
@@ -367,21 +375,41 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
         goto Finished;
     }
 
-    intHostFxrExitCode = pFnHostFxrSearchDirectories(
-        *m_pConfiguration->QueryHostFxrArgCount(),
-        *m_pConfiguration->QueryHostFxrArguments(),
-        pwszNativeSearchPathsBuffer, 
-        BUFFER_SIZE
-    );
-
-    if (intHostFxrExitCode != 0)
+    if (FAILED(hr = struNativeSearchPaths.Resize(dwBufferSize)))
     {
-        // Call to hostfxr failed.
-        hr = E_FAIL;
         goto Finished;
     }
 
-    if (FAILED(hr = struNativeSearchPaths.Copy(pwszNativeSearchPathsBuffer)))
+    while (!fFound)
+    {
+        intHostFxrExitCode = pFnHostFxrSearchDirectories(
+            m_pConfiguration->QueryHostFxrArgCount(),
+            m_pConfiguration->QueryHostFxrArguments(),
+            struNativeSearchPaths.QueryStr(),
+            dwBufferSize
+        );
+
+        if (intHostFxrExitCode == 0)
+        {
+            fFound = TRUE;
+        }
+        else if (intHostFxrExitCode == API_BUFFER_TOO_SMALL)
+        {
+            dwBufferSize *= 2; // smaller buffer. increase the buffer and retry
+            if (FAILED(hr = struNativeSearchPaths.Resize(dwBufferSize)))
+            {
+                goto Finished;
+            }
+        }
+        else
+        {
+            hr = E_FAIL;
+            // Log "Error finding native search directories from aspnetcore application.
+            goto Finished;
+        }
+    }
+
+    if (FAILED(hr = struNativeSearchPaths.SyncWithBuffer()))
     {
         goto Finished;
     }
@@ -403,15 +431,17 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
             }
         }
 
-        if (FAILED(struNativeDllLocation.Append(g_pwzAspnetcoreRequestHandlerName)))
+        if (FAILED(hr = struNativeDllLocation.Append(g_pwzAspnetcoreRequestHandlerName)))
         {
             goto Finished;
         }
 
-        hNativeRequestHandler = UTILITY::CheckIfFileExists(&struNativeDllLocation);
-        if (hNativeRequestHandler != INVALID_HANDLE_VALUE)
+        if (UTILITY::CheckIfFileExists(struNativeDllLocation.QueryStr()))
         {
-            struFilename->Copy(struNativeDllLocation);
+            if (FAILED(hr = struFilename->Copy(struNativeDllLocation)))
+            {
+                goto Finished;
+            }
             fFound = TRUE;
             break;
         }
@@ -426,10 +456,6 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
     }
 
 Finished:
-    if (hNativeRequestHandler != INVALID_HANDLE_VALUE)
-    {
-        CloseHandle(hNativeRequestHandler);
-    }
 
     return hr;
 }

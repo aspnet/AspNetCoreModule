@@ -569,17 +569,20 @@ UTILITY::FindDotNetFolders(
     FindClose(handle);
 }
 
-HANDLE
-UTILITY::CheckIfFileExists(STRU* struFile)
+BOOL
+UTILITY::CheckIfFileExists(
+    _In_ PCWSTR pszFilePath
+)
 {
     HANDLE              hFileHandle = INVALID_HANDLE_VALUE;
     SECURITY_ATTRIBUTES saAttr;
+    BOOL                fFileExists;
 
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = TRUE;
     saAttr.lpSecurityDescriptor = NULL;
 
-    hFileHandle = CreateFile(struFile->QueryStr(),
+    hFileHandle = CreateFile(pszFilePath,
         GENERIC_READ,
         FILE_SHARE_READ,
         &saAttr,
@@ -587,5 +590,11 @@ UTILITY::CheckIfFileExists(STRU* struFile)
         FILE_ATTRIBUTE_NORMAL,
         NULL);
 
-    return hFileHandle;
+    fFileExists = hFileHandle != INVALID_HANDLE_VALUE;
+    if (fFileExists)
+    {
+        CloseHandle(hFileHandle);
+    }
+
+    return fFileExists;
 }

@@ -106,9 +106,9 @@ public:
     );
 
     static
-    HANDLE
+    BOOL
     CheckIfFileExists(
-        STRU* struFile
+        PCWSTR pszFilePath
     );
 
 private:

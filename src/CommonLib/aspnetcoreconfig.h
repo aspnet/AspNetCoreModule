@@ -215,28 +215,38 @@ public:
         return &m_struConfigPath;
     }
 
-    PCWSTR**
+    PCWSTR*
     QueryHostFxrArguments(
         VOID
     )
     {
-        return &m_pcwArguments;
+        return m_ppStrArguments;
+    }
+
+    DWORD
+    QueryHostFxrArgCount(
+        VOID
+    )
+    {
+        return m_dwArgc;
     }
 
     STRU*
-    QueryHostFxrLocation(
+    QueryHostFxrFullPath(
         VOID
     )
     {
         return &m_struHostFxrLocation;
     }
 
-    DWORD*
-    QueryHostFxrArgCount(
-        VOID
+    VOID
+    SetHostFxrArguments(
+        DWORD dwArgc,
+        PCWSTR* ppStrArguments
     )
     {
-        return &m_dwArgc;
+        m_dwArgc = dwArgc;
+        m_ppStrArguments = ppStrArguments;
     }
 
     VOID
@@ -292,6 +302,6 @@ private:
     APP_HOSTING_MODEL      m_hostingModel;
     ENVIRONMENT_VAR_HASH*  m_pEnvironmentVariables;
     STRU                   m_struHostFxrLocation;
-    PCWSTR*                m_pcwArguments;
+    PCWSTR*                m_ppStrArguments;
     DWORD                  m_dwArgc;
 };

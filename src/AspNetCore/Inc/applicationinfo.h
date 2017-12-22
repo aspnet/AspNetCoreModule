@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 #pragma once
+#define API_BUFFER_TOO_SMALL 0x80008098
 
 typedef
 HRESULT
