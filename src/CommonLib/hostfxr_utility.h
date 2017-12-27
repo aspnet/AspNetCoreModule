@@ -19,17 +19,20 @@ public:
         ASPNETCORE_CONFIG *pConfig
     );
 
-    static
-    HRESULT GetArguments(
-        STRU * struArguments, 
-        STRU * pstruExePath,
-        ASPNETCORE_CONFIG *pConfig
-    );
+
 
 private:
     static
     HRESULT
     GetStandaloneHostfxrParameters(
+        ASPNETCORE_CONFIG *pConfig
+    );
+
+    static
+    HRESULT
+    SetHostFxrArguments(
+        STRU * struArguments,
+        STRU * pstruExePath,
         ASPNETCORE_CONFIG *pConfig
     );
 };

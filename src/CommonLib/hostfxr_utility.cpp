@@ -29,7 +29,6 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
 )
 {
     HRESULT             hr = S_OK;
-    HANDLE              hFileHandle = INVALID_HANDLE_VALUE;
     STRU                struExePath;
     STRU                struDllPath;
     STRU                struArguments;
@@ -77,16 +76,13 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
         goto Finished;
     }
 
-    if (FAILED(hr = GetArguments(&struArguments, &struExePath, pConfig)))
+    if (FAILED(hr = SetHostFxrArguments(&struArguments, &struExePath, pConfig)))
     {
         goto Finished;
     }
 
 Finished:
-    if (hFileHandle != INVALID_HANDLE_VALUE)
-    {
-        CloseHandle(hFileHandle);
-    }
+
     return hr;
 }
 
@@ -240,15 +236,13 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
         goto Finished;
     }
 
-   ;
-
     if (!UTILITY::CheckIfFileExists(struHostFxrPath.QueryStr()))
     {
         hr = ERROR_FILE_INVALID;
         goto Finished;
     }
     
-    if (FAILED(hr = GetArguments(pConfig->QueryArguments(), &strDotnetExeLocation, pConfig)))
+    if (FAILED(hr = SetHostFxrArguments(pConfig->QueryArguments(), &strDotnetExeLocation, pConfig)))
     {
         goto Finished;
     }
@@ -272,7 +266,7 @@ Finished:
 // argv[2] = first argument specified in the arguments portion of aspnetcore config. 
 // 
 HRESULT
-HOSTFXR_UTILITY::GetArguments(
+HOSTFXR_UTILITY::SetHostFxrArguments(
     STRU* struArgumentsFromConfig,
     STRU* pstruExePath,
     ASPNETCORE_CONFIG* pConfig
