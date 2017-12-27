@@ -549,7 +549,7 @@ IN_PROCESS_APPLICATION::ExecuteApplication(
 
     // should be a redudant call here, but we will be safe and call it twice.
     // TODO AV here on m_pHostFxrParameters being null
-    hModule = LoadLibraryW(m_pConfig->QueryHostFxrFullPath()->QueryStr());
+    hModule = LoadLibraryW(m_pConfig->QueryHostFxrFullPath());
 
     if (hModule == NULL)
     {
@@ -629,7 +629,7 @@ Finished:
 // Note, this will not 
 // 
 HRESULT
-IN_PROCESS_APPLICATION::RunDotnetApplication(CONST DWORD argc, PCWSTR* argv, hostfxr_main_fn pProc)
+IN_PROCESS_APPLICATION::RunDotnetApplication(DWORD argc, CONST PCWSTR* argv, hostfxr_main_fn pProc)
 {
     HRESULT hr = S_OK;
     __try

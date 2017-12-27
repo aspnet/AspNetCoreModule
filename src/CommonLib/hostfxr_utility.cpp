@@ -114,7 +114,7 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
         if (UTILITY::CheckIfFileExists(struHostFxrPath.QueryStr()))
         {
             // Standalone application
-            if (FAILED(hr = pConfig->QueryHostFxrFullPath()->Copy(struHostFxrPath)))
+            if (FAILED(hr = pConfig->SetHostFxrFullPath(struHostFxrPath.QueryStr())))
             {
                 goto Finished;
             }
@@ -247,7 +247,7 @@ HOSTFXR_UTILITY::GetHostFxrParameters(
         goto Finished;
     }
 
-    if (FAILED(hr = pConfig->QueryHostFxrFullPath()->Copy(struHostFxrPath)))
+    if (FAILED(hr = pConfig->SetHostFxrFullPath(struHostFxrPath.QueryStr())))
     {
         goto Finished;
     }

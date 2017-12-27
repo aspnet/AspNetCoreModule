@@ -3,8 +3,8 @@
 
 #pragma once
 
-typedef INT(*hostfxr_get_native_search_directories_fn) (const int argc, const WCHAR* argv[], WCHAR* dest, size_t dest_size);
-typedef INT(*hostfxr_main_fn) (CONST DWORD argc, CONST WCHAR* argv[]);
+typedef INT(*hostfxr_get_native_search_directories_fn) (const int argc, const PCWSTR argv[], PCWSTR dest, size_t dest_size);
+typedef INT(*hostfxr_main_fn) (CONST DWORD argc, CONST PCWSTR argv[]);
 
 
 class HOSTFXR_UTILITY
@@ -18,8 +18,6 @@ public:
     GetHostFxrParameters(
         ASPNETCORE_CONFIG *pConfig
     );
-
-
 
 private:
     static

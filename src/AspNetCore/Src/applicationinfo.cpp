@@ -354,11 +354,12 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
 
     DBG_ASSERT(struFileName != NULL);
 
-    hmHostFxrDll = LoadLibraryW(m_pConfiguration->QueryHostFxrFullPath()->QueryStr());
+    hmHostFxrDll = LoadLibraryW(m_pConfiguration->QueryHostFxrFullPath());
     
     if (hmHostFxrDll == NULL)
     {
         // Could not load hostfxr
+        hr = GetLastError();
         goto Finished;
     }
 
@@ -378,7 +379,7 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
         goto Finished;
     }
 
-    while (!fFound)
+    while (TRUE)
     {
         intHostFxrExitCode = pFnHostFxrSearchDirectories(
             m_pConfiguration->QueryHostFxrArgCount(),
@@ -389,7 +390,7 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
 
         if (intHostFxrExitCode == 0)
         {
-            fFound = TRUE;
+            break;
         }
         else if (intHostFxrExitCode == API_BUFFER_TOO_SMALL)
         {
@@ -411,6 +412,8 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
     {
         goto Finished;
     }
+
+    fFound = FALSE;
     
     // The native search directories are semicolon delimited.
     // Split on semicolons, append aspnetcorerh.dll, and check if the file exists.

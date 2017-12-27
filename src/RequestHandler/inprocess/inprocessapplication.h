@@ -58,17 +58,6 @@ public:
         IN_PROCESS_HANDLER* pInProcessHandler
     );
 
-    static 
-    INT
-    FilterException(unsigned int code, struct _EXCEPTION_POINTERS *ep);
-
-    HRESULT
-    RunDotnetApplication(
-        DWORD argc, 
-        PCWSTR* argv,
-        hostfxr_main_fn pProc
-    );
-
     static
     IN_PROCESS_APPLICATION*
     GetInstance(
@@ -124,5 +113,16 @@ private:
     VOID
     ExecuteAspNetCoreProcess(
         _In_ LPVOID pContext
+    );
+
+    static
+    INT
+    FilterException(unsigned int code, struct _EXCEPTION_POINTERS *ep);
+
+    HRESULT
+    RunDotnetApplication(
+        DWORD argc,
+        CONST PCWSTR* argv,
+        hostfxr_main_fn pProc
     );
 };

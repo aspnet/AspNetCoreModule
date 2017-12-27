@@ -215,6 +215,7 @@ public:
         return &m_struConfigPath;
     }
 
+    CONST
     PCWSTR*
     QueryHostFxrArguments(
         VOID
@@ -223,6 +224,7 @@ public:
         return m_ppStrArguments;
     }
 
+    CONST
     DWORD
     QueryHostFxrArgCount(
         VOID
@@ -231,12 +233,21 @@ public:
         return m_dwArgc;
     }
 
-    STRU*
+    CONST
+    PCWSTR
     QueryHostFxrFullPath(
         VOID
     )
     {
-        return &m_struHostFxrLocation;
+        return m_struHostFxrLocation.QueryStr();
+    }
+
+    HRESULT
+    SetHostFxrFullPath(
+        PCWSTR pStrHostFxrFullPath
+    )
+    {
+        return m_struHostFxrLocation.Copy(pStrHostFxrFullPath);
     }
 
     VOID
@@ -273,7 +284,8 @@ private:
         m_fStdoutLogEnabled( FALSE ),
         m_pEnvironmentVariables( NULL ),
         m_cRefs( 1 ),
-        m_hostingModel( HOSTING_UNKNOWN )
+        m_hostingModel( HOSTING_UNKNOWN ),
+        m_ppStrArguments(NULL)
     {
     }
 
