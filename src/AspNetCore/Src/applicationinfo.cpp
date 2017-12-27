@@ -353,7 +353,6 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
     DWORD       dwBufferSize = 1024 * 10;
 
     DBG_ASSERT(struFileName != NULL);
-    DBG_ASSERT(pHostFxrParameters != NULL);
 
     hmHostFxrDll = LoadLibraryW(m_pConfiguration->QueryHostFxrFullPath()->QueryStr());
     
@@ -368,7 +367,8 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
 
     if (pFnHostFxrSearchDirectories == NULL)
     {
-        // Host fxr version is incorrect
+        // Host fxr version is incorrect (need a higher version).
+        // TODO log error 
         hr = E_FAIL;
         goto Finished;
     }

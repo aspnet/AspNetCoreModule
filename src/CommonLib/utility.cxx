@@ -576,7 +576,7 @@ UTILITY::CheckIfFileExists(
 {
     HANDLE              hFileHandle = INVALID_HANDLE_VALUE;
     SECURITY_ATTRIBUTES saAttr;
-    BOOL                fFileExists;
+    BOOL                fFileExists = FALSE;
 
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = TRUE;
@@ -590,7 +590,8 @@ UTILITY::CheckIfFileExists(
         FILE_ATTRIBUTE_NORMAL,
         NULL);
 
-    fFileExists = hFileHandle != INVALID_HANDLE_VALUE;
+    fFileExists = hFileHandle != INVALID_HANDLE_VALUE || GetLastError() == ERROR_SHARING_VIOLATION;
+
     if (fFileExists)
     {
         CloseHandle(hFileHandle);

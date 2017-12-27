@@ -231,6 +231,7 @@ public:
         return m_dwArgc;
     }
 
+    CONST
     STRU*
     QueryHostFxrFullPath(
         VOID
@@ -245,6 +246,11 @@ public:
         PCWSTR* ppStrArguments
     )
     {
+        if (m_ppStrArguments != NULL)
+        {
+            delete[] m_ppStrArguments;
+        }
+
         m_dwArgc = dwArgc;
         m_ppStrArguments = ppStrArguments;
     }
