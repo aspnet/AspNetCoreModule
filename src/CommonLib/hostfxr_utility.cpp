@@ -30,16 +30,10 @@ HOSTFXR_UTILITY::GetStandaloneHostfxrParameters(
 {
     HRESULT             hr = S_OK;
     HANDLE              hFileHandle = INVALID_HANDLE_VALUE;
-    STRU                struHostfxrPath;
     STRU                struExePath;
     STRU                struDllPath;
     STRU                struArguments;
     DWORD               dwPosition;
-
-    if (FAILED(hr = pConfig->QueryHostFxrFullPath()->Copy(struHostfxrPath)))
-    {
-        goto Finished;
-    }
 
     hr = UTILITY::ConvertPathToFullPath(pConfig->QueryProcessPath()->QueryStr(),
         pConfig->QueryApplicationPhysicalPath()->QueryStr(),
