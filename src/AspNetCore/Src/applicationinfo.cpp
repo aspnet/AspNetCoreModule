@@ -355,8 +355,6 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
     DBG_ASSERT(struFileName != NULL);
     DBG_ASSERT(pHostFxrParameters != NULL);
 
-
-
     hmHostFxrDll = LoadLibraryW(m_pConfiguration->QueryHostFxrFullPath()->QueryStr());
     
     if (hmHostFxrDll == NULL)
@@ -456,6 +454,9 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
     }
 
 Finished:
-
+    if (FAILED(hr) && hmHostFxrDll != NULL)
+    {
+        FreeLibrary(hmHostFxrDll);
+    }
     return hr;
 }
