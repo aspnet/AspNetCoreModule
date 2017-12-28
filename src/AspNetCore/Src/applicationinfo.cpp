@@ -359,7 +359,7 @@ APPLICATION_INFO::FindNativeAssemblyFromHostfxr(
     if (hmHostFxrDll == NULL)
     {
         // Could not load hostfxr
-        hr = GetLastError();
+        hr = HRESULT_FROM_WIN32(GetLastError());
         goto Finished;
     }
 
