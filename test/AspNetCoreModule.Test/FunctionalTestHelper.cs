@@ -25,20 +25,19 @@ namespace AspNetCoreModule.Test
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
     public class ANCMTestFlags : Attribute, ITestCondition
     {
-        private readonly string _attributeValue;
+        private readonly string _attributeValue = null;
+
         public ANCMTestFlags(string attributeValue)
         {
-            if (_attributeValue == TestFlags.SkipTest)
+            _attributeValue = attributeValue;
+
+            if (_attributeValue == TestFlags.SkipTest && TestFlags.Enabled(TestFlags.UseFullIIS))
             {
                 // Currently the global test flag is set to TestFlags.SkipTest.
-                // So, to override the value, I added this logic.
-                // if ANCMTestFlags environmentvariable is set to UseFullIIS, let's use RunAsAdministrator to make test run.
-                if (TestFlags.Enabled(TestFlags.UseFullIIS))
-                {
-                    _attributeValue = TestFlags.RunAsAdministrator;
-                }
+                // However, if ANCMTestFlags environmentvariable is set to UseFullIIS, 
+                // we need ignore the default global test flag to run test.
+                _attributeValue = TestFlags.RunAsAdministrator;
             }
-            _attributeValue = attributeValue.ToString();
         }
 
         public bool IsMet
