@@ -81,18 +81,30 @@ namespace AspNetCoreModule.Test.Framework
 
         public static void RestoreAppHostConfig(string fileExtenstion, bool overWriteMode)
         {
-            string tofile = Strings.AppHostConfigPath;
-            string fromfile = Strings.AppHostConfigPath + fileExtenstion;
-            if (File.Exists(fromfile))
+            for (int i = 0; i <= 3; i++)
             {
-                try
+                string tofile = Strings.AppHostConfigPath;
+                string fromfile = Strings.AppHostConfigPath + fileExtenstion;
+                if (File.Exists(fromfile))
                 {
-                    TestUtility.FileCopy(fromfile, tofile, overWrite:overWriteMode);
-                }
-                catch
-                {
-                    TestUtility.LogInformation("Failed to Restore applicationhost.config");
-                    throw;
+                    try
+                    {
+                        TestUtility.FileCopy(fromfile, tofile, overWrite: overWriteMode);
+                        break;
+                    }
+                    catch
+                    {
+                        if (i == 3)
+                        {
+                            TestUtility.LogInformation("Failed to Restore applicationhost.config");
+                            throw;
+                        }
+                        else
+                        {
+                            TestUtility.LogInformation("Retrying...");
+                            Thread.Sleep(1000);
+                        }
+                    }
                 }
             }
         }

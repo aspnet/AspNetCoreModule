@@ -1555,6 +1555,7 @@ namespace AspNetCoreModule.Test
         
         public static async Task DoWebSocketErrorhandlingTest(IISConfigUtility.AppPoolBitness appPoolBitness)
         {
+            Exception saved_ex = null;
             try
             {
                 using (var testSite = new TestWebSite(appPoolBitness, "DoWebSocketErrorhandlingTest"))
@@ -1578,17 +1579,17 @@ namespace AspNetCoreModule.Test
 
                     // send a simple request again and verify the response body
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
-
-                    // roback configuration 
-                    IISConfigUtility.RestoreAppHostConfig("DoWebSocketErrorhandlingTest", true);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // roback configuration 
-                IISConfigUtility.RestoreAppHostConfig("DoWebSocketErrorhandlingTest", true);
-                throw;
+                saved_ex = ex;
             }
+
+            Assert.Null(saved_ex);
+
+            // roback configuration 
+            IISConfigUtility.RestoreAppHostConfig("DoWebSocketErrorhandlingTest", true);
         }
 
         public enum DoAppVerifierTest_ShutDownMode
