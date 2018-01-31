@@ -28,6 +28,16 @@ namespace AspNetCoreModule.Test
         private readonly string _attributeValue;
         public ANCMTestFlags(string attributeValue)
         {
+            if (_attributeValue == TestFlags.SkipTest)
+            {
+                // Currently the global test flag is set to TestFlags.SkipTest.
+                // So, to override the value, I added this logic.
+                // if ANCMTestFlags environmentvariable is set to UseFullIIS, let's use RunAsAdministrator to make test run.
+                if (TestFlags.Enabled(TestFlags.UseFullIIS))
+                {
+                    _attributeValue = TestFlags.RunAsAdministrator;
+                }
+            }
             _attributeValue = attributeValue.ToString();
         }
 
@@ -155,7 +165,7 @@ namespace AspNetCoreModule.Test
                     Assert.True(TestUtility.RetryHelper((arg1, arg2) => VerifyANCMStartEvent(arg1, arg2), startTime, backendProcessId));
 
                     // get process id of IIS worker process (w3wp.exe)
-                    string userName = testSite.SiteName;
+                    string userName = testSite.RootAppContext.AppPoolName;
                     int processIdOfWorkerProcess = Convert.ToInt32(TestUtility.GetProcessWMIAttributeValue("w3wp.exe", "Handle", userName));
                     var workerProcess = Process.GetProcessById(Convert.ToInt32(processIdOfWorkerProcess));
                     workerProcess.Kill();
@@ -765,14 +775,16 @@ namespace AspNetCoreModule.Test
                     string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                     string logPath = testSite.AspNetCoreApp.GetDirectoryPathWith("logs");
                                         
-                    // In the new implementation, ANCM creates log directory if the directory is not found
-                    Assert.True(Directory.Exists(logPath));
+                    //// In the new implementation, ANCM creates log directory if the directory is not found
+                    // Assert.True(Directory.Exists(logPath));
 
-                    //Assert.True(TestUtility.RetryHelper((arg1, arg2, arg3) => VerifyApplicationEventLog(arg1, arg2, arg3), 1004, startTime, @"logs\stdout"));
-                    //Assert.True(TestUtility.RetryHelper((arg1, arg2) => VerifyANCMStartEvent(arg1, arg2), startTime, backendProcessId));
+                    //  /*
+                    Assert.True(TestUtility.RetryHelper((arg1, arg2, arg3) => VerifyApplicationEventLog(arg1, arg2, arg3), 1004, startTime, @"logs\stdout"));
+                    Assert.True(TestUtility.RetryHelper((arg1, arg2) => VerifyANCMStartEvent(arg1, arg2), startTime, backendProcessId));
+                    //  */
 
-                    //testSite.AspNetCoreApp.CreateDirectory("logs");
-
+                    testSite.AspNetCoreApp.CreateDirectory("logs");
+                    
                     // verify the log file is created and backend process is not recycled
                     Assert.True(Directory.GetFiles(logPath).Length == 1);
                     Assert.True(backendProcessId == (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody);
@@ -911,7 +923,7 @@ namespace AspNetCoreModule.Test
                     string pocessIdBackendProcess = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
 
                     // get process id of IIS worker process (w3wp.exe)
-                    string userName = testSite.SiteName;
+                    string userName = testSite.RootAppContext.AppPoolName;
                     int processIdOfWorkerProcess = Convert.ToInt32(TestUtility.GetProcessWMIAttributeValue("w3wp.exe", "Handle", userName));
                     var workerProcess = Process.GetProcessById(Convert.ToInt32(processIdOfWorkerProcess));
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(pocessIdBackendProcess));

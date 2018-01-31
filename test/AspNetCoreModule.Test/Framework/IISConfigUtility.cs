@@ -1206,7 +1206,7 @@ namespace AspNetCoreModule.Test.Framework
                 " -Command Add-SslBinding" + 
                 " -IpAddress " + hexIpAddress + 
                 " -Port " + port.ToString() + 
-                " –Thumbprint \"" + thumbPrint + "\"" + 
+                " -thumbprint \"" + thumbPrint + "\"" + 
                 " -TargetSSLStore " + sslStore;
 
             string output = TestUtility.RunPowershellScript(powershellScript);
