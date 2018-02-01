@@ -310,12 +310,31 @@ namespace AspNetCoreModule.Test
             return DoClientCertificateMappingTest(appPoolBitness, useHTTPSMiddleWare);
         }
 
+
         [ConditionalTheory]
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
+        public Task AppVerifierTest1(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
+        {
+            return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
+        }
+
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.DontUseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
+        public Task AppVerifierTest2(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
+        {
+            return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
+        }
+
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.StopAndStartAppPool, 1)]
         public Task AppVerifierTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
         {
