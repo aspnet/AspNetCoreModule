@@ -42,7 +42,7 @@ namespace WebSocketClientEXE
                     }
                     else
                     {
-                        TestUtility.LogInformation("Type any data and then Enter ('q' to quit, 'close' to disconnect, 'connect' to connect): ");
+                        TestUtility.LogInformation("Type any data and then Enter ('q' to quit, 'close' or 'CloseFromServer' to disconnect, 'connect' to connect): ");
                         consoleInput = Console.ReadLine();
                     }
                                         
@@ -73,8 +73,19 @@ namespace WebSocketClientEXE
 
                         if (temp == "q" || temp == "close")
                         {
-                            frameReturned = websocketClient.Close();
-                            TestUtility.LogInformation(frameReturned.Content);
+                            if (!websocketClient.IsOpened)
+                            {
+                                TestUtility.LogInformation("Connection is already closed, skipping websocket close handshaking...");
+                                if (!websocketClient.WaitForWebSocketState(WebSocketState.ConnectionClosed))
+                                {
+                                    throw new Exception("Failed to close a connection");
+                                }
+                            }
+                            else
+                            {
+                                frameReturned = websocketClient.Close();
+                                TestUtility.LogInformation(frameReturned.Content);
+                            }
 
                             if (temp == "q")
                             {

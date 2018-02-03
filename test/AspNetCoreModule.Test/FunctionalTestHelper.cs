@@ -773,19 +773,14 @@ namespace AspNetCoreModule.Test
 
                     string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                     string logPath = testSite.AspNetCoreApp.GetDirectoryPathWith("logs");
-                                        
-                    //// In the new implementation, ANCM creates log directory if the directory is not found
-                    // Assert.True(Directory.Exists(logPath));
-
-                    //  /*
+                    Assert.False(Directory.Exists(logPath));
                     Assert.True(TestUtility.RetryHelper((arg1, arg2, arg3) => VerifyApplicationEventLog(arg1, arg2, arg3), 1004, startTime, @"logs\stdout"));
                     Assert.True(TestUtility.RetryHelper((arg1, arg2) => VerifyANCMStartEvent(arg1, arg2), startTime, backendProcessId));
-                    //  */
 
                     testSite.AspNetCoreApp.CreateDirectory("logs");
-                    
-                    // verify the log file is created and backend process is not recycled
-                    Assert.True(Directory.GetFiles(logPath).Length == 1);
+
+                    // verify the log file is not created because backend process is not recycled
+                    Assert.True(Directory.GetFiles(logPath).Length == 0);
                     Assert.True(backendProcessId == (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody);
 
                     // reset web.config to recycle backend process and give write permission to the Users local group to which IIS workerprocess identity belongs
@@ -798,9 +793,7 @@ namespace AspNetCoreModule.Test
 
                     // check JitDebugger before continuing 
                     TestUtility.ResetHelper(ResetHelperMode.KillVSJitDebugger);
-
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "stdoutLogEnabled", true);
-
                     Assert.True(backendProcessId != (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody);
 
                     // Verify log file is created now after backend process is recycled

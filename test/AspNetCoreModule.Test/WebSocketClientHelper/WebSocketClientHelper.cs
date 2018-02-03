@@ -26,8 +26,10 @@ namespace AspNetCoreModule.Test.WebSocketClient
 
         public void Dispose()
         {
+            TestUtility.LogInformation("WebSocketClientHelper::Dispose()");
             if (IsOpened)
             {
+                TestUtility.LogInformation("Connection is still opened; Calling Close()...");
                 Close();
             }
         }
@@ -54,6 +56,14 @@ namespace AspNetCoreModule.Test.WebSocketClient
                 }
                 else
                 {
+                    if (expectedState == WebSocketState.ConnectionClosed)
+                    {
+                        if (this.Connection.IsDisposed)
+                        {
+                            result = true;
+                            break;
+                        }
+                    }
                     Thread.Sleep(INTERVAL);
                 }
             }
@@ -402,13 +412,13 @@ namespace AspNetCoreModule.Test.WebSocketClient
                 {
                     if (WebSocketState == WebSocketState.ConnectionClosed)
                     {
-                        throw new Exception("Connection was already closed");
+                        throw new Exception("Error!!! Connection was already closed");
                     }
                     else
                     {
                         if (WebSocketState != WebSocketState.ClosingFromClientStarted)
                         {
-                            TestUtility.LogInformation("Send back Close frame to responsd server closing...");
+                            TestUtility.LogInformation("Send back Close frame to responsd server side closing...");
                             SendClose();
                         }
                         TestUtility.LogInformation(frame.Content);
