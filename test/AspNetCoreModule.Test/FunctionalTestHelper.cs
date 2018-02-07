@@ -146,6 +146,12 @@ namespace AspNetCoreModule.Test
                     return;
                 }
 
+                // Encrease rapidFailProtectionMaxCrashes for the current apppool
+                using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
+                {
+                    iisConfig.SetAppPoolSetting(testSite.RootAppContext.AppPoolName, "rapidFailProtectionMaxCrashes", 100);
+                }
+
                 string backendProcessId_old = null;
                 const int repeatCount = 3;
                 for (int i = 0; i < repeatCount; i++)
@@ -668,11 +674,11 @@ namespace AspNetCoreModule.Test
                     Thread.Sleep(500);
                     if (startupTimeLimit < startupDelay)
                     {
-                        await SendReceive(testSite.AspNetCoreApp.GetUri("DoSleep3000"), HttpStatusCode.BadGateway);
+                        await SendReceive(testSite.AspNetCoreApp.GetUri("DoSleep3000"), HttpStatusCode.BadGateway, timeout: 10);
                     }
                     else
                     {
-                        await SendReceive(testSite.AspNetCoreApp.GetUri("DoSleep3000"), expectedResponseBody: "Running");
+                        await SendReceive(testSite.AspNetCoreApp.GetUri("DoSleep3000"), expectedResponseBody: "Running", timeout: 10);
                     }
                 }
                 testSite.AspNetCoreApp.RestoreFile("web.config");
@@ -908,8 +914,8 @@ namespace AspNetCoreModule.Test
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
 
-                    // allocating 1024,000 KB
-                    await SendReceive(testSite.AspNetCoreApp.GetUri("MemoryLeak1024000"));
+                    // allocating 128,000 KB
+                    await SendReceive(testSite.AspNetCoreApp.GetUri("MemoryLeak128000"));
 
                     // get backend process id
                     string pocessIdBackendProcess = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
@@ -973,8 +979,8 @@ namespace AspNetCoreModule.Test
                         // check JitDebugger before continuing 
                         foundVSJit = TestUtility.ResetHelper(ResetHelperMode.KillVSJitDebugger);
 
-                        // allocating 2048,000 KB
-                        await SendReceive(testSite.AspNetCoreApp.GetUri("MemoryLeak2048000"));
+                        // allocating 256,000 KB
+                        await SendReceive(testSite.AspNetCoreApp.GetUri("MemoryLeak256000"));
 
                         newPocessIdBackendProcess = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                         if (foundVSJit || backupPocessIdBackendProcess != newPocessIdBackendProcess)

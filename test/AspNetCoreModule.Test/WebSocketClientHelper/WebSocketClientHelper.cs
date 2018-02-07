@@ -56,14 +56,15 @@ namespace AspNetCoreModule.Test.WebSocketClient
                 }
                 else
                 {
-                    if (expectedState == WebSocketState.ConnectionClosed)
-                    {
-                        if (this.Connection.IsDisposed)
-                        {
-                            result = true;
-                            break;
-                        }
-                    }
+                    // This might not be required anymore.
+                    //if (expectedState == WebSocketState.ConnectionClosed)
+                    //{
+                    //    if (this.Connection.IsDisposed)
+                    //    {
+                    //        result = true;
+                    //        break;
+                    //    }
+                    //}
                     Thread.Sleep(INTERVAL);
                 }
             }
