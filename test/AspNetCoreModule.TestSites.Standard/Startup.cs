@@ -42,7 +42,8 @@ namespace AspnetCoreModule.TestSites.Standard
                 if ((result.Count == "CloseFromServer".Length && System.Text.Encoding.ASCII.GetString(buffer).Substring(0, result.Count) == "CloseFromServer") 
                     || Program.AappLifetimeStopping == true)
                 {
-                    // start closing handshake from backend process
+                    // start closing handshake from backend process when client send "CloseFromServer" text message 
+                    // or when any message is sent from client during the graceful shutdown.
                     await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "ClosingFromServer", CancellationToken.None);
                     closeFromServer = true;
                 }

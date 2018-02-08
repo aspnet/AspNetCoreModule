@@ -458,7 +458,7 @@ namespace AspNetCoreModule.Test.Framework
             }
         }
 
-        public void SetANCMConfig(string siteName, string appName, string attributeName, object attributeValue)
+        public void SetANCMConfig(string siteName, string appName, string attributeName, object attributeValue, bool removeExisting = false)
         {
             try
             {
@@ -474,10 +474,17 @@ namespace AspNetCoreModule.Test.Framework
                         ConfigurationElement environmentVariableElement = environmentVariablesCollection.CreateElement("environmentVariable");
                         environmentVariableElement["name"] = name;
                         environmentVariableElement["value"] = value;
-                        var element = FindElement(environmentVariablesCollection, "add", "name", value);
+                        var element = FindElement(environmentVariablesCollection, "environmentVariable", "name", name);
                         if (element != null)
                         {
-                            throw new ApplicationException("duplicated collection item");
+                            if (removeExisting)
+                            {
+                                environmentVariablesCollection.Remove(element);
+                            }
+                            else
+                            {
+                                throw new ApplicationException("duplicated collection item");
+                            }
                         }
                         environmentVariablesCollection.Add(environmentVariableElement);
                     }
@@ -494,7 +501,7 @@ namespace AspNetCoreModule.Test.Framework
                 throw ex;
             }
         }
-
+        
         public void ConfigureCustomLogging(string siteName, string appName, int statusCode, int subStatusCode, string path)
         {
             using (ServerManager serverManager = GetServerManager())
