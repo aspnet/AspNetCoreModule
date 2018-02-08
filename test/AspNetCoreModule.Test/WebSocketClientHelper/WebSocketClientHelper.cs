@@ -112,7 +112,26 @@ namespace AspNetCoreModule.Test.WebSocketClient
             if (!IsAlwaysReading)
                 openingFrame = ReadData();
             else
-                openingFrame = Connection.DataReceived[0];
+            {
+                bool success = false;
+                for (int i = 0; i < 10; i++)
+                {
+                    if (Connection.DataReceived.Count > 0)
+                    {
+                        openingFrame = Connection.DataReceived[0];
+                        success = true;
+                        break;
+                    }
+                    else
+                    {
+                        Thread.Sleep(500);
+                    }
+                }
+                if (!success)
+                {
+                    throw new Exception("Failed to receive data from server after websocket opening handshake");
+                }
+            }
             
             return openingFrame;
         }

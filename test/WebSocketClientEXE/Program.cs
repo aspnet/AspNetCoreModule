@@ -13,13 +13,14 @@ namespace WebSocketClientEXE
     {
         static void Main(string[] args)
         {
+            if (args.Length == 0)
+            {
+                TestUtility.LogInformation("Usage: WebSocketClientEXE http://localhost:40000/aspnetcoreapp/websocket");
+                return;
+            }
+
             using (WebSocketClientHelper websocketClient = new WebSocketClientHelper())
             {
-                if (args.Length == 0)
-                {
-                    TestUtility.LogInformation("Usage: WebSocketClientEXE http://localhost:40000/aspnetcoreapp/websocket");
-                    return;
-                }
                 string url = "http://localhost:40000/aspnetcoreapp/websocket";
                 if (args[0].Contains("http:"))
                 {

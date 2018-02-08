@@ -44,8 +44,8 @@ namespace AspnetCoreModule.TestSites.Standard
                 {
                     // start closing handshake from backend process when client send "CloseFromServer" text message 
                     // or when any message is sent from client during the graceful shutdown.
-                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "ClosingFromServer", CancellationToken.None);
                     closeFromServer = true;
+                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "ClosingFromServer", CancellationToken.None);
                 }
                 else
                 {
@@ -57,10 +57,12 @@ namespace AspnetCoreModule.TestSites.Standard
 
             if (closeFromServer)
             {
+                webSocket.Dispose();
                 return;
             }
 
             await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
+            webSocket.Dispose();
         }
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
