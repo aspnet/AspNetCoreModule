@@ -29,14 +29,21 @@ namespace AspNetCoreModule.Test.WebSocketClient
         public void Dispose()
         {
             TestUtility.LogInformation("WebSocketClientHelper::Dispose()");
-            if (IsOpened)
+            if (IsOpened && !this.Connection.IsDisposed && !this.Connection.TcpClient.IsDead)
             {
-                TestUtility.LogInformation("Connection is still opened; Calling Close()...");
-                Close();
+                if (!this.Connection.IsDisposed || !this.Connection.TcpClient.IsDead)
+                {
+                    TestUtility.LogInformation("Connection is not available; Skipping Calling Close()...");
+                }
+                else
+                {
+                    TestUtility.LogInformation("Connection is still opened; Calling Close()...");
+                    Close();
+                }
             }
         }
 
-        public bool WaitForWebSocketState(WebSocketState expectedState, int timeout = 3000)
+        public bool WaitForWebSocketState(WebSocketState expectedState, int timeout = 10000)
         {
             bool result = false;
             int RETRYMAX = 300;
@@ -145,7 +152,9 @@ namespace AspNetCoreModule.Test.WebSocketClient
             if (!IsAlwaysReading)
                 closeFrame = ReadData();
             else
+            {
                 closeFrame = Connection.DataReceived[Connection.DataReceived.Count - 1];
+            }
 
             IsOpened = false;
             return closeFrame;
@@ -404,8 +413,7 @@ namespace AspNetCoreModule.Test.WebSocketClient
             if (Connection.TcpClient.Connected)
             {
                 var result = Connection.Stream.BeginWrite(outputData, 0, outputData.Length, WriteCallback, Connection);
-                TestUtility.LogInformation("Client {0:D3}: Write Type {1} : {2} ", Connection.Id, frame.FrameType,
-                    frame.Content.Length);
+                TestUtility.LogInformation("Client {0:D3}: Write Type {1} : {2} ", Connection.Id, frame.FrameType, frame.Content.Length);
             }
             else
             {

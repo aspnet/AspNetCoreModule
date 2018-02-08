@@ -13,16 +13,25 @@ namespace WebSocketClientEXE
     {
         static void Main(string[] args)
         {
-            if (args.Length == 0)
+            
+            string parameter = null;
+            foreach (string item in args) { parameter += item; }
+
+            if (!parameter.ToLower().Contains("http"))
             {
-                TestUtility.LogInformation("Usage: WebSocketClientEXE http://localhost:40000/aspnetcoreapp/websocket");
+                TestUtility.LogInformation("Usage example: WebSocketClientEXE http://localhost:40000/aspnetcoreapp/websocket [-quiet]");
                 return;
+            }
+
+            if (parameter.ToLower().Contains("-quiet"))
+            {
+                TestUtility.VerboseMode = false;
             }
 
             using (WebSocketClientHelper websocketClient = new WebSocketClientHelper())
             {
                 string url = "http://localhost:40000/aspnetcoreapp/websocket";
-                if (args[0].Contains("http:"))
+                if (args[0].Contains("http"))
                 {
                     url = args[0];
                 }

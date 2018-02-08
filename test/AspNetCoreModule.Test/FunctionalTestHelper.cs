@@ -1786,7 +1786,7 @@ namespace AspNetCoreModule.Test
                             {
                                 // Test issue. Closing connection does not work reliably because of timing issue. 
                                 // Temporarily, let's ignore the noise with this special flag
-                                websocketClient.ExpectedDisposedConnection = true;
+                                //websocketClient.ExpectedDisposedConnection = true;
 
                                 for (int jj = 0; jj < 10; jj++)
                                 {
