@@ -58,7 +58,7 @@ namespace AspNetCoreModule.Test.WebSocketClient
                 }
                 else
                 {
-                    if (ExpectedDisposedConnection)
+                    if (ExpectedDisposedConnection && expectedState == WebSocketState.ConnectionClosed)
                     {
                         if (this.Connection.IsDisposed || this.Connection.TcpClient.IsDead || this.Connection.TcpClient.Connected == false)
                         {
