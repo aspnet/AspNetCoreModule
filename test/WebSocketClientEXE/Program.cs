@@ -55,7 +55,7 @@ namespace WebSocketClientEXE
                     {
                         if (repeatcount <= 0 || consoleInput == "")
                         {
-                            TestUtility.LogInformation("Type any data and then Enter ('q' to quit, 'close' or 'CloseFromServer' to disconnect, 'connect' to connect): ");
+                            TestUtility.LogInformation("Type any data and then Enter ('q' to quit, 'close' or 'CloseFromServer' to disconnect, 'connect' to connect, 'repeat;<count>' to repeat the next command)");
                             consoleInput = Console.ReadLine();
 
                             string[] tempTokens = consoleInput.Split(new char[] { ';' });
