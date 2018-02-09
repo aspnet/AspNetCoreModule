@@ -37,6 +37,7 @@ namespace WebSocketClientEXE
                 }
                 
                 string consoleInput = null;
+                int repeatcount = 0;
                 while (true)
                 {
                     if (consoleInput != null && consoleInput.ToLower() == "q")
@@ -52,8 +53,15 @@ namespace WebSocketClientEXE
                     }
                     else
                     {
-                        TestUtility.LogInformation("Type any data and then Enter ('q' to quit, 'close' or 'CloseFromServer' to disconnect, 'connect' to connect): ");
-                        consoleInput = Console.ReadLine();
+                        if (!consoleInput.StartsWith("Repeat"))
+                        {
+                            TestUtility.LogInformation("Type any data and then Enter ('q' to quit, 'close' or 'CloseFromServer' to disconnect, 'connect' to connect): ");
+                            consoleInput = Console.ReadLine();
+                        }
+                        else
+                        {
+                            TestUtility.LogInformation("#### Repeating " + repeatcount++);
+                        }
                     }
                                         
                     string[] tokens = consoleInput.Split(new char[] { ';' });
