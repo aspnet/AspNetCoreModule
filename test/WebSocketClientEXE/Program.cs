@@ -53,14 +53,25 @@ namespace WebSocketClientEXE
                     }
                     else
                     {
-                        if (!consoleInput.StartsWith("Repeat"))
+                        if (repeatcount <= 0 || consoleInput == "")
                         {
                             TestUtility.LogInformation("Type any data and then Enter ('q' to quit, 'close' or 'CloseFromServer' to disconnect, 'connect' to connect): ");
                             consoleInput = Console.ReadLine();
+
+                            string[] tempTokens = consoleInput.Split(new char[] { ';' });
+                            
+                            if (tempTokens.Length == 2 && tempTokens[0].ToLower() == "repeat")
+                            {
+                                repeatcount = Convert.ToInt32(tempTokens[1]);
+                                TestUtility.LogInformation("Initialzing repeat count " + repeatcount + "...");
+                                consoleInput = "";
+                                continue;
+                            }
                         }
                         else
                         {
-                            TestUtility.LogInformation("#### Repeating " + repeatcount++);
+                            TestUtility.LogInformation("#### Repeating " + repeatcount);
+                            repeatcount--;
                         }
                     }
                                         
