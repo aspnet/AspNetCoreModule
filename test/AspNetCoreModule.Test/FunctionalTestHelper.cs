@@ -1406,8 +1406,8 @@ namespace AspNetCoreModule.Test
                 await SendReceive(testSite.WebSocketApp.GetUri("echoSubProtocol.aspx"), expectedStringsInResponseBody: new string[] { "Socket Open", "mywebsocketsubprotocol" }); // echoSubProtocol.aspx has hard coded path for the websocket server
                 */
 
-                        // Verify websocket 
-                        using (WebSocketClientHelper websocketClient = new WebSocketClientHelper())
+                // Verify websocket 
+                using (WebSocketClientHelper websocketClient = new WebSocketClientHelper())
                 {
                     var frameReturned = websocketClient.Connect(testSite.AspNetCoreApp.GetUri("websocket"), true, true);
                     Assert.Contains("Connection: Upgrade", frameReturned.Content);
