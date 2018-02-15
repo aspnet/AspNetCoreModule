@@ -95,15 +95,11 @@ namespace AspNetCoreModule.Test.Framework
                     // check if this test process is started with the Run As Administrator start option
                     _globalTestFlags = Environment.ExpandEnvironmentVariables(ANCMTestFlagsEnvironmentVariable);
 
-                    //
-                    // Check if ANCMTestFlags environment is not defined and the test program was started 
-                    // without using the Run As Administrator start option. 
-                    // In that case, we have to use the default TestFlags of UseIISExpress and UsePrivateANCM
-                    //
                     if (!isElevated)
                     {
                         if (_globalTestFlags.ToLower().Contains("%" + ANCMTestFlagsEnvironmentVariable.ToLower() + "%"))
                         {
+                            // if %ANCMTestFlags% environment is not defined, set the default value here
                             _globalTestFlags = TestFlags.UsePrivateANCM + ";" + TestFlags.UseIISExpress;
                         }
                     }
@@ -114,7 +110,7 @@ namespace AspNetCoreModule.Test.Framework
                     _globalTestFlags = _globalTestFlags.ToLower();
 
                     //
-                    // error handling: UseIISExpress and UseFullIIS can be used together. 
+                    // error handling: UseIISExpress and UseFullIIS can't be used together. 
                     //
                     if (_globalTestFlags.Contains(TestFlags.UseIISExpress.ToLower()) && _globalTestFlags.Contains(TestFlags.UseFullIIS.ToLower()))
                     {
@@ -136,6 +132,7 @@ namespace AspNetCoreModule.Test.Framework
                     else
                     {
                         // add UseIISExpress
+                        TestUtility.LogInformation("Warning!!! test process is not started without using RunAsAdministrator");
                         if (!_globalTestFlags.Contains(TestFlags.UseIISExpress.ToLower()))
                         {
                             TestUtility.LogInformation("Added test context of " + TestFlags.UseIISExpress);
@@ -145,6 +142,7 @@ namespace AspNetCoreModule.Test.Framework
                         // remove UseFullIIS
                         if (_globalTestFlags.Contains(TestFlags.UseFullIIS.ToLower()))
                         {
+                            TestUtility.LogInformation("UseFullIIS is replaced with UseIISExpress");
                             _globalTestFlags = _globalTestFlags.Replace(TestFlags.UseFullIIS.ToLower(), "");
                         }
 

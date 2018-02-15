@@ -36,19 +36,53 @@ namespace AspnetCoreModule.TestSites.Standard
             var buffer = new byte[1024 * 4];
             var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
             bool closeFromServer = false;
+            string closeFromServerCmd = "CloseFromServer";
+            int closeFromServerLength = closeFromServerCmd.Length;
+
+            bool echoBack = true;
+            int repeatCount = 1;
 
             while (!result.CloseStatus.HasValue)
             {
-                if ((result.Count == "CloseFromServer".Length && System.Text.Encoding.ASCII.GetString(buffer).Substring(0, result.Count) == "CloseFromServer") 
+                if ((result.Count == closeFromServerLength && System.Text.Encoding.ASCII.GetString(buffer).Substring(0, result.Count) == closeFromServerCmd) 
                     || Program.AappLifetimeStopping == true)
                 {
-                    // start closing handshake from backend process
-                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "ClosingFromServer", CancellationToken.None);
+                    // start closing handshake from backend process when client send "CloseFromServer" text message 
+                    // or when any message is sent from client during the graceful shutdown.
                     closeFromServer = true;
+                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, closeFromServerCmd, CancellationToken.None);
                 }
                 else
                 {
-                    await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
+                    
+                    if (buffer[0] == '_')
+                    {
+                        string tempString = System.Text.Encoding.ASCII.GetString(buffer).Substring(0, result.Count).ToLower();
+                        switch (tempString)
+                        {
+                            case "_donotecho":
+                                echoBack = false;
+                                break;
+                            case "_1":
+                                repeatCount = 1;
+                                break;
+                            case "_10":
+                                repeatCount = 10;
+                                break;
+                            case "_100":
+                                repeatCount = 100;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    if (echoBack)
+                    {
+                        for (int i = 0; i < repeatCount; i++)
+                        {
+                            await webSocket.SendAsync(new ArraySegment<byte>(buffer, 0, result.Count), result.MessageType, result.EndOfMessage, CancellationToken.None);
+                        }
+                    }
                 }
 
                 result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
@@ -56,10 +90,12 @@ namespace AspnetCoreModule.TestSites.Standard
 
             if (closeFromServer)
             {
+                webSocket.Dispose();
                 return;
             }
 
             await webSocket.CloseAsync(result.CloseStatus.Value, result.CloseStatusDescription, CancellationToken.None);
+            webSocket.Dispose();
         }
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
