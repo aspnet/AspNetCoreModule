@@ -81,18 +81,30 @@ namespace AspNetCoreModule.Test.Framework
 
         public static void RestoreAppHostConfig(string fileExtenstion, bool overWriteMode)
         {
-            string tofile = Strings.AppHostConfigPath;
-            string fromfile = Strings.AppHostConfigPath + fileExtenstion;
-            if (File.Exists(fromfile))
+            for (int i = 0; i <= 3; i++)
             {
-                try
+                string tofile = Strings.AppHostConfigPath;
+                string fromfile = Strings.AppHostConfigPath + fileExtenstion;
+                if (File.Exists(fromfile))
                 {
-                    TestUtility.FileCopy(fromfile, tofile, overWrite:overWriteMode);
-                }
-                catch
-                {
-                    TestUtility.LogInformation("Failed to Restore applicationhost.config");
-                    throw;
+                    try
+                    {
+                        TestUtility.FileCopy(fromfile, tofile, overWrite: overWriteMode);
+                        break;
+                    }
+                    catch
+                    {
+                        if (i == 3)
+                        {
+                            TestUtility.LogInformation("Failed to Restore applicationhost.config");
+                            throw;
+                        }
+                        else
+                        {
+                            TestUtility.LogInformation("Retrying...");
+                            Thread.Sleep(1000);
+                        }
+                    }
                 }
             }
         }
@@ -446,7 +458,7 @@ namespace AspNetCoreModule.Test.Framework
             }
         }
 
-        public void SetANCMConfig(string siteName, string appName, string attributeName, object attributeValue)
+        public void SetANCMConfig(string siteName, string appName, string attributeName, object attributeValue, bool removeExisting = false)
         {
             try
             {
@@ -462,10 +474,17 @@ namespace AspNetCoreModule.Test.Framework
                         ConfigurationElement environmentVariableElement = environmentVariablesCollection.CreateElement("environmentVariable");
                         environmentVariableElement["name"] = name;
                         environmentVariableElement["value"] = value;
-                        var element = FindElement(environmentVariablesCollection, "add", "name", value);
+                        var element = FindElement(environmentVariablesCollection, "environmentVariable", "name", name);
                         if (element != null)
                         {
-                            throw new ApplicationException("duplicated collection item");
+                            if (removeExisting)
+                            {
+                                environmentVariablesCollection.Remove(element);
+                            }
+                            else
+                            {
+                                throw new ApplicationException("duplicated collection item");
+                            }
                         }
                         environmentVariablesCollection.Add(environmentVariableElement);
                     }
@@ -482,7 +501,7 @@ namespace AspNetCoreModule.Test.Framework
                 throw ex;
             }
         }
-
+        
         public void ConfigureCustomLogging(string siteName, string appName, int statusCode, int subStatusCode, string path)
         {
             using (ServerManager serverManager = GetServerManager())
@@ -1206,7 +1225,7 @@ namespace AspNetCoreModule.Test.Framework
                 " -Command Add-SslBinding" + 
                 " -IpAddress " + hexIpAddress + 
                 " -Port " + port.ToString() + 
-                " –Thumbprint \"" + thumbPrint + "\"" + 
+                " -thumbprint \"" + thumbPrint + "\"" + 
                 " -TargetSSLStore " + sslStore;
 
             string output = TestUtility.RunPowershellScript(powershellScript);

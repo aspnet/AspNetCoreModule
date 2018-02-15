@@ -19,20 +19,31 @@ namespace AspNetCoreModule.Test.WebSocketClient
         public Uri Address { get; set; }
         public byte[][] HandShakeRequest { get; set; }
         public WebSocketState WebSocketState { get; set; }
-                
+
+        public bool ExpectedDisposedConnection { get; set; }
         public WebSocketClientHelper()
         {
+            ExpectedDisposedConnection = false;
         }
 
         public void Dispose()
         {
-            if (IsOpened)
+            TestUtility.LogInformation("WebSocketClientHelper::Dispose()");
+            if (IsOpened && !this.Connection.IsDisposed && !this.Connection.TcpClient.IsDead)
             {
-                Close();
+                if (!this.Connection.IsDisposed || !this.Connection.TcpClient.IsDead)
+                {
+                    TestUtility.LogInformation("Connection is not available; Skipping Calling Close()...");
+                }
+                else
+                {
+                    TestUtility.LogInformation("Connection is still opened; Calling Close()...");
+                    Close();
+                }
             }
         }
 
-        public bool WaitForWebSocketState(WebSocketState expectedState, int timeout = 3000)
+        public bool WaitForWebSocketState(WebSocketState expectedState, int timeout = 10000)
         {
             bool result = false;
             int RETRYMAX = 300;
@@ -54,6 +65,16 @@ namespace AspNetCoreModule.Test.WebSocketClient
                 }
                 else
                 {
+                    if (ExpectedDisposedConnection && expectedState == WebSocketState.ConnectionClosed)
+                    {
+                        if (this.Connection.IsDisposed || this.Connection.TcpClient.IsDead || this.Connection.TcpClient.Connected == false)
+                        {
+                            // reset connection state with ConnectionClosed
+                            this.WebSocketState = WebSocketState.ConnectionClosed;
+                            result = true;
+                            break;
+                        }
+                    }
                     Thread.Sleep(INTERVAL);
                 }
             }
@@ -98,7 +119,26 @@ namespace AspNetCoreModule.Test.WebSocketClient
             if (!IsAlwaysReading)
                 openingFrame = ReadData();
             else
-                openingFrame = Connection.DataReceived[0];
+            {
+                bool success = false;
+                for (int i = 0; i < 10; i++)
+                {
+                    if (Connection.DataReceived.Count > 0)
+                    {
+                        openingFrame = Connection.DataReceived[0];
+                        success = true;
+                        break;
+                    }
+                    else
+                    {
+                        Thread.Sleep(500);
+                    }
+                }
+                if (!success)
+                {
+                    throw new Exception("Failed to receive data from server after websocket opening handshake");
+                }
+            }
             
             return openingFrame;
         }
@@ -112,7 +152,9 @@ namespace AspNetCoreModule.Test.WebSocketClient
             if (!IsAlwaysReading)
                 closeFrame = ReadData();
             else
+            {
                 closeFrame = Connection.DataReceived[Connection.DataReceived.Count - 1];
+            }
 
             IsOpened = false;
             return closeFrame;
@@ -184,76 +226,87 @@ namespace AspNetCoreModule.Test.WebSocketClient
 
         public void ReadDataCallback(IAsyncResult result)
         {
-            WebSocketConnect client = (WebSocketConnect) result.AsyncState;
-            
-            if (client.IsDisposed)
-                return;
-
-            int bytesRead = client.Stream.EndRead(result); // wait until the buffer is filled 
-            int bytesReadIntotal = bytesRead;
-            ArrayList InputDataArray = new ArrayList();
-            byte[] tempBuffer = null;
-
-            if (bytesRead > 0)
+            try
             {
-                tempBuffer = WebSocketClientUtility.SubArray(Connection.InputData, 0, bytesRead);
-
-                Frame temp = new Frame(tempBuffer);
-
-                // start looping if there is still remaining data
-                if (tempBuffer.Length < temp.DataLength)
-                { 
-                    if (client.TcpClient.GetStream().DataAvailable)
-                    {
-                        // add the first buffer to the arrayList
-                        InputDataArray.Add(tempBuffer);
-
-                        // start looping appending to the arrayList
-                        while (client.TcpClient.GetStream().DataAvailable)
-                        {
-                            bytesRead = client.TcpClient.GetStream().Read(Connection.InputData, 0, Connection.InputData.Length);
-                            tempBuffer = WebSocketClientUtility.SubArray(Connection.InputData, 0, bytesRead);
-                            InputDataArray.Add(tempBuffer);
-                            bytesReadIntotal += bytesRead;
-                            TestUtility.LogInformation("ReadDataCallback: Looping: Client {0:D3}: bytesReadHere {1} ", Connection.Id, bytesRead);
-                        }
-
-                        // create a single byte array with the arrayList
-                        tempBuffer = new byte[bytesReadIntotal];
-                        int arrayIndex = 0;
-                        foreach (byte[] item in InputDataArray.ToArray())
-                        {
-                            for (int i = 0; i < item.Length; i++)
-                            {
-                                tempBuffer[arrayIndex] = item[i];
-                                arrayIndex++;
-                            }
-                        }
-                    }
-                }
-
-                // Create frame with the tempBuffer
-                Frame frame = new Frame(tempBuffer);
-                ProcessReceivedData(frame);
-                int nextFrameIndex = frame.IndexOfNextFrame;
-
-                while (nextFrameIndex != -1)
-                {
-                    tempBuffer = tempBuffer.SubArray(frame.IndexOfNextFrame, tempBuffer.Length - frame.IndexOfNextFrame);
-                    frame = new Frame(tempBuffer);
-                    ProcessReceivedData(frame);
-                    nextFrameIndex = frame.IndexOfNextFrame;
-                }
+                WebSocketConnect client = (WebSocketConnect)result.AsyncState;
 
                 if (client.IsDisposed)
                     return;
 
-                // Start the Async Read to handle the next frame comming from server
-                client.Stream.BeginRead(client.InputData, 0, client.InputData.Length, ReadDataCallback, client);
+                int bytesRead = client.Stream.EndRead(result); // wait until the buffer is filled 
+                int bytesReadIntotal = bytesRead;
+                ArrayList InputDataArray = new ArrayList();
+                byte[] tempBuffer = null;
+
+                if (bytesRead > 0)
+                {
+                    tempBuffer = WebSocketClientUtility.SubArray(Connection.InputData, 0, bytesRead);
+
+                    Frame temp = new Frame(tempBuffer);
+
+                    // start looping if there is still remaining data
+                    if (tempBuffer.Length < temp.DataLength)
+                    {
+                        if (client.TcpClient.GetStream().DataAvailable)
+                        {
+                            // add the first buffer to the arrayList
+                            InputDataArray.Add(tempBuffer);
+
+                            // start looping appending to the arrayList
+                            while (client.TcpClient.GetStream().DataAvailable)
+                            {
+                                bytesRead = client.TcpClient.GetStream().Read(Connection.InputData, 0, Connection.InputData.Length);
+                                tempBuffer = WebSocketClientUtility.SubArray(Connection.InputData, 0, bytesRead);
+                                InputDataArray.Add(tempBuffer);
+                                bytesReadIntotal += bytesRead;
+                                TestUtility.LogInformation("ReadDataCallback: Looping: Client {0:D3}: bytesReadHere {1} ", Connection.Id, bytesRead);
+                            }
+
+                            // create a single byte array with the arrayList
+                            tempBuffer = new byte[bytesReadIntotal];
+                            int arrayIndex = 0;
+                            foreach (byte[] item in InputDataArray.ToArray())
+                            {
+                                for (int i = 0; i < item.Length; i++)
+                                {
+                                    tempBuffer[arrayIndex] = item[i];
+                                    arrayIndex++;
+                                }
+                            }
+                        }
+                    }
+
+                    // Create frame with the tempBuffer
+                    Frame frame = new Frame(tempBuffer);
+                    ProcessReceivedData(frame);
+                    int nextFrameIndex = frame.IndexOfNextFrame;
+
+                    while (nextFrameIndex != -1)
+                    {
+                        tempBuffer = tempBuffer.SubArray(frame.IndexOfNextFrame, tempBuffer.Length - frame.IndexOfNextFrame);
+                        frame = new Frame(tempBuffer);
+                        ProcessReceivedData(frame);
+                        nextFrameIndex = frame.IndexOfNextFrame;
+                    }
+
+                    if (client.IsDisposed)
+                        return;
+
+                    // Start the Async Read to handle the next frame comming from server
+                    client.Stream.BeginRead(client.InputData, 0, client.InputData.Length, ReadDataCallback, client);
+                }
+                else
+                {
+                    client.Dispose();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                client.Dispose();
+                TestUtility.LogInformation("ReadDataCallback() Unexpected error: " + ex.Message);
+                if (!this.ExpectedDisposedConnection)
+                {
+                    throw ex;
+                }                
             }
         }
 
@@ -360,8 +413,7 @@ namespace AspNetCoreModule.Test.WebSocketClient
             if (Connection.TcpClient.Connected)
             {
                 var result = Connection.Stream.BeginWrite(outputData, 0, outputData.Length, WriteCallback, Connection);
-                TestUtility.LogInformation("Client {0:D3}: Write Type {1} : {2} ", Connection.Id, frame.FrameType,
-                    frame.Content.Length);
+                TestUtility.LogInformation("Client {0:D3}: Write Type {1} : {2} ", Connection.Id, frame.FrameType, frame.Content.Length);
             }
             else
             {
@@ -402,13 +454,13 @@ namespace AspNetCoreModule.Test.WebSocketClient
                 {
                     if (WebSocketState == WebSocketState.ConnectionClosed)
                     {
-                        throw new Exception("Connection was already closed");
+                        throw new Exception("Error!!! Connection was already closed");
                     }
                     else
                     {
                         if (WebSocketState != WebSocketState.ClosingFromClientStarted)
                         {
-                            TestUtility.LogInformation("Send back Close frame to responsd server closing...");
+                            TestUtility.LogInformation("Send back Close frame to responsd server side closing...");
                             SendClose();
                         }
                         TestUtility.LogInformation(frame.Content);
