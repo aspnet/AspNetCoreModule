@@ -294,7 +294,7 @@ function Export-CertificateTo($_targetThumbPrint, $_exportToSSLStore, $_password
         }
         else
         {
-            $securedPassword = ConvertTo-SecureString -String $_password -Force –AsPlainText 
+            $securedPassword = ConvertTo-SecureString -String $_password -Force -AsPlainText 
             $exportedPfxFile = Export-PfxCertificate -FilePath $_exportToSSLStore -Cert $TargetSSLStore\$_targetThumbPrint -Password $securedPassword
             if ( ($exportedPfxFile -ne $null) -and (Test-Path $exportedPfxFile.FullName) )
             {
