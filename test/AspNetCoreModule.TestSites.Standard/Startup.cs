@@ -37,6 +37,7 @@ namespace AspnetCoreModule.TestSites.Standard
             var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
             bool closeFromServer = false;
             string closeFromServerCmd = "CloseFromServer";
+            string closingFromServer = "ClosingFromServer";
             int closeFromServerLength = closeFromServerCmd.Length;
 
             bool echoBack = true;
@@ -50,18 +51,20 @@ namespace AspnetCoreModule.TestSites.Standard
                     // start closing handshake from backend process when client send "CloseFromServer" text message 
                     // or when any message is sent from client during the graceful shutdown.
                     closeFromServer = true;
-                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, closeFromServerCmd, CancellationToken.None);
+                    await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, closingFromServer, CancellationToken.None);
                 }
                 else
                 {
-                    
                     if (buffer[0] == '_')
                     {
                         string tempString = System.Text.Encoding.ASCII.GetString(buffer).Substring(0, result.Count).ToLower();
                         switch (tempString)
                         {
-                            case "_donotecho":
+                            case "_off":
                                 echoBack = false;
+                                break;
+                            case "_on":
+                                echoBack = true;
                                 break;
                             case "_1":
                                 repeatCount = 1;
@@ -69,8 +72,8 @@ namespace AspnetCoreModule.TestSites.Standard
                             case "_10":
                                 repeatCount = 10;
                                 break;
-                            case "_100":
-                                repeatCount = 100;
+                            case "_1000":
+                                repeatCount = 1000;
                                 break;
                             default:
                                 break;

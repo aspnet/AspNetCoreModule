@@ -1691,6 +1691,7 @@ namespace AspNetCoreModule.Test
 
                     // reset existing worker process process
                     TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
+                    Thread.Sleep(1000);
 
                     for (int i = 0; i < repeatCount; i++)
                     {
@@ -1699,9 +1700,12 @@ namespace AspNetCoreModule.Test
 
                         // send a startup request to start a new worker process
                         TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + testSite.TcpPort + " ).StatusCode", "200", retryCount: 5);
+                        Thread.Sleep(1000);
 
                         // attach debugger to the worker process
                         testSite.AttachWinDbg(testSite.WorkerProcessID);
+                        Thread.Sleep(1000);
+
                         TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + testSite.TcpPort + " ).StatusCode", "200", retryCount: 30);
 
                         // verify windbg process is started
