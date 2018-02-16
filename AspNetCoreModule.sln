@@ -1,5 +1,4 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27110.0
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -26,8 +25,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CommonLib", "src\CommonLib\CommonLib.vcxproj", "{55494E58-E061-4C4C-A0A8-837008E72F85}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebSocketClientEXE", "test\WebSocketClientEXE\WebSocketClientEXE.csproj", "{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -107,18 +104,6 @@ Global
 		{55494E58-E061-4C4C-A0A8-837008E72F85}.Release|x64.ActiveCfg = Release|x64
 		{55494E58-E061-4C4C-A0A8-837008E72F85}.Release|x64.Build.0 = Release|x64
 		{55494E58-E061-4C4C-A0A8-837008E72F85}.Release|x64.Deploy.0 = Release|x64
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Debug|Win32.ActiveCfg = Debug|Any CPU
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Debug|Win32.Build.0 = Debug|Any CPU
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Debug|x64.Build.0 = Debug|Any CPU
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Release|Win32.ActiveCfg = Release|Any CPU
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Release|Win32.Build.0 = Release|Any CPU
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Release|x64.ActiveCfg = Release|Any CPU
-		{C4DC6789-017A-4AF7-83E9-CDA2F1954A9E}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
