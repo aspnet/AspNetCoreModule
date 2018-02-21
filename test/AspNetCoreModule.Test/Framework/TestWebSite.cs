@@ -477,7 +477,7 @@ namespace AspNetCoreModule.Test.Framework
             
             try
             {
-                TestUtility.RunCommand(debuggerCmdline, " -g -G -p " + processIdOfWorkerProcess.ToString(), true, false);                
+                TestUtility.RunCommand(debuggerCmdline, " -c \"sxi 80000003\" -g -G -p " + processIdOfWorkerProcess.ToString(), true, false);                
                 System.Threading.Thread.Sleep(3000);
             }
             catch
