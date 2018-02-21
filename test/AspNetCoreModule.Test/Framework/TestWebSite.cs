@@ -442,7 +442,7 @@ namespace AspNetCoreModule.Test.Framework
             }
         }
 
-        public void AttachWinDbg(int processIdOfWorkerProcess)
+        public void AttachWinDbg(int processIdOfWorkerProcess, string initialCommand = null)
         {
             string processName = "iisexpress.exe";
             string debuggerCmdline;
@@ -477,7 +477,14 @@ namespace AspNetCoreModule.Test.Framework
             
             try
             {
-                TestUtility.RunCommand(debuggerCmdline, " -c \"sxi 80000003\" -g -G -p " + processIdOfWorkerProcess.ToString(), true, false);                
+                if (initialCommand != null)
+                {
+                    TestUtility.RunCommand(debuggerCmdline, " -c \"" + initialCommand + "\" -g -G -p " + processIdOfWorkerProcess.ToString(), true, false);
+                }
+                else
+                {
+                    TestUtility.RunCommand(debuggerCmdline, " -g -G -p " + processIdOfWorkerProcess.ToString(), true, false);
+                }
                 System.Threading.Thread.Sleep(3000);
             }
             catch

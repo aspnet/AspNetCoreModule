@@ -1766,7 +1766,7 @@ namespace AspNetCoreModule.Test
                         Thread.Sleep(1000);
 
                         // attach debugger to the worker process
-                        testSite.AttachWinDbg(testSite.WorkerProcessID);
+                        testSite.AttachWinDbg(testSite.WorkerProcessID, "sxi 80000003;g");
                         Thread.Sleep(1000);
 
                         TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + testSite.TcpPort + " ).StatusCode", "200", retryCount: 30);
