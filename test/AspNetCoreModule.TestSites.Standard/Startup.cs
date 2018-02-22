@@ -33,11 +33,14 @@ namespace AspnetCoreModule.TestSites.Standard
 
         private async Task Echo(WebSocket webSocket)
         {
+            int webSocketIndex = WebSocketConnections.GetLastIndex();
+            WebSocketConnections.WebSockets.Add(webSocketIndex, webSocket);
+
             var buffer = new byte[1024 * 4];
             var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
             bool closeFromServer = false;
-            string closeFromServerCmd = "CloseFromServer";
-            string closingFromServer = "ClosingFromServer";
+            string closeFromServerCmd = WebSocketConnections.CloseFromServerCmd;
+            string closingFromServer = WebSocketConnections.ClosingFromServer;
             int closeFromServerLength = closeFromServerCmd.Length;
 
             bool echoBack = true;
@@ -45,11 +48,9 @@ namespace AspnetCoreModule.TestSites.Standard
 
             while (!result.CloseStatus.HasValue)
             {
-                if ((result.Count == closeFromServerLength && System.Text.Encoding.ASCII.GetString(buffer).Substring(0, result.Count) == closeFromServerCmd) 
-                    || Program.AappLifetimeStopping == true)
+                if ((result.Count == closeFromServerLength && System.Text.Encoding.ASCII.GetString(buffer).Substring(0, result.Count) == closeFromServerCmd))
                 {
                     // start closing handshake from backend process when client send "CloseFromServer" text message 
-                    // or when any message is sent from client during the graceful shutdown.
                     closeFromServer = true;
                     await webSocket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, closingFromServer, CancellationToken.None);
                 }
