@@ -1,4 +1,4 @@
-﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 using AspNetCoreModule.Test.Framework;
@@ -1536,9 +1536,6 @@ namespace AspNetCoreModule.Test
                         testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "App_Offline.Htm");
                         Thread.Sleep(1000);
 
-                        // ToDo: This should be replaced when the server can handle this automaticially
-                        // send a websocket data to invoke the server side websocket disconnection after the app_offline
-                        websocketClient.SendTextData("test");
                         bool connectionClosedFromServer = websocketClient.WaitForWebSocketState(WebSocketState.ConnectionClosed);
 
                         if (connectionClosedFromServer)
@@ -1595,11 +1592,6 @@ namespace AspNetCoreModule.Test
                             iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "startupTimeLimit", 11 + jj);
                             Thread.Sleep(1000);
                         }
-                        
-                        // ToDo: This should be replaced when the server can handle this automaticially
-                        // send a websocket data to invoke the server side websocket disconnection after the app_offline
-                        websocketClient.SendTextData("test");
-                        bool connectionClosedFromServer = websocketClient.WaitForWebSocketState(WebSocketState.ConnectionClosed);
                         
                         // Verify server side connection closing is done successfully
                         Assert.True(connectionClosedFromServer, "Closing Handshake initiated from Server");
@@ -1874,10 +1866,6 @@ namespace AspNetCoreModule.Test
                                     // put app_offline
                                     testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "App_Offline.Htm");
                                     Thread.Sleep(1000);
-
-                                    // ToDo: remove this when server can handle this automatically
-                                    // send a websocket data to invoke the server side websocket disconnection after the app_offline
-                                    websocketClient.SendTextData("test");
                                     
                                     // wait for the gracefulshutdown finished
                                     Thread.Sleep(shutdownDelayTime);
