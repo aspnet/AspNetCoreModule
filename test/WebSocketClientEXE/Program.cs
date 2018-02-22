@@ -142,6 +142,12 @@ namespace WebSocketClientEXE
                             continue;
                         }
 
+                        if (temp.StartsWith("|"))
+                        {
+                            websocketClient.SendTextData(data, 0x00);  // 0x00: continuation of sending partial data
+                            continue;
+                        }
+
                         if (temp.EndsWith("]"))
                         {
                             websocketClient.SendTextData(data, 0x80);  // 0x80: end of sending partial data
