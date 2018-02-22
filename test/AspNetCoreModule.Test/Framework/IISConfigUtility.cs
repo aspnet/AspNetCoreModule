@@ -1233,6 +1233,8 @@ namespace AspNetCoreModule.Test.Framework
             {
                 throw new ApplicationException("Failed to configure certificate, output: " + output);
             }
+
+            Thread.Sleep(1000);
         }
 
         public void RemoveSSLCertificate(int port, string hexIpAddress, string sslStore = @"Cert:\LocalMachine\My")
