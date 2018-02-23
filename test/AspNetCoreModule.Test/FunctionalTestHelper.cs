@@ -31,10 +31,10 @@ namespace AspNetCoreModule.Test
         {
             _attributeValue = attributeValue;
 
-            if (_attributeValue == TestFlags.SkipTest && TestFlags.Enabled(TestFlags.UseFullIIS))
+            if (_attributeValue == TestFlags.SkipTest && (TestFlags.Enabled(TestFlags.UseFullIIS) || TestFlags.Enabled(TestFlags.UseIISExpress)))
             {
                 // Currently the global test flag is set to TestFlags.SkipTest.
-                // However, if ANCMTestFlags environmentvariable is set to UseFullIIS, 
+                // However, if ANCMTestFlags environmentvariable is set to UseFullIIS or UseIISExpress, 
                 // we need ignore the default global test flag to run test.
                 _attributeValue = TestFlags.RunAsAdministrator;
             }
@@ -1593,6 +1593,8 @@ namespace AspNetCoreModule.Test
                             Thread.Sleep(1000);
                         }
                         
+                        bool connectionClosedFromServer = websocketClient.WaitForWebSocketState(WebSocketState.ConnectionClosed); 
+
                         // Verify server side connection closing is done successfully
                         Assert.True(connectionClosedFromServer, "Closing Handshake initiated from Server");
 

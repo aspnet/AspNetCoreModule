@@ -104,6 +104,8 @@ namespace AspnetCoreModule.TestSites.Standard
 
         public void Configure(IApplicationBuilder app, ILoggerFactory loggerFactory)
         {
+            app.UseStaticFiles();
+
             loggerFactory.AddConsole(minLevel: LogLevel.Warning);
 
             app.Map("/websocketSubProtocol", subApp =>
