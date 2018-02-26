@@ -169,8 +169,6 @@ namespace AspNetCoreModule.Test.Framework
             //
             // Use localhost hostname for IISExpress
             //
-            
-
             if (IisServerType == ServerType.IISExpress 
                 && TestFlags.Enabled(TestFlags.Wow64BitMode))
             {
@@ -232,9 +230,15 @@ namespace AspNetCoreModule.Test.Framework
             }
 
             //
-            // Currently we use DotnetCore v2.0
+            // By default we use DotnetCore v2.0
             //
-            string publishPath = Path.Combine(srcPath, "bin", "Debug", "netcoreapp2.0", "publish");
+            string SDKVersion = "netcoreapp2.0";
+            if (TestFlags.Enabled(TestFlags.UseSDK2Dot1))
+            {
+                SDKVersion = "netcoreapp2.1";
+            }
+
+            string publishPath = Path.Combine(srcPath, "bin", "Debug", SDKVersion, "publish");
             string publishPathOutput = Path.Combine(InitializeTestMachine.TestRootDirectory, "publishPathOutput");
             
             //
@@ -242,7 +246,7 @@ namespace AspNetCoreModule.Test.Framework
             //
             if (_publishedAspnetCoreApp != true)
             {
-                string argumentForDotNet = "publish " + srcPath + " --framework netcoreapp2.0";
+                string argumentForDotNet = "publish " + srcPath + " --framework " + SDKVersion;
                 TestUtility.LogInformation("TestWebSite::TestWebSite() StandardTestApp is not published, trying to publish on the fly: dotnet.exe " + argumentForDotNet);
                 TestUtility.DeleteDirectory(publishPath);
                 TestUtility.RunCommand("dotnet", argumentForDotNet);
@@ -309,21 +313,25 @@ namespace AspNetCoreModule.Test.Framework
             RootAppContext.RestoreFile("web.config");
             RootAppContext.DeleteFile("app_offline.htm");
             RootAppContext.AppPoolName = appPoolName;
+            RootAppContext.IisServerType = IisServerType;
 
             AspNetCoreApp = new TestWebApplication("/AspNetCoreApp", aspnetCoreAppRootPath, this);
             AspNetCoreApp.AppPoolName = appPoolName;
             AspNetCoreApp.RestoreFile("web.config");
             AspNetCoreApp.DeleteFile("app_offline.htm");
+            AspNetCoreApp.IisServerType = IisServerType;
 
             WebSocketApp = new TestWebApplication("/WebSocketApp", Path.Combine(siteRootPath, "WebSocket"), this);
             WebSocketApp.AppPoolName = appPoolName;
             WebSocketApp.RestoreFile("web.config");
             WebSocketApp.DeleteFile("app_offline.htm");
+            WebSocketApp.IisServerType = IisServerType;
 
             URLRewriteApp = new TestWebApplication("/URLRewriteApp", Path.Combine(siteRootPath, "URLRewrite"), this);
             URLRewriteApp.AppPoolName = appPoolName;
             URLRewriteApp.RestoreFile("web.config");
             URLRewriteApp.DeleteFile("app_offline.htm");
+            URLRewriteApp.IisServerType = IisServerType;
 
             //
             // Create site and apps
@@ -365,6 +373,14 @@ namespace AspNetCoreModule.Test.Framework
                 iisConfig.CreateApp(siteName, AspNetCoreApp.Name, AspNetCoreApp.PhysicalPath, appPoolName);
                 iisConfig.CreateApp(siteName, WebSocketApp.Name, WebSocketApp.PhysicalPath, appPoolName);
                 iisConfig.CreateApp(siteName, URLRewriteApp.Name, URLRewriteApp.PhysicalPath, appPoolName);
+
+
+                // Configure hostingModel for aspnetcore app
+                if (TestFlags.Enabled(TestFlags.InprocessMode))
+                {
+                    AspNetCoreApp.HostingModel = "inprocess";
+                    iisConfig.SetANCMConfig(siteName, AspNetCoreApp.Name, "hostingModel", "inprocess");
+                }
             }
 
             if (startIISExpress)

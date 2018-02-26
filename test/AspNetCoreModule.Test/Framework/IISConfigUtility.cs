@@ -25,6 +25,8 @@ namespace AspNetCoreModule.Test.Framework
         public static string ApppHostTemporaryBackupFileExtention = null;
         private ServerType _serverType = ServerType.IIS;
         private string _iisExpressConfigPath = null;
+
+        public static bool ANCMInprocessMode = false;
         
         public enum AppPoolBitness
         {
@@ -490,6 +492,14 @@ namespace AspNetCoreModule.Test.Framework
                     }
                     else
                     {
+                        if (attributeName == "hostingModel" && attributeValue.ToString().ToLower().Trim() == "inprocess")
+                        {
+                            ANCMInprocessMode = true;
+                        }
+                        else
+                        {
+                            ANCMInprocessMode = false;
+                        }
                         aspNetCoreSection[attributeName] = attributeValue;
                     }
 

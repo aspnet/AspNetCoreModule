@@ -101,6 +101,32 @@ namespace AspNetCoreModule.Test.Framework
             }
         }
 
+        private ServerType _iisServerType = ServerType.IIS;
+        public ServerType IisServerType
+        {
+            get
+            {
+                return _iisServerType;
+            }
+            set
+            {
+                _iisServerType = value;
+            }
+        }
+
+        private string _hostingModel = null;
+        public string HostingModel
+        {
+            get
+            {
+                return _hostingModel;
+            }
+            set
+            {
+                _hostingModel = value;
+            }
+        }
+
         public Uri GetUri()
         {
             return new Uri("http://" + _testSite.HostName + ":" + _testSite.TcpPort.ToString() + URL);
@@ -144,25 +170,39 @@ namespace AspNetCoreModule.Test.Framework
 
         public string GetProcessFileName()
         {
-            string filePath = Path.Combine(_physicalPath, "web.config");
             string result = null;
-
-            // read web.config
-            string fileContent = TestUtility.FileReadAllText(filePath);
-
-            // get the value of processPath attribute of aspNetCore element
-            if (fileContent != null)
+            if (this.HostingModel == "inprocess")
             {
-                result = TestUtility.XmlParser(fileContent, "aspNetCore", "processPath", null);
+                if (this.IisServerType == ServerType.IIS)
+                {
+                    result = "w3wp.exe";
+                }
+                else
+                {
+                    result = "iisexpress.exe";
+                }
             }
-
-            // split fileName from full path
-            result = Path.GetFileName(result);
-
-            // append .exe if it wasn't used
-            if (!result.Contains(".exe"))
+            else
             {
-                result = result + ".exe";
+                string filePath = Path.Combine(_physicalPath, "web.config");
+
+                // read web.config
+                string fileContent = TestUtility.FileReadAllText(filePath);
+
+                // get the value of processPath attribute of aspNetCore element
+                if (fileContent != null)
+                {
+                    result = TestUtility.XmlParser(fileContent, "aspNetCore", "processPath", null);
+                }
+
+                // split fileName from full path
+                result = Path.GetFileName(result);
+
+                // append .exe if it wasn't used
+                if (!result.Contains(".exe"))
+                {
+                    result = result + ".exe";
+                }
             }
             return result;
         }
