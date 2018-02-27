@@ -396,6 +396,21 @@ namespace AspNetCoreModule.Test.Framework
             TestUtility.LogInformation("TestWebSite::TestWebSite() End");
         }
 
+        public void VerifyWorkerProcessRecycledUnderInprocessMode(string backendProcessId, int timeout = 5000)
+        {
+            if (AspNetCoreApp.HostingModel == "inprocess")
+            {
+                var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
+                backendProcess.WaitForExit(timeout);
+
+                if (IisServerType == ServerType.IISExpress)
+                {
+                    // restart IISExpress
+                    StartIISExpress();
+                }
+            }
+        }
+
         public void StartIISExpress()
         {
             if (IisServerType == ServerType.IIS)
