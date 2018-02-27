@@ -130,7 +130,6 @@ namespace AspNetCoreModule.Test
 
                     string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                     Assert.NotEqual(backendProcessId_old, backendProcessId);
-
                     backendProcessId_old = backendProcessId;
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
                     Assert.Equal(backendProcess.ProcessName.ToLower().Replace(".exe", ""), testSite.AspNetCoreApp.GetProcessFileName().ToLower().Replace(".exe", ""));
@@ -172,7 +171,6 @@ namespace AspNetCoreModule.Test
 
                     string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                     Assert.NotEqual(backendProcessId_old, backendProcessId);
-
                     backendProcessId_old = backendProcessId;
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
                     Assert.Equal(backendProcess.ProcessName.ToLower().Replace(".exe", ""), testSite.AspNetCoreApp.GetProcessFileName().ToLower().Replace(".exe", ""));
