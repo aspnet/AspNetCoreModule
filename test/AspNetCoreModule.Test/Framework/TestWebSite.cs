@@ -28,16 +28,23 @@ namespace AspNetCoreModule.Test.Framework
 
             if (_iisExpressPidBackup != -1)
             {
-                var iisExpressProcess = Process.GetProcessById(Convert.ToInt32(_iisExpressPidBackup));
                 try
                 {
+                    var iisExpressProcess = Process.GetProcessById(Convert.ToInt32(_iisExpressPidBackup));
                     iisExpressProcess.Kill();
                     iisExpressProcess.WaitForExit();
                     iisExpressProcess.Close();
                 }
                 catch
                 {
-                    TestUtility.RunPowershellScript("stop-process -id " + _iisExpressPidBackup);
+                    if (this.AspNetCoreApp.HostingModel == "inprocess")
+                    {
+                        // IISExpress seems to be already recycled under Inprocess mode.
+                    }
+                    else
+                    {
+                        TestUtility.RunPowershellScript("stop-process -id " + _iisExpressPidBackup);
+                    }
                 }
             }
             TestUtility.LogInformation("TestWebSite::Dispose() End");
@@ -169,8 +176,6 @@ namespace AspNetCoreModule.Test.Framework
             //
             // Use localhost hostname for IISExpress
             //
-            
-
             if (IisServerType == ServerType.IISExpress 
                 && TestFlags.Enabled(TestFlags.Wow64BitMode))
             {
@@ -232,9 +237,15 @@ namespace AspNetCoreModule.Test.Framework
             }
 
             //
-            // Currently we use DotnetCore v2.0
+            // By default we use DotnetCore v2.0
             //
-            string publishPath = Path.Combine(srcPath, "bin", "Debug", "netcoreapp2.0", "publish");
+            string SDKVersion = "netcoreapp2.0";
+            if (TestFlags.Enabled(TestFlags.UseSDK2Dot1))
+            {
+                SDKVersion = "netcoreapp2.1";
+            }
+
+            string publishPath = Path.Combine(srcPath, "bin", "Debug", SDKVersion, "publish");
             string publishPathOutput = Path.Combine(InitializeTestMachine.TestRootDirectory, "publishPathOutput");
             
             //
@@ -242,7 +253,7 @@ namespace AspNetCoreModule.Test.Framework
             //
             if (_publishedAspnetCoreApp != true)
             {
-                string argumentForDotNet = "publish " + srcPath + " --framework netcoreapp2.0";
+                string argumentForDotNet = "publish " + srcPath + " --framework " + SDKVersion;
                 TestUtility.LogInformation("TestWebSite::TestWebSite() StandardTestApp is not published, trying to publish on the fly: dotnet.exe " + argumentForDotNet);
                 TestUtility.DeleteDirectory(publishPath);
                 TestUtility.RunCommand("dotnet", argumentForDotNet);
@@ -309,21 +320,25 @@ namespace AspNetCoreModule.Test.Framework
             RootAppContext.RestoreFile("web.config");
             RootAppContext.DeleteFile("app_offline.htm");
             RootAppContext.AppPoolName = appPoolName;
+            RootAppContext.IisServerType = IisServerType;
 
             AspNetCoreApp = new TestWebApplication("/AspNetCoreApp", aspnetCoreAppRootPath, this);
             AspNetCoreApp.AppPoolName = appPoolName;
             AspNetCoreApp.RestoreFile("web.config");
             AspNetCoreApp.DeleteFile("app_offline.htm");
+            AspNetCoreApp.IisServerType = IisServerType;
 
             WebSocketApp = new TestWebApplication("/WebSocketApp", Path.Combine(siteRootPath, "WebSocket"), this);
             WebSocketApp.AppPoolName = appPoolName;
             WebSocketApp.RestoreFile("web.config");
             WebSocketApp.DeleteFile("app_offline.htm");
+            WebSocketApp.IisServerType = IisServerType;
 
             URLRewriteApp = new TestWebApplication("/URLRewriteApp", Path.Combine(siteRootPath, "URLRewrite"), this);
             URLRewriteApp.AppPoolName = appPoolName;
             URLRewriteApp.RestoreFile("web.config");
             URLRewriteApp.DeleteFile("app_offline.htm");
+            URLRewriteApp.IisServerType = IisServerType;
 
             //
             // Create site and apps
@@ -365,6 +380,14 @@ namespace AspNetCoreModule.Test.Framework
                 iisConfig.CreateApp(siteName, AspNetCoreApp.Name, AspNetCoreApp.PhysicalPath, appPoolName);
                 iisConfig.CreateApp(siteName, WebSocketApp.Name, WebSocketApp.PhysicalPath, appPoolName);
                 iisConfig.CreateApp(siteName, URLRewriteApp.Name, URLRewriteApp.PhysicalPath, appPoolName);
+
+
+                // Configure hostingModel for aspnetcore app
+                if (TestFlags.Enabled(TestFlags.InprocessMode))
+                {
+                    AspNetCoreApp.HostingModel = "inprocess";
+                    iisConfig.SetANCMConfig(siteName, AspNetCoreApp.Name, "hostingModel", "inprocess");
+                }
             }
 
             if (startIISExpress)
@@ -378,6 +401,35 @@ namespace AspNetCoreModule.Test.Framework
                 TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + TcpPort + " ).StatusCode", "200");
             }
             TestUtility.LogInformation("TestWebSite::TestWebSite() End");
+        }
+
+        public void VerifyWorkerProcessRecycledUnderInprocessMode(string backendProcessId, int timeout = 5000)
+        {
+            if (AspNetCoreApp.HostingModel == "inprocess")
+            {
+                if (backendProcessId == null)
+                {
+                    System.Threading.Thread.Sleep(3000);
+                }
+                else
+                {
+                    try
+                    {
+                        var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
+                        backendProcess.WaitForExit(timeout);
+                    }
+                    catch
+                    {
+                        // IISExpress process is already recycled.
+                    }
+                }
+
+                if (IisServerType == ServerType.IISExpress)
+                {
+                    // restart IISExpress
+                    StartIISExpress();
+                }
+            }
         }
 
         public void StartIISExpress()

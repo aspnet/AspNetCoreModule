@@ -16,6 +16,8 @@ namespace AspNetCoreModule.Test.Framework
         public const string UsePrivateANCM = "UsePrivateANCM";
         public const string UseIISExpress = "UseIISExpress";
         public const string UseFullIIS = "UseFullIIS";
+        public const string UseSDK2Dot1 = "UseSDK2Dot1";
+        public const string InprocessMode = "InprocessMode";
         public const string RunAsAdministrator = "RunAsAdministrator";
         public const string MakeCertExeAvailable = "MakeCertExeAvailable";
         public const string WebSocketModuleAvailable = "WebSocketModuleAvailable";
@@ -103,12 +105,26 @@ namespace AspNetCoreModule.Test.Framework
                             _globalTestFlags = TestFlags.UsePrivateANCM + ";" + TestFlags.UseIISExpress;
                         }
                     }
-
+                    
                     //
                     // convert in lower case 
                     //
                     _globalTestFlags = _globalTestFlags.ToLower();
 
+                    // add InprocessMode
+                    if (!_globalTestFlags.Contains(TestFlags.InprocessMode))
+                    {
+                        TestUtility.LogInformation("Added test context of " + TestFlags.InprocessMode);
+                        _globalTestFlags += ";" + TestFlags.InprocessMode;
+                    }
+
+                    // add UseSDK2Dot1
+                    if (!_globalTestFlags.Contains(TestFlags.UseSDK2Dot1))
+                    {
+                        TestUtility.LogInformation("Added test context of " + TestFlags.UseSDK2Dot1);
+                        _globalTestFlags += ";" + TestFlags.UseSDK2Dot1;
+                    }
+                    
                     //
                     // error handling: UseIISExpress and UseFullIIS can't be used together. 
                     //
