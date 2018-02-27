@@ -112,19 +112,19 @@ namespace AspNetCoreModule.Test.Framework
                     _globalTestFlags = _globalTestFlags.ToLower();
 
                     // add InprocessMode
-                    if (!_globalTestFlags.Contains(TestFlags.InprocessMode))
+                    if (_globalTestFlags.Contains(TestFlags.InprocessMode.ToLower()))
                     {
                         TestUtility.LogInformation("Added test context of " + TestFlags.InprocessMode);
                         _globalTestFlags += ";" + TestFlags.InprocessMode;
                     }
 
                     // add UseSDK2Dot1
-                    if (!_globalTestFlags.Contains(TestFlags.UseSDK2Dot1))
+                    if (_globalTestFlags.Contains(TestFlags.UseSDK2Dot1.ToLower()))
                     {
                         TestUtility.LogInformation("Added test context of " + TestFlags.UseSDK2Dot1);
                         _globalTestFlags += ";" + TestFlags.UseSDK2Dot1;
                     }
-                    
+
                     //
                     // error handling: UseIISExpress and UseFullIIS can't be used together. 
                     //
