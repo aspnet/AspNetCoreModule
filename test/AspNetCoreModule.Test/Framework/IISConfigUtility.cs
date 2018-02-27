@@ -492,13 +492,16 @@ namespace AspNetCoreModule.Test.Framework
                     }
                     else
                     {
-                        if (attributeName == "hostingModel" && attributeValue.ToString().ToLower().Trim() == "inprocess")
+                        if (attributeName == "hostingModel")
                         {
-                            ANCMInprocessMode = true;
-                        }
-                        else
-                        {
-                            ANCMInprocessMode = false;
+                            if (attributeValue.ToString().ToLower().Trim() == "inprocess")
+                            {
+                                ANCMInprocessMode = true;
+                            }
+                            else
+                            {
+                                ANCMInprocessMode = false;
+                            }
                         }
                         aspNetCoreSection[attributeName] = attributeValue;
                     }

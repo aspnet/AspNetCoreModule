@@ -390,19 +390,23 @@ namespace AspNetCoreModule.Test
                     Assert.True("foo" == (await SendReceive(testSite.AspNetCoreApp.GetUri("ExpandEnvironmentVariablesANCMTestFoo"))).ResponseBody);
                     Assert.True(expectedEnvironmentVariableValue == (await SendReceive(testSite.AspNetCoreApp.GetUri("ExpandEnvironmentVariables" + environmentVariableName))).ResponseBody);
 
-                    // Verify other common environment variables
-                    string temp = (await SendReceive(testSite.AspNetCoreApp.GetUri("DumpEnvironmentVariables"))).ResponseBody;
-                    Assert.Contains("ASPNETCORE_PORT", temp);
-                    Assert.Contains("ASPNETCORE_APPL_PATH", temp);
-                    Assert.Contains("ASPNETCORE_IIS_HTTPAUTH", temp);
-                    Assert.Contains("ASPNETCORE_TOKEN", temp);
-                    Assert.Contains("ASPNETCORE_HOSTINGSTARTUPASSEMBLIES", temp);
+                    // verify environment variables passed to backend process
+                    if (testSite.AspNetCoreApp.HostingModel != "inprocess")
+                    {
+                        // Verify other common environment variables
+                        string temp = (await SendReceive(testSite.AspNetCoreApp.GetUri("DumpEnvironmentVariables"))).ResponseBody;
+                        Assert.Contains("ASPNETCORE_PORT", temp);
+                        Assert.Contains("ASPNETCORE_APPL_PATH", temp);
+                        Assert.Contains("ASPNETCORE_IIS_HTTPAUTH", temp);
+                        Assert.Contains("ASPNETCORE_TOKEN", temp);
+                        Assert.Contains("ASPNETCORE_HOSTINGSTARTUPASSEMBLIES", temp);
 
-                    // Verify other inherited environment variables
-                    Assert.Contains("PROCESSOR_ARCHITECTURE", temp);
-                    Assert.Contains("USERNAME", temp);
-                    Assert.Contains("USERDOMAIN", temp);
-                    Assert.Contains("USERPROFILE", temp);
+                        // Verify other inherited environment variables
+                        Assert.Contains("PROCESSOR_ARCHITECTURE", temp);
+                        Assert.Contains("USERNAME", temp);
+                        Assert.Contains("USERDOMAIN", temp);
+                        Assert.Contains("USERPROFILE", temp);
+                    }
                 }
 
                 testSite.AspNetCoreApp.RestoreFile("web.config");
@@ -958,6 +962,12 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoForwardWindowsAuthTokenTest", startIISExpress: false))
             {
+                if (testSite.AspNetCoreApp.HostingModel == "inprocess")
+                {
+                    TestUtility.LogInformation("This test is not valid for Inprocess mode");
+                    return;
+                }
+
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
                     string responseBody = string.Empty;
@@ -976,7 +986,6 @@ namespace AspNetCoreModule.Test
                     requestHeaders = (await SendReceive(testSite.AspNetCoreApp.GetUri("DumpRequestHeaders"))).ResponseBody;
                     if (enabledForwardWindowsAuthToken)
                     {
-
                         Assert.Contains("MS-ASPNETCORE-WINAUTHTOKEN", requestHeaders.ToUpper());
 
                         responseBody = (await SendReceive(testSite.AspNetCoreApp.GetUri("ImpersonateMiddleware"))).ResponseBody;

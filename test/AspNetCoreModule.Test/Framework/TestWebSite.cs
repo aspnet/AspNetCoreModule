@@ -28,16 +28,23 @@ namespace AspNetCoreModule.Test.Framework
 
             if (_iisExpressPidBackup != -1)
             {
-                var iisExpressProcess = Process.GetProcessById(Convert.ToInt32(_iisExpressPidBackup));
                 try
                 {
+                    var iisExpressProcess = Process.GetProcessById(Convert.ToInt32(_iisExpressPidBackup));
                     iisExpressProcess.Kill();
                     iisExpressProcess.WaitForExit();
                     iisExpressProcess.Close();
                 }
                 catch
                 {
-                    TestUtility.RunPowershellScript("stop-process -id " + _iisExpressPidBackup);
+                    if (this.AspNetCoreApp.HostingModel == "inprocess")
+                    {
+                        // IISExpress seems to be already recycled under Inprocess mode.
+                    }
+                    else
+                    {
+                        TestUtility.RunPowershellScript("stop-process -id " + _iisExpressPidBackup);
+                    }
                 }
             }
             TestUtility.LogInformation("TestWebSite::Dispose() End");
@@ -400,8 +407,22 @@ namespace AspNetCoreModule.Test.Framework
         {
             if (AspNetCoreApp.HostingModel == "inprocess")
             {
-                var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
-                backendProcess.WaitForExit(timeout);
+                if (backendProcessId == null)
+                {
+                    System.Threading.Thread.Sleep(3000);
+                }
+                else
+                {
+                    try
+                    {
+                        var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
+                        backendProcess.WaitForExit(timeout);
+                    }
+                    catch
+                    {
+                        // IISExpress process is already recycled.
+                    }
+                }
 
                 if (IisServerType == ServerType.IISExpress)
                 {
