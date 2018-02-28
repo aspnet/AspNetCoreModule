@@ -42,8 +42,6 @@ namespace AspNetCoreModule.Test
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 25, 19, false)]
-        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 25, 19, true)]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, 25, 19, false)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, 25, 19, true)]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 5, 4, true)]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 5, 4, false)]
@@ -56,6 +54,17 @@ namespace AspNetCoreModule.Test
         public Task ShutdownTimeLimitTest(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
         {
             return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
+        }
+
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
+        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 30, 9, true)]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, 30, 9, false)]
+        public Task V21_ShutdownTimeLimitTest(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
+        {
+            return DoShutdownTimeLimitAndAppOfflineTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
         }
 
         [ConditionalTheory]
@@ -203,10 +212,19 @@ namespace AspNetCoreModule.Test
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "00:02:00")]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, "00:02:00")]
-        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "00:01:00")]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, "00:01:00")]
         public Task RequestTimeoutTest(IISConfigUtility.AppPoolBitness appPoolBitness, string requestTimeout)
+        {
+            return DoRequestTimeoutTest(appPoolBitness, requestTimeout);
+        }
+
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
+        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "00:00:10")]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, "00:00:20")]
+        public Task V21_RequestTimeoutTest(IISConfigUtility.AppPoolBitness appPoolBitness, string requestTimeout)
         {
             return DoRequestTimeoutTest(appPoolBitness, requestTimeout);
         }
@@ -316,7 +334,7 @@ namespace AspNetCoreModule.Test
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
-        public Task AppVerifierTest1(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
+        public Task AppVerifierTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
         {
             return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
         }
@@ -326,7 +344,7 @@ namespace AspNetCoreModule.Test
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.DontUseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
-        public Task AppVerifierTest2(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
+        public Task AppVerifier2Test(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
         {
             return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
         }
@@ -336,7 +354,7 @@ namespace AspNetCoreModule.Test
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.StopAndStartAppPool, 1)]
-        public Task AppVerifierTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
+        public Task AppVerifier3Test(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
         {
             return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
         }
@@ -366,11 +384,33 @@ namespace AspNetCoreModule.Test
         [OSSkipCondition(OperatingSystems.Windows, WindowsVersions.Win7, SkipReason = "IIS does not support Websocket on Win7")]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "abcdefghijklmnopqrstuvwxyz0123456789")]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, "a")]
-        // Test reliablitiy issue with lenghty data; disabled until the reason of the test issue is figured out
-        //[InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789")]
         public Task WebSocketTest(IISConfigUtility.AppPoolBitness appPoolBitness, string testData)
         {
             return DoWebSocketTest(appPoolBitness, testData);
+        }
+
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
+        [OSSkipCondition(OperatingSystems.Windows, WindowsVersions.Win7, SkipReason = "IIS does not support Websocket on Win7")]
+        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "abcdefghijklmnopqrstuvwxyz0123456789")]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, "a")]
+        public Task V21_WebSocketAppOfflineTest(IISConfigUtility.AppPoolBitness appPoolBitness, string testData)
+        {
+            return DoWebSocketAppOfflineTest(appPoolBitness, testData);
+        }
+
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
+        [OSSkipCondition(OperatingSystems.Windows, WindowsVersions.Win7, SkipReason = "IIS does not support Websocket on Win7")]
+        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "ab")]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, "abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789")]
+        public Task V21_WebSocketRecycledWithConfigChangeTest(IISConfigUtility.AppPoolBitness appPoolBitness, string testData)
+        {
+            return DoWebSocketRecycledWithConfigChangeTest(appPoolBitness, testData);
         }
 
         [ConditionalTheory]

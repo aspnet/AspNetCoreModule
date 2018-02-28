@@ -415,8 +415,10 @@ namespace AspNetCoreModule.Test
 
         public static async Task DoAppOfflineTestWithRenaming(IISConfigUtility.AppPoolBitness appPoolBitness)
         {
+            string appPoolName = null;
             using (var testSite = new TestWebSite(appPoolBitness, "DoAppOfflineTestWithRenaming"))
             {
+                appPoolName = testSite.AspNetCoreApp.AppPoolName;
                 string backendProcessId_old = null;
                 string fileContent = "BackEndAppOffline";
                 string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
@@ -430,7 +432,6 @@ namespace AspNetCoreModule.Test
 
                     DateTime startTime = DateTime.Now;
                     Thread.Sleep(1100);
-
                     // verify 503 
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
 
@@ -441,7 +442,7 @@ namespace AspNetCoreModule.Test
 
                     // rename app_offline.htm to _app_offline.htm and verify 200
                     testSite.AspNetCoreApp.MoveFile("App_Offline.Htm", "_App_Offline.Htm");
-                                        
+                    
                     string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
                     Assert.Equal(backendProcess.ProcessName.ToLower().Replace(".exe", ""), testSite.AspNetCoreApp.GetProcessFileName().ToLower().Replace(".exe", ""));
@@ -452,6 +453,11 @@ namespace AspNetCoreModule.Test
                     // rename back to app_offline.htm
                     testSite.AspNetCoreApp.MoveFile("_App_Offline.Htm", "App_Offline.Htm");
                     testSite.VerifyWorkerProcessRecycledUnderInprocessMode(backendProcessId_old);
+                }
+
+                using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
+                {
+                    iisConfig.CreateAppPool(appPoolName);
                 }
             }
         }
@@ -751,6 +757,14 @@ namespace AspNetCoreModule.Test
                     {
                         await SendReceive(testSite.AspNetCoreApp.GetUri("DoSleep65000"), HttpStatusCode.BadGateway, timeout: 70);
                     }
+                    else if (requestTimeout.ToString() == "00:00:20")
+                    {
+                        await SendReceive(testSite.AspNetCoreApp.GetUri("DoSleep15000"), expectedResponseBody: "Running", timeout: 20);
+                    }
+                    else if (requestTimeout.ToString() == "00:00:10")
+                    {
+                        await SendReceive(testSite.AspNetCoreApp.GetUri("DoSleep15000"), HttpStatusCode.BadGateway, timeout: 20);
+                    }
                     else
                     {
                         throw new ApplicationException("wrong data");
@@ -764,13 +778,13 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoShutdownTimeLimitTest", startIISExpress:false))
             {
-                /////////////////////////////////////////// BUGBUG START
-                // Encrease rapidFailProtectionMaxCrashes for the current apppool
-                using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
-                {
-                    iisConfig.SetAppPoolSetting(testSite.RootAppContext.AppPoolName, "rapidFailProtectionMaxCrashes", 100);
-                }
-                /////////////////////////////////////////// BUGBUG END
+                ///////////////////////////////////////////// BUGBUG START
+                //// Encrease rapidFailProtectionMaxCrashes for the current apppool
+                //using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
+                //{
+                //    iisConfig.SetAppPoolSetting(testSite.RootAppContext.AppPoolName, "rapidFailProtectionMaxCrashes", 100);
+                //}
+                ///////////////////////////////////////////// BUGBUG END
 
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
@@ -803,38 +817,38 @@ namespace AspNetCoreModule.Test
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", 100);
                     backendProcess.WaitForExit(30000);
 
-                    /////////////////////////////////////////// BUGBUG START
-                    // bugbug: configuration change notification does not work; so recycling worker process instead as a workaround
-                    // remove this BUGBUG block when the issue is gone
-                    var endTimeTemp = DateTime.Now;
-                    var differenceTemp = endTimeTemp - startTime2;
-                    if ((differenceTemp.Seconds >= expectedClosingTime) == false || (differenceTemp.Seconds < expectedClosingTime + 3) == false)
-                    {
-                        // try again with restaring worker process
-                        if (testSite.IisServerType == ServerType.IIS)
-                        {
-                            try
-                            {
-                                TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
-                            }
-                            catch {}
-                        }
-                        else
-                        {
-                            try
-                            {
-                                TestUtility.ResetHelper(ResetHelperMode.KillIISExpress);
-                            }
-                            catch {}
-                            testSite.StartIISExpress();
-                        }
-                        startTime2 = DateTime.Now;
-                        backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
-                        backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
-                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", 101);
-                        backendProcess.WaitForExit(30000);                        
-                    }
-                    /////////////////////////////////////////// BUGBUG END
+                    ///////////////////////////////////////////// BUGBUG START
+                    //// bugbug: configuration change notification does not work; so recycling worker process instead as a workaround
+                    //// remove this BUGBUG block when the issue is gone
+                    //var endTimeTemp = DateTime.Now;
+                    //var differenceTemp = endTimeTemp - startTime2;
+                    //if ((differenceTemp.Seconds >= expectedClosingTime) == false || (differenceTemp.Seconds < expectedClosingTime + 4) == false)
+                    //{
+                    //    // try again with restaring worker process
+                    //    if (testSite.IisServerType == ServerType.IIS)
+                    //    {
+                    //        try
+                    //        {
+                    //            TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
+                    //        }
+                    //        catch {}
+                    //    }
+                    //    else
+                    //    {
+                    //        try
+                    //        {
+                    //            TestUtility.ResetHelper(ResetHelperMode.KillIISExpress);
+                    //        }
+                    //        catch {}
+                    //        testSite.StartIISExpress();
+                    //    }
+                    //    startTime2 = DateTime.Now;
+                    //    backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    //    backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
+                    //    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", 101);
+                    //    backendProcess.WaitForExit(30000);                        
+                    //}
+                    ///////////////////////////////////////////// BUGBUG END
                     
                     DateTime endTime = DateTime.Now;
                     var difference = endTime - startTime2;
@@ -860,6 +874,90 @@ namespace AspNetCoreModule.Test
                 testSite.AspNetCoreApp.RestoreFile("web.config");
             }
         }
+
+        public static async Task DoShutdownTimeLimitAndAppOfflineTest(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
+        {
+            using (var testSite = new TestWebSite(appPoolBitness, "DoShutdownTimeLimitTest", startIISExpress: false))
+            {
+                using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
+                {
+                    iisConfig.SetAppPoolSetting(testSite.RootAppContext.AppPoolName, "rapidFailProtectionMaxCrashes", 100);
+
+                    DateTime startTime = DateTime.Now;
+
+                    // Make shutdownDelay time with hard coded value such as 10 seconds and test vairious shutdonwTimeLimit, either less than 10 seconds or bigger then 10 seconds
+                    int shutdownDelayTime = 10000;
+                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", valueOfshutdownTimeLimit);
+                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestShutdownDelay", shutdownDelayTime.ToString() });
+                    string expectedGracefulShutdownResponseStatusCode = "202";
+                    if (!isGraceFullShutdownEnabled)
+                    {
+                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "GracefulShutdown", "disabled" });
+                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestStartupClassName", "StartupWithShutdownDisabled" });
+                        expectedGracefulShutdownResponseStatusCode = "200";
+                        Thread.Sleep(500);
+                    }
+
+                    testSite.StartIISExpress();
+
+                    string response = (await SendReceive(testSite.AspNetCoreApp.GetUri(""))).ResponseBody;
+                    Assert.True(response == "Running");
+
+                    string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
+
+                    // put app_offline.htm to make the backend process being recycled
+                    DateTime startTime2 = DateTime.Now;
+                    string fileContent = "BackEndAppOffline";
+                    testSite.AspNetCoreApp.CreateFile(new string[] { fileContent }, "App_Offline.Htm");
+
+                    Thread.Sleep(1000);
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: fileContent +"\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
+
+                    // remove app_offline
+                    testSite.AspNetCoreApp.MoveFile("App_Offline.Htm", "_App_Offline.Htm");
+                    Thread.Sleep(1000);
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
+
+                    // add back app_offline.htm
+                    testSite.AspNetCoreApp.MoveFile("_App_Offline.Htm", "App_Offline.Htm");
+                    Thread.Sleep(1000);
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
+
+                    backendProcess.WaitForExit(30000);
+
+                    DateTime endTime = DateTime.Now;
+                    var difference = endTime - startTime2;
+
+                    Thread.Sleep(500);
+                    Assert.True(difference.Seconds >= expectedClosingTime);
+                    Assert.True(difference.Seconds < expectedClosingTime + 3);
+                    string newBackendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    Assert.True(backendProcessId != newBackendProcessId);
+
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
+
+                    // remove app_offline
+                    testSite.AspNetCoreApp.MoveFile("App_Offline.Htm", "_App_Offline.Htm");
+                    Thread.Sleep(1000);
+
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
+
+                    // if expectedClosing time is less than the shutdownDelay time, gracefulshutdown is supposed to fail and failure event is expected
+                    if (expectedClosingTime * 1000 + 1000 == shutdownDelayTime)
+                    {
+                        Assert.True(TestUtility.RetryHelper((arg1, arg2) => VerifyANCMGracefulShutdownEvent(arg1, arg2), startTime, backendProcessId));
+                        Assert.True(TestUtility.RetryHelper((arg1, arg2) => VerifyANCMGracefulShutdownEvent(arg1, arg2), startTime, expectedGracefulShutdownResponseStatusCode));
+                    }
+                    else
+                    {
+                        Assert.True(TestUtility.RetryHelper((arg1, arg2) => VerifyANCMGracefulShutdownFailureEvent(arg1, arg2), startTime, backendProcessId));
+                    }
+                }
+                testSite.AspNetCoreApp.RestoreFile("web.config");
+            }
+        }
+
         public static async Task DoStdoutLogEnabledTest(IISConfigUtility.AppPoolBitness appPoolBitness)
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoStdoutLogEnabledTest", startIISExpress: false))
@@ -1636,15 +1734,45 @@ namespace AspNetCoreModule.Test
                 backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                 Assert.Equal(backendProcessId_old, backendProcessId);
 
+                // send a simple request and verify the response body
+                await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
+            }
+        }
+
+        public static async Task DoWebSocketAppOfflineTest(IISConfigUtility.AppPoolBitness appPoolBitness, string testData)
+        {
+            using (var testSite = new TestWebSite(appPoolBitness, "DoWebSocketTest"))
+            {
+                string recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+
+                string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
+
+                using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
+                {
+                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", 10);
+
+                    testSite.VerifyWorkerProcessRecycledUnderInprocessMode(recycledProcessId);
+                }
+
+                DateTime startTime = DateTime.Now;
+
+                // Get Process ID
+                Thread.Sleep(500);
+                string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+
                 // Verify websocket with app_offline.htm
                 using (WebSocketClientHelper websocketClient = new WebSocketClientHelper())
                 {
-                    int failureCount = 0;
-                    for (int jj = 0; jj < 3; jj++)
+                    //int failureCount = 0;
+                    string fileContent = "WebSocketApp_offline";
+                    for (int jj = 0; jj < 5; jj++)
                     {
                         backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                         testSite.AspNetCoreApp.DeleteFile("App_Offline.Htm");
                         Thread.Sleep(1000);
+
+                        // send a simple request and verify the response body
+                        await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
 
                         var frameReturned = websocketClient.Connect(testSite.AspNetCoreApp.GetUri("websocket"), true, true);
                         Assert.Contains("Connection: Upgrade", frameReturned.Content);
@@ -1655,13 +1783,11 @@ namespace AspNetCoreModule.Test
                         Thread.Sleep(500);
 
                         // put app_offline
-                        testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "App_Offline.Htm");
-                        Thread.Sleep(1000);
-
+                        testSite.AspNetCoreApp.CreateFile(new string[] { fileContent }, "App_Offline.Htm");
                         bool connectionClosedFromServer = websocketClient.WaitForWebSocketState(WebSocketState.ConnectionClosed);
 
-                        if (connectionClosedFromServer)
-                        {
+                        //if (connectionClosedFromServer)
+                        //{
                             // Verify server side connection closing is done successfully
                             Assert.True(connectionClosedFromServer, "Closing Handshake initiated from Server");
 
@@ -1670,38 +1796,56 @@ namespace AspNetCoreModule.Test
 
                             // Verify text data is matched to the string sent by server
                             Assert.Contains("ClosingFromServer", websocketClient.Connection.DataReceived[lastIndex].TextData);
-                        }
-                        else
-                        {
-                            // todo: this part should be removed.
-                            // there is a reliability issue and we should ignore one failure here out of the total retrying
-                            failureCount++;
-                        }
-
-                        Assert.True(failureCount < 2, "Failure count should be less than 2");
-
+                        //}
+                        //else
+                        //{
+                        //    failureCount++;
+                        //}
+                        
                         // Verify the application file can be removed under app_offline mode
                         testSite.AspNetCoreApp.BackupFile(appDllFileName);
                         testSite.AspNetCoreApp.DeleteFile(appDllFileName);
                         testSite.AspNetCoreApp.RestoreFile(appDllFileName);
 
                         testSite.VerifyWorkerProcessRecycledUnderInprocessMode(backendProcessId);
+
+                        // verify app_offline.htm
+                        await SendReceive(testSite.RootAppContext.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
                     }
+
+                    //Assert.True(failureCount < 2, "Failure count : " + failureCount);
                 }
 
                 // remove app_offline.htm
                 testSite.AspNetCoreApp.DeleteFile("App_Offline.Htm");
                 Thread.Sleep(1000);
 
-                /*
-                BugBug!!! configuration change does not invoke the shutdown message 
-                because IIS does not trigger the change notification event until all websocket connection is gone.
-                This scenario should be added back when the issue is resolved.
+                // send a simple request and verify the response body
+                await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
+            }
+        }
+
+        public static async Task DoWebSocketRecycledWithConfigChangeTest(IISConfigUtility.AppPoolBitness appPoolBitness, string testData)
+        {
+            using (var testSite = new TestWebSite(appPoolBitness, "DoWebSocketTest"))
+            {
+                string recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+
+                string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
+
+                using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
+                {
+                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", 10);
+
+                    testSite.VerifyWorkerProcessRecycledUnderInprocessMode(recycledProcessId);
+                }
+
+                await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
 
                 // Verify websocket with configuration change notification
                 using (WebSocketClientHelper websocketClient = new WebSocketClientHelper())
                 {
-                    for (int jj = 0; jj < 10; jj++)
+                    for (int jj = 0; jj < 3; jj++)
                     {
                         var frameReturned = websocketClient.Connect(testSite.AspNetCoreApp.GetUri("websocket"), true, true);
                         Assert.Contains("Connection: Upgrade", frameReturned.Content);
@@ -1729,7 +1873,6 @@ namespace AspNetCoreModule.Test
                         Assert.Contains("ClosingFromServer", websocketClient.Connection.DataReceived[lastIndex].TextData);
                     }
                 }
-                */
 
                 // send a simple request and verify the response body
                 await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");

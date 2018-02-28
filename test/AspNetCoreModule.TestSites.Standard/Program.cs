@@ -176,17 +176,23 @@ namespace AspnetCoreModule.TestSites.Standard
             AppLifetime.ApplicationStopping.Register(
                 () =>
                 {
+                    Console.WriteLine("Begin: WebSocketConnections");
                     WebSocketConnections.CloseAll();
+                    Console.WriteLine("End: WebSocketConnections");
+
+                    Console.WriteLine("Begin: AppLifetime.ApplicationStopping.Register(), sleeping " + Startup.SleeptimeWhileClosing / 2);
                     Thread.Sleep(Startup.SleeptimeWhileClosing / 2);
-                    Thread.Sleep(GracefulShutdownDelayTime);
-                    Console.WriteLine("AppLifetime.ApplicationStopping.Register()");
+                    Startup.SleeptimeWhileClosing = Startup.SleeptimeWhileClosing / 2;
+                    Console.WriteLine("End: AppLifetime.ApplicationStopping.Register()");
                 }
             );
             AppLifetime.ApplicationStopped.Register(
                 () =>
                 {
-                    Thread.Sleep(Startup.SleeptimeWhileClosing / 2);
-                    Console.WriteLine("AppLifetime.ApplicationStopped.Register()");
+                    Console.WriteLine("Begin: AppLifetime.ApplicationStopped.Register(), sleeping " + Startup.SleeptimeWhileClosing);
+                    Thread.Sleep(Startup.SleeptimeWhileClosing);
+                    Startup.SleeptimeWhileClosing = 0;
+                    Console.WriteLine("End: AppLifetime.ApplicationStopped.Register()");
                 }
             );
 
@@ -203,9 +209,11 @@ namespace AspnetCoreModule.TestSites.Standard
             }
 
             // Sleep before finishing
-            if (SleeptimeWhileClosing != 0)
+            if (Startup.SleeptimeWhileClosing >  0)
             {
-                Thread.Sleep(SleeptimeWhileClosing);
+                Console.WriteLine("Begin: SleeptimeWhileClosing " + Startup.SleeptimeWhileClosing);
+                Thread.Sleep(Startup.SleeptimeWhileClosing);
+                Console.WriteLine("End: SleeptimeWhileClosing");
             }
             Console.WriteLine("END Main()");
         }
