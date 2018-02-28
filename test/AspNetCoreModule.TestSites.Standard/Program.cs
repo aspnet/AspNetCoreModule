@@ -23,27 +23,36 @@ namespace AspnetCoreModule.TestSites.Standard
 
         public static void Main(string[] args)
         {
+            Console.WriteLine("BEGIN Main()");
             // initialize variables
             int SleeptimeWhileStarting = 0;
             int SleeptimeWhileClosing = 0;
-            
-            if (AppDomain.CurrentDomain.FriendlyName.ToLower().Contains("w3wp"))
+
+            string Token = Environment.GetEnvironmentVariable("ASPNETCORE_TOKEN");
+            if (!string.IsNullOrEmpty(Token))
             {
-                //inprocess
-                Program.InprocessMode = true;
+                InprocessMode = false;
             }
-            
-            string startupDelay = Environment.GetEnvironmentVariable("StartUpDelay");
+            else
+            {
+                InprocessMode = true;
+            }
+           
+            string startupDelay = Environment.GetEnvironmentVariable("ANCMTestStartUpDelay");
             if (!string.IsNullOrEmpty(startupDelay))
             {
                 SleeptimeWhileStarting = Convert.ToInt32(startupDelay);
             }
 
-            string shutdownDelay = Environment.GetEnvironmentVariable("ShutdownDelay");
+            string shutdownDelay = Environment.GetEnvironmentVariable("ANCMTestShutdownDelay");
             if (!string.IsNullOrEmpty(shutdownDelay))
             {
                 SleeptimeWhileClosing = Convert.ToInt32(shutdownDelay);
             }
+
+            Console.WriteLine("SleeptimeWhileStarting: " + SleeptimeWhileStarting);
+            Console.WriteLine("SleeptimeWhileClosing: " + SleeptimeWhileClosing);
+
 
             // Sleep before starting
             if (SleeptimeWhileStarting != 0)
@@ -51,13 +60,14 @@ namespace AspnetCoreModule.TestSites.Standard
                 Startup.SleeptimeWhileStarting = SleeptimeWhileStarting;
                 Thread.Sleep(SleeptimeWhileStarting);
             }
-
+            
             // Build WebHost
             IWebHost host = null;
             IWebHostBuilder builder = null;
             string startUpClassString = Environment.GetEnvironmentVariable("ANCMTestStartupClassName");
             if (!string.IsNullOrEmpty(startUpClassString))
             {
+                Console.WriteLine("ANCMTestStartupClassName: " + startUpClassString);
                 IConfiguration config = new ConfigurationBuilder()
                     .AddCommandLine(args)
                     .Build();
@@ -103,17 +113,30 @@ namespace AspnetCoreModule.TestSites.Standard
                 }
                 else if (startUpClassString == "StartupWithShutdownDisabled")
                 {
-                    builder = WebHost.CreateDefaultBuilder(args)
-                    .ConfigureServices(services =>
-                    {
-                        const string PairingToken = "TOKEN";
-                        string paringToken = builder.GetSetting(PairingToken) ?? Environment.GetEnvironmentVariable($"ASPNETCORE_{PairingToken}");
-                        services.AddSingleton<IStartupFilter>(
-                            new IISSetupFilter(paringToken)
-                        );
-                    })
-                    .UseConfiguration(config)
-                    .UseStartup<Startup>();
+                    builder = new WebHostBuilder()
+                        .UseKestrel()
+                        .ConfigureServices(services =>
+                        {
+                            const string PairingToken = "TOKEN";
+
+                            string paringToken = null;
+                            if (InprocessMode)
+                            {
+                                Console.WriteLine("Don't use IISMiddleware for inprocess mode");
+                                paringToken = null;
+                            }
+                            else
+                            {
+                                Console.WriteLine("Use IISMiddleware for outofprocess mode");
+                                paringToken = builder.GetSetting(PairingToken) ?? Environment.GetEnvironmentVariable($"ASPNETCORE_{PairingToken}");
+                            }
+                            services.AddSingleton<IStartupFilter>(
+                                new IISSetupFilter(paringToken)
+                            );
+                        })
+                        .UseConfiguration(config)
+                        .UseStartup<Startup>();
+
                     host = builder.Build();
                 }
                 else
@@ -135,7 +158,7 @@ namespace AspnetCoreModule.TestSites.Standard
                 Startup.SleeptimeWhileClosing = SleeptimeWhileClosing;
             }
 
-            string gracefulShutdownDelay = Environment.GetEnvironmentVariable("GracefulShutdownDelayTime");
+            string gracefulShutdownDelay = Environment.GetEnvironmentVariable("ANCMTestGracefulShutdownDelayTime");
             if (!string.IsNullOrEmpty(gracefulShutdownDelay))
             {
                 GracefulShutdownDelayTime = Convert.ToInt32(gracefulShutdownDelay);
@@ -170,11 +193,13 @@ namespace AspnetCoreModule.TestSites.Standard
             // run
             try
             {
+                Console.WriteLine("BEGIN Main::Run()");
                 host.Run();
+                Console.WriteLine("END Main::Run()");
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore
+                Console.WriteLine("Exception error!!! " + ex.Message);
             }
 
             // Sleep before finishing
@@ -182,6 +207,7 @@ namespace AspnetCoreModule.TestSites.Standard
             {
                 Thread.Sleep(SleeptimeWhileClosing);
             }
+            Console.WriteLine("END Main()");
         }
     }
 }

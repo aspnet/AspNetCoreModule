@@ -397,7 +397,7 @@ namespace AspNetCoreModule.Test.Framework
 
                 StartIISExpress();
 
-                // send a startup request to IISExpress instance to make sure that it is fully ready to use before starting actual test scenarios
+                // send a startup request to IISExpress instance to make sure that it is ready to use before starting actual test scenarios
                 TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + TcpPort + " ).StatusCode", "200");
             }
             TestUtility.LogInformation("TestWebSite::TestWebSite() End");
