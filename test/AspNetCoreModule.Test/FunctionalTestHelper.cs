@@ -202,6 +202,35 @@ namespace AspNetCoreModule.Test
                 string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
 
                 const int repeatCount = 3;
+                
+                // configuration change from same level
+                for (int i = 0; i < repeatCount; i++)
+                {
+                    // check JitDebugger before continuing 
+                    CleanupVSJitDebuggerWindow();
+
+                    DateTime startTime = DateTime.Now;
+                    Thread.Sleep(1000);
+
+                    string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
+                    Assert.NotEqual(backendProcessId_old, backendProcessId);
+                    backendProcessId_old = backendProcessId;
+                    Assert.Equal(backendProcess.ProcessName.ToLower().Replace(".exe", ""), testSite.AspNetCoreApp.GetProcessFileName().ToLower().Replace(".exe", ""));
+                    Assert.True(TestUtility.RetryHelper((arg1, arg2) => VerifyANCMStartEvent(arg1, arg2), startTime, backendProcessId));
+                    testSite.RootAppContext.MoveFile("web.config", "_web.config");
+                    Thread.Sleep(500);
+                    testSite.RootAppContext.MoveFile("_web.config", "web.config");
+
+                    // Verify the application file can be removed after backend process is restarted
+                    testSite.AspNetCoreApp.BackupFile(appDllFileName);
+                    testSite.AspNetCoreApp.DeleteFile(appDllFileName);
+                    testSite.AspNetCoreApp.RestoreFile(appDllFileName);
+
+                    testSite.VerifyWorkerProcessRecycledUnderInprocessMode(backendProcessId);
+                }
+
+                // configuration change from same level
                 for (int i = 0; i < repeatCount; i++)
                 {
                     // check JitDebugger before continuing 
@@ -453,11 +482,6 @@ namespace AspNetCoreModule.Test
                     // rename back to app_offline.htm
                     testSite.AspNetCoreApp.MoveFile("_App_Offline.Htm", "App_Offline.Htm");
                     testSite.VerifyWorkerProcessRecycledUnderInprocessMode(backendProcessId_old);
-                }
-
-                using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
-                {
-                    iisConfig.CreateAppPool(appPoolName);
                 }
             }
         }
@@ -778,14 +802,6 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoShutdownTimeLimitTest", startIISExpress:false))
             {
-                ///////////////////////////////////////////// BUGBUG START
-                //// Encrease rapidFailProtectionMaxCrashes for the current apppool
-                //using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
-                //{
-                //    iisConfig.SetAppPoolSetting(testSite.RootAppContext.AppPoolName, "rapidFailProtectionMaxCrashes", 100);
-                //}
-                ///////////////////////////////////////////// BUGBUG END
-
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
                     DateTime startTime = DateTime.Now;
@@ -817,45 +833,22 @@ namespace AspNetCoreModule.Test
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", 100);
                     backendProcess.WaitForExit(30000);
 
-                    ///////////////////////////////////////////// BUGBUG START
-                    //// bugbug: configuration change notification does not work; so recycling worker process instead as a workaround
-                    //// remove this BUGBUG block when the issue is gone
-                    //var endTimeTemp = DateTime.Now;
-                    //var differenceTemp = endTimeTemp - startTime2;
-                    //if ((differenceTemp.Seconds >= expectedClosingTime) == false || (differenceTemp.Seconds < expectedClosingTime + 4) == false)
-                    //{
-                    //    // try again with restaring worker process
-                    //    if (testSite.IisServerType == ServerType.IIS)
-                    //    {
-                    //        try
-                    //        {
-                    //            TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
-                    //        }
-                    //        catch {}
-                    //    }
-                    //    else
-                    //    {
-                    //        try
-                    //        {
-                    //            TestUtility.ResetHelper(ResetHelperMode.KillIISExpress);
-                    //        }
-                    //        catch {}
-                    //        testSite.StartIISExpress();
-                    //    }
-                    //    startTime2 = DateTime.Now;
-                    //    backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
-                    //    backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
-                    //    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", 101);
-                    //    backendProcess.WaitForExit(30000);                        
-                    //}
-                    ///////////////////////////////////////////// BUGBUG END
-                    
                     DateTime endTime = DateTime.Now;
                     var difference = endTime - startTime2;
 
                     Thread.Sleep(500);
-                    Assert.True(difference.Seconds >= expectedClosingTime);
-                    Assert.True(difference.Seconds < expectedClosingTime + 3);
+
+                    // Verify shutdown time
+                    int tempExpectedClosingTime = expectedClosingTime;
+                    int offSetSecond = 3;
+                    if ((difference.Seconds < tempExpectedClosingTime + offSetSecond) == false && tempExpectedClosingTime > 10)
+                    {
+                        // add 1 second to adjust expectedClosing time
+                        tempExpectedClosingTime++;
+                    }
+                    Assert.True(difference.Seconds < tempExpectedClosingTime + offSetSecond, "Actual: " + difference.Seconds + ", Expected" + tempExpectedClosingTime + 3);
+                    Assert.True(difference.Seconds >= expectedClosingTime, "Actual: " + difference.Seconds + ", Expected: " + expectedClosingTime);
+
                     string newBackendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                     Assert.True(backendProcessId != newBackendProcessId);
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
@@ -930,8 +923,18 @@ namespace AspNetCoreModule.Test
                     var difference = endTime - startTime2;
 
                     Thread.Sleep(500);
-                    Assert.True(difference.Seconds >= expectedClosingTime);
-                    Assert.True(difference.Seconds < expectedClosingTime + 3);
+
+                    // Verify shutdown time
+                    int tempExpectedClosingTime = expectedClosingTime;
+                    int offSetSecond = 3;
+                    if ((difference.Seconds < tempExpectedClosingTime + offSetSecond) == false && tempExpectedClosingTime > 10)
+                    {
+                        // add 1 second to adjust expectedClosing time
+                        tempExpectedClosingTime++;                        
+                    }
+                    Assert.True(difference.Seconds < tempExpectedClosingTime + offSetSecond, "Actual: " + difference.Seconds + ", Expected" + tempExpectedClosingTime + 3);
+                    Assert.True(difference.Seconds >= expectedClosingTime, "Actual: " + difference.Seconds + ", Expected: " + expectedClosingTime);
+
                     string newBackendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                     Assert.True(backendProcessId != newBackendProcessId);
 

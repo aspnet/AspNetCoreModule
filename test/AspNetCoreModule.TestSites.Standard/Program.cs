@@ -28,39 +28,34 @@ namespace AspnetCoreModule.TestSites.Standard
             int SleeptimeWhileStarting = 0;
             int SleeptimeWhileClosing = 0;
 
-            string Token = Environment.GetEnvironmentVariable("ASPNETCORE_TOKEN");
-            if (!string.IsNullOrEmpty(Token))
+            string tempstring = Environment.GetEnvironmentVariable("ASPNETCORE_TOKEN");
+            if (!string.IsNullOrEmpty(tempstring))
             {
                 InprocessMode = false;
+                tempstring = null;
             }
             else
             {
                 InprocessMode = true;
             }
            
-            string startupDelay = Environment.GetEnvironmentVariable("ANCMTestStartUpDelay");
-            if (!string.IsNullOrEmpty(startupDelay))
+            tempstring = Environment.GetEnvironmentVariable("ANCMTestStartUpDelay");
+            if (!string.IsNullOrEmpty(tempstring))
             {
-                SleeptimeWhileStarting = Convert.ToInt32(startupDelay);
-            }
-
-            string shutdownDelay = Environment.GetEnvironmentVariable("ANCMTestShutdownDelay");
-            if (!string.IsNullOrEmpty(shutdownDelay))
-            {
-                SleeptimeWhileClosing = Convert.ToInt32(shutdownDelay);
-            }
-
-            Console.WriteLine("SleeptimeWhileStarting: " + SleeptimeWhileStarting);
-            Console.WriteLine("SleeptimeWhileClosing: " + SleeptimeWhileClosing);
-
-
-            // Sleep before starting
-            if (SleeptimeWhileStarting != 0)
-            {
+                SleeptimeWhileStarting = Convert.ToInt32(tempstring);
                 Startup.SleeptimeWhileStarting = SleeptimeWhileStarting;
-                Thread.Sleep(SleeptimeWhileStarting);
+                Console.WriteLine("SleeptimeWhileStarting: " + Startup.SleeptimeWhileStarting);
+                tempstring = null;
             }
-            
+
+            tempstring = Environment.GetEnvironmentVariable("ANCMTestShutdownDelay");
+            if (!string.IsNullOrEmpty(tempstring))
+            {
+                SleeptimeWhileClosing = Convert.ToInt32(tempstring);
+                Startup.SleeptimeWhileClosing = SleeptimeWhileClosing;
+                Console.WriteLine("SleeptimeWhileClosing: " + Startup.SleeptimeWhileClosing);
+            }
+
             // Build WebHost
             IWebHost host = null;
             IWebHostBuilder builder = null;
@@ -151,19 +146,7 @@ namespace AspnetCoreModule.TestSites.Standard
                     .UseStartup<Startup>()
                     .Build();
             }
-
-            // Sleep before stopping
-            if (SleeptimeWhileClosing != 0)
-            {
-                Startup.SleeptimeWhileClosing = SleeptimeWhileClosing;
-            }
-
-            string gracefulShutdownDelay = Environment.GetEnvironmentVariable("ANCMTestGracefulShutdownDelayTime");
-            if (!string.IsNullOrEmpty(gracefulShutdownDelay))
-            {
-                GracefulShutdownDelayTime = Convert.ToInt32(gracefulShutdownDelay);
-            }
-
+                        
             // Initialize AppLifeTime events handler
             AppLifetime = (IApplicationLifetime)host.Services.GetService(typeof(IApplicationLifetime));
             AppLifetime.ApplicationStarted.Register(
