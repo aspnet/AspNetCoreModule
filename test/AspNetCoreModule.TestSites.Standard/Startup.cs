@@ -386,6 +386,16 @@ namespace AspnetCoreModule.TestSites.Standard
                         }
                     }
                 }
+
+                // Sleep before starting
+                if (Startup.SleeptimeWhileStarting > 0)
+                {
+                    Console.WriteLine("Begin: SleeptimeWhileStarting " + Startup.SleeptimeWhileStarting);
+                    Thread.Sleep(Startup.SleeptimeWhileStarting);
+                    Console.WriteLine("End: SleeptimeWhileStarting");
+                    Startup.SleeptimeWhileStarting = 0;
+                }
+
                 return context.Response.WriteAsync(response);
             });
         }
