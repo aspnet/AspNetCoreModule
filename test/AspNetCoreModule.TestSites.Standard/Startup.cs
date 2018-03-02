@@ -140,7 +140,7 @@ namespace AspnetCoreModule.TestSites.Standard
                 {
                     if (context.WebSockets.IsWebSocketRequest)
                     {
-                        var webSocket = await context.WebSockets.AcceptWebSocketAsync("");
+                        var webSocket = await context.WebSockets.AcceptWebSocketAsync();
                         await Echo(webSocket);
                     }
                     else
@@ -386,6 +386,16 @@ namespace AspnetCoreModule.TestSites.Standard
                         }
                     }
                 }
+
+                // Sleep before starting
+                if (Startup.SleeptimeWhileStarting > 0)
+                {
+                    Console.WriteLine("Begin: SleeptimeWhileStarting " + Startup.SleeptimeWhileStarting);
+                    Thread.Sleep(Startup.SleeptimeWhileStarting);
+                    Console.WriteLine("End: SleeptimeWhileStarting");
+                    Startup.SleeptimeWhileStarting = 0;
+                }
+
                 return context.Response.WriteAsync(response);
             });
         }

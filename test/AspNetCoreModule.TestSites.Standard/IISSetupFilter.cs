@@ -11,7 +11,7 @@ namespace AspnetCoreModule.TestSites.Standard
 {
     internal class IISSetupFilter : IStartupFilter
     {
-        private readonly string _pairingToken;
+        private readonly string _pairingToken = null;
         
         internal IISSetupFilter(string pairingToken)
         {
@@ -23,7 +23,12 @@ namespace AspnetCoreModule.TestSites.Standard
             return app =>
             {
                 app.UseMiddleware<TestMiddleWareBeforeIISMiddleWare>();
-                app.UseMiddleware<IISMiddleware>(_pairingToken);
+
+                // token value is available only for outofprocess mode, which requires IISMiddleware. IISMiddleware is not required for inprocess mode.
+                if (_pairingToken != null)
+                {
+                    app.UseMiddleware<IISMiddleware>(_pairingToken);
+                }
                 next(app);
             };
         }

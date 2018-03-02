@@ -23,33 +23,37 @@ namespace AspnetCoreModule.TestSites.Standard
 
         public static void Main(string[] args)
         {
+            Console.WriteLine("BEGIN Main()");
             // initialize variables
             int SleeptimeWhileStarting = 0;
             int SleeptimeWhileClosing = 0;
-            
-            if (AppDomain.CurrentDomain.FriendlyName.ToLower().Contains("w3wp"))
-            {
-                //inprocess
-                Program.InprocessMode = true;
-            }
-            
-            string startupDelay = Environment.GetEnvironmentVariable("StartUpDelay");
-            if (!string.IsNullOrEmpty(startupDelay))
-            {
-                SleeptimeWhileStarting = Convert.ToInt32(startupDelay);
-            }
 
-            string shutdownDelay = Environment.GetEnvironmentVariable("ShutdownDelay");
-            if (!string.IsNullOrEmpty(shutdownDelay))
+            string tempstring = Environment.GetEnvironmentVariable("ASPNETCORE_TOKEN");
+            if (!string.IsNullOrEmpty(tempstring))
             {
-                SleeptimeWhileClosing = Convert.ToInt32(shutdownDelay);
+                InprocessMode = false;
+                tempstring = null;
             }
-
-            // Sleep before starting
-            if (SleeptimeWhileStarting != 0)
+            else
             {
+                InprocessMode = true;
+            }
+           
+            tempstring = Environment.GetEnvironmentVariable("ANCMTestStartUpDelay");
+            if (!string.IsNullOrEmpty(tempstring))
+            {
+                SleeptimeWhileStarting = Convert.ToInt32(tempstring);
                 Startup.SleeptimeWhileStarting = SleeptimeWhileStarting;
-                Thread.Sleep(SleeptimeWhileStarting);
+                Console.WriteLine("SleeptimeWhileStarting: " + Startup.SleeptimeWhileStarting);
+                tempstring = null;
+            }
+
+            tempstring = Environment.GetEnvironmentVariable("ANCMTestShutdownDelay");
+            if (!string.IsNullOrEmpty(tempstring))
+            {
+                SleeptimeWhileClosing = Convert.ToInt32(tempstring);
+                Startup.SleeptimeWhileClosing = SleeptimeWhileClosing;
+                Console.WriteLine("SleeptimeWhileClosing: " + Startup.SleeptimeWhileClosing);
             }
 
             // Build WebHost
@@ -58,6 +62,7 @@ namespace AspnetCoreModule.TestSites.Standard
             string startUpClassString = Environment.GetEnvironmentVariable("ANCMTestStartupClassName");
             if (!string.IsNullOrEmpty(startUpClassString))
             {
+                Console.WriteLine("ANCMTestStartupClassName: " + startUpClassString);
                 IConfiguration config = new ConfigurationBuilder()
                     .AddCommandLine(args)
                     .Build();
@@ -103,17 +108,30 @@ namespace AspnetCoreModule.TestSites.Standard
                 }
                 else if (startUpClassString == "StartupWithShutdownDisabled")
                 {
-                    builder = WebHost.CreateDefaultBuilder(args)
-                    .ConfigureServices(services =>
-                    {
-                        const string PairingToken = "TOKEN";
-                        string paringToken = builder.GetSetting(PairingToken) ?? Environment.GetEnvironmentVariable($"ASPNETCORE_{PairingToken}");
-                        services.AddSingleton<IStartupFilter>(
-                            new IISSetupFilter(paringToken)
-                        );
-                    })
-                    .UseConfiguration(config)
-                    .UseStartup<Startup>();
+                    builder = new WebHostBuilder()
+                        .UseKestrel()
+                        .ConfigureServices(services =>
+                        {
+                            const string PairingToken = "TOKEN";
+
+                            string paringToken = null;
+                            if (InprocessMode)
+                            {
+                                Console.WriteLine("Don't use IISMiddleware for inprocess mode");
+                                paringToken = null;
+                            }
+                            else
+                            {
+                                Console.WriteLine("Use IISMiddleware for outofprocess mode");
+                                paringToken = builder.GetSetting(PairingToken) ?? Environment.GetEnvironmentVariable($"ASPNETCORE_{PairingToken}");
+                            }
+                            services.AddSingleton<IStartupFilter>(
+                                new IISSetupFilter(paringToken)
+                            );
+                        })
+                        .UseConfiguration(config)
+                        .UseStartup<Startup>();
+
                     host = builder.Build();
                 }
                 else
@@ -128,19 +146,7 @@ namespace AspnetCoreModule.TestSites.Standard
                     .UseStartup<Startup>()
                     .Build();
             }
-
-            // Sleep before stopping
-            if (SleeptimeWhileClosing != 0)
-            {
-                Startup.SleeptimeWhileClosing = SleeptimeWhileClosing;
-            }
-
-            string gracefulShutdownDelay = Environment.GetEnvironmentVariable("GracefulShutdownDelayTime");
-            if (!string.IsNullOrEmpty(gracefulShutdownDelay))
-            {
-                GracefulShutdownDelayTime = Convert.ToInt32(gracefulShutdownDelay);
-            }
-
+                        
             // Initialize AppLifeTime events handler
             AppLifetime = (IApplicationLifetime)host.Services.GetService(typeof(IApplicationLifetime));
             AppLifetime.ApplicationStarted.Register(
@@ -153,35 +159,46 @@ namespace AspnetCoreModule.TestSites.Standard
             AppLifetime.ApplicationStopping.Register(
                 () =>
                 {
+                    Console.WriteLine("Begin: WebSocketConnections");
                     WebSocketConnections.CloseAll();
+                    Console.WriteLine("End: WebSocketConnections");
+
+                    Console.WriteLine("Begin: AppLifetime.ApplicationStopping.Register(), sleeping " + Startup.SleeptimeWhileClosing / 2);
                     Thread.Sleep(Startup.SleeptimeWhileClosing / 2);
-                    Thread.Sleep(GracefulShutdownDelayTime);
-                    Console.WriteLine("AppLifetime.ApplicationStopping.Register()");
+                    Startup.SleeptimeWhileClosing = Startup.SleeptimeWhileClosing / 2;
+                    Console.WriteLine("End: AppLifetime.ApplicationStopping.Register()");
                 }
             );
             AppLifetime.ApplicationStopped.Register(
                 () =>
                 {
-                    Thread.Sleep(Startup.SleeptimeWhileClosing / 2);
-                    Console.WriteLine("AppLifetime.ApplicationStopped.Register()");
+                    Console.WriteLine("Begin: AppLifetime.ApplicationStopped.Register(), sleeping " + Startup.SleeptimeWhileClosing);
+                    Thread.Sleep(Startup.SleeptimeWhileClosing);
+                    Startup.SleeptimeWhileClosing = 0;
+                    Console.WriteLine("End: AppLifetime.ApplicationStopped.Register()");
                 }
             );
 
             // run
             try
             {
+                Console.WriteLine("BEGIN Main::Run()");
                 host.Run();
+                Console.WriteLine("END Main::Run()");
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore
+                Console.WriteLine("Exception error!!! " + ex.Message);
             }
 
             // Sleep before finishing
-            if (SleeptimeWhileClosing != 0)
+            if (Startup.SleeptimeWhileClosing >  0)
             {
-                Thread.Sleep(SleeptimeWhileClosing);
+                Console.WriteLine("Begin: SleeptimeWhileClosing " + Startup.SleeptimeWhileClosing);
+                Thread.Sleep(Startup.SleeptimeWhileClosing);
+                Console.WriteLine("End: SleeptimeWhileClosing");
             }
+            Console.WriteLine("END Main()");
         }
     }
 }

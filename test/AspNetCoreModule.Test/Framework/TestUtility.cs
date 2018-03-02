@@ -30,7 +30,8 @@ namespace AspNetCoreModule.Test.Framework
         StopW3svcStartW3svc,
         KillWorkerProcess,
         KillVSJitDebugger,
-        KillIISExpress
+        KillIISExpress,
+        RestartWorkerProcess
     }
 
     public enum ServerType
