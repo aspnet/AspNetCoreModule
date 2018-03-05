@@ -55,7 +55,8 @@ namespace AspnetCoreModule.TestSites.Standard
                         context.Context.Response.ContentType = "text/plain";
                     }
                 }
-            ); 
+            );
+            app.UseStaticFiles();
         }
     }
 }
