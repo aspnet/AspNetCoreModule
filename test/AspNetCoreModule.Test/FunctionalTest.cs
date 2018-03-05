@@ -368,6 +368,17 @@ namespace AspNetCoreModule.Test
             return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
         }
 
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown)]
+        //[InlineData(IISConfigUtility.AppPoolBitness.noChange, true, DoAppVerifierTest_StartUpMode.DontUseGracefulShutdown)]
+        public Task V21_StressTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool useHttps, DoAppVerifierTest_StartUpMode startUpMode)
+        {
+            return DoStressTest(appPoolBitness, useHttps, startUpMode);
+        }
+
         //////////////////////////////////////////////////////////
         // NOTE: below test scenarios are not valid for Win7 OS
         //////////////////////////////////////////////////////////

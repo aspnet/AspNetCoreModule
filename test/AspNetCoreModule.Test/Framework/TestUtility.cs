@@ -642,6 +642,22 @@ namespace AspNetCoreModule.Test.Framework
                     result = true;
                 }
             }
+
+            query = "Select * from Win32_Process Where Name = \"iisexpresstray.exe\"";
+            searcher = new ManagementObjectSearcher(query);
+            processList = searcher.Get();
+
+            foreach (ManagementObject obj in processList)
+            {
+                string[] argList = new string[] { string.Empty, string.Empty };
+                bool foundProcess = true;
+                if (foundProcess)
+                {
+                    obj.InvokeMethod("Terminate", null);
+                    result = true;
+                }
+            }
+
             return result;
         }
 

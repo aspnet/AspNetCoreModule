@@ -305,7 +305,11 @@ namespace AspNetCoreModule.Test.Framework
                 {
                     InitializeIISServer();
                 }
-                
+                else
+                {
+                    TestUtility.ResetHelper(ResetHelperMode.KillIISExpress);
+                }
+
                 string siteRootPath = TestRootDirectory;
                 if (!Directory.Exists(siteRootPath))
                 {
