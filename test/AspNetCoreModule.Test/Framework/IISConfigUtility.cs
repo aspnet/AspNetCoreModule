@@ -460,6 +460,85 @@ namespace AspNetCoreModule.Test.Framework
             }
         }
 
+        public void SetSiteRooAppConfig(string siteName, string attributeName, object attributeValue)
+        {
+            try
+            {
+                using (ServerManager serverManager = GetServerManager())
+                {
+                    Configuration config = serverManager.GetApplicationHostConfiguration();
+                    ConfigurationSection sitesSection = config.GetSection("system.applicationHost/sites");
+                    ConfigurationElementCollection sitesCollection = sitesSection.GetCollection();
+                    ConfigurationElement siteElement = FindElement(sitesCollection, "site", "name", siteName);
+                    if (siteElement == null)
+                    {
+                        throw new Exception("SetSiteConfig::Site Not Found");
+                    }
+                    ConfigurationElementCollection applicationCollection = siteElement.GetCollection();
+                    ConfigurationElement applicationElement = FindElement(applicationCollection, "application", "path", @"/");
+
+                    applicationElement[attributeName] = attributeValue;
+                    serverManager.CommitChanges();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public void SetWarmUpConfig(string siteName, string appName, string attributeName, object attributeValue, bool removeExisting = false)
+        {
+            try
+            {
+                using (ServerManager serverManager = GetServerManager())
+                {
+                    Configuration config = serverManager.GetWebConfiguration(siteName, appName);
+                    ConfigurationSection appInitializationSection = config.GetSection("system.webServer/applicationInitialization");
+                    if (attributeName == "initializationPage" || attributeName == "hostName")
+                    {
+                        string initializationPage = (string) attributeValue;
+                        string hostName = null;
+                        if (attributeName == "hostName")
+                        {
+                            initializationPage = ((string[])attributeValue)[0];
+                            hostName = ((string[])attributeValue)[1];
+                        }
+                        ConfigurationElementCollection intializationPagesCollection = appInitializationSection.GetCollection();
+                        ConfigurationElement environmentVariableElement = intializationPagesCollection.CreateElement();
+                        environmentVariableElement["initializationPage"] = initializationPage;
+                        if (hostName != null)
+                        {
+                            environmentVariableElement["hostName"] = hostName;
+                        }
+                        var element = FindElement(intializationPagesCollection, "add", "initializationPage", initializationPage);
+                        if (element != null)
+                        {
+                            if (removeExisting)
+                            {
+                                intializationPagesCollection.Remove(element);
+                            }
+                            else
+                            {
+                                throw new ApplicationException("duplicated collection item");
+                            }
+                        }
+                        intializationPagesCollection.Add(environmentVariableElement);
+                    }
+                    else
+                    {
+                        appInitializationSection[attributeName] = attributeValue;
+                    }
+
+                    serverManager.CommitChanges();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         public void SetANCMConfig(string siteName, string appName, string attributeName, object attributeValue, bool removeExisting = false)
         {
             try
@@ -494,7 +573,7 @@ namespace AspNetCoreModule.Test.Framework
                     {
                         if (attributeName == "hostingModel")
                         {
-                            if (attributeValue.ToString().ToLower().Trim() == "inprocess")
+                            if (attributeValue.ToString().ToLower().Trim() == TestWebApplication.HostingModelValue.Inprocess)
                             {
                                 ANCMInprocessMode = true;
                             }
@@ -1271,11 +1350,13 @@ namespace AspNetCoreModule.Test.Framework
             }
         }
 
-        public void AddBindingToSite(string siteName, string ipAddress, int port, string host, string protocol = "http")
+       public void AddBindingToSite(string siteName, string ipAddress, int port, string host, string protocol = "http")
         {
             string bindingInfo = "";
             if (ipAddress == null)
+            {
                 ipAddress = "*";
+            }
             bindingInfo += ipAddress;
             bindingInfo += ":";
             bindingInfo += port;

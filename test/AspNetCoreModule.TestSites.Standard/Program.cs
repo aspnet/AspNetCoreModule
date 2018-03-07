@@ -88,7 +88,8 @@ namespace AspnetCoreModule.TestSites.Standard
                     }
                     host = WebHost.CreateDefaultBuilder(args)
                         .UseConfiguration(config)
-                        .UseContentRoot(Directory.GetCurrentDirectory())
+                        // BUGBUG below line is commented out because it causes 404 error with inprocess mode
+                        //.UseContentRoot(Directory.GetCurrentDirectory())
                         .UseStartup<StartupCompressionCaching>()
                         .Build();
                 }

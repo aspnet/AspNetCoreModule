@@ -114,6 +114,12 @@ namespace AspNetCoreModule.Test.Framework
             }
         }
 
+        public static class HostingModelValue
+        {
+            public static string Inprocess = "inprocess";
+            public static string Outofprocess = "outofprocess";
+        }
+
         private string _hostingModel = null;
         public string HostingModel
         {
@@ -171,7 +177,7 @@ namespace AspNetCoreModule.Test.Framework
         public string GetProcessFileName()
         {
             string result = null;
-            if (this.HostingModel == "inprocess")
+            if (this.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
             {
                 if (this.IisServerType == ServerType.IIS)
                 {
