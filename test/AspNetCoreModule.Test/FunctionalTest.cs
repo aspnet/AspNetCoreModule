@@ -372,11 +372,10 @@ namespace AspNetCoreModule.Test
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown)]
-        //[InlineData(IISConfigUtility.AppPoolBitness.noChange, true, DoAppVerifierTest_StartUpMode.DontUseGracefulShutdown)]
-        public Task V21_StressTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool useHttps, DoAppVerifierTest_StartUpMode startUpMode)
+        [InlineData(false)]
+        public Task V21_StressTest(bool enableAppVerifier)
         {
-            return DoStressTest(appPoolBitness, useHttps, startUpMode);
+            return DoStressTest(enableAppVerifier);
         }
 
         //////////////////////////////////////////////////////////

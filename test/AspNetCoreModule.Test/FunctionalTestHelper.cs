@@ -370,6 +370,8 @@ namespace AspNetCoreModule.Test
                     bool setEnvironmentVariableConfiguration = true;
 
                     // Set authentication for ASPNETCORE_IIS_HTTPAUTH test scenarios
+                    recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+
                     if (environmentVariableName == "ASPNETCORE_IIS_HTTPAUTH" && environmentVariableValue != "ignoredValue")
                     {
                         setEnvironmentVariableConfiguration = false;
@@ -399,7 +401,6 @@ namespace AspNetCoreModule.Test
                     // Add a new environment variable
                     if (setEnvironmentVariableConfiguration)
                     {
-                        recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                         iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { environmentVariableName, environmentVariableValue });
 
                         // Adjust the new expected total number of environment variables
@@ -408,10 +409,9 @@ namespace AspNetCoreModule.Test
                         {
                             expectedValue++;
                         }
-
-                        testSite.VerifyWorkerProcessRecycledUnderInprocessMode(recycledProcessId);
-
                     }
+                    testSite.VerifyWorkerProcessRecycledUnderInprocessMode(recycledProcessId);
+
                     Thread.Sleep(500);
 
                     // check JitDebugger before continuing 
@@ -455,7 +455,7 @@ namespace AspNetCoreModule.Test
                 string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
 
                 testSite.AspNetCoreApp.CreateFile(new string[] { fileContent }, "App_Offline.Htm");
-                                
+
                 for (int i = 0; i < _repeatCount; i++)
                 {
                     // check JitDebugger before continuing 
@@ -1291,8 +1291,6 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoCompressionTest", startIISExpress: false))
             {
-                string recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
-
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
                     string startupClass = "StartupCompressionCaching";
@@ -1322,6 +1320,7 @@ namespace AspNetCoreModule.Test
                     testSite.AspNetCoreApp.CreateFile(new string[] { "defaulthtm" }, @"wwwroot\default.htm");
 
                     testSite.StartIISExpress();
+                    Thread.Sleep(1000);
 
                     SendReceiveContext result = null;
                     if (!useCompressionMiddleWare && !enableIISCompression)
@@ -2279,111 +2278,82 @@ namespace AspNetCoreModule.Test
             }
         }
 
-        public static async Task DoStressTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool useHttps, DoAppVerifierTest_StartUpMode startUpMode)
+        public static async Task DoStressTest(bool enableAppVerifier)
         {
-            //
-            // While running this test, start stressing with running below command in a seperate powershell window
-            //
-            // (1..1000) | foreach { (Invoke-WebRequest http://localhost:40000/aspnetcoreapp/getprocessid).StatusCode; }
-            //
             if (!File.Exists(Environment.ExpandEnvironmentVariables("%systemdrive%\\ANCMStressTest.TXT")))
             { 
                 TestUtility.LogInformation("Skipping stress test");
                 return;
             }
 
-            TestWebSite testSite = new TestWebSite(appPoolBitness, "DoAppVerifierTest", startIISExpress: false, publishing: false);
-            bool testResult = false;
+            //
+            // While running this test, start stressing with running below command in a seperate powershell window
+            //
+            // (1..1000) | foreach { (Invoke-WebRequest http://localhost:1234/aspnetcoreapp/getprocessid).StatusCode; }
+            //
 
-            // enable AppVerifier 
-            testSite.AttachAppverifier();
-            
+            int timeoutValue = 5;
+            int numberOfSite = 0;
+
+            int tcpPort = 1234 + numberOfSite;
+            TestWebSite testSite = new TestWebSite(IISConfigUtility.AppPoolBitness.noChange, "DoStressTest", startIISExpress: false, publishing: false, tcpPort: tcpPort);
+            InitializeSite(testSite, timeoutValue : timeoutValue);
+            numberOfSite++;
+
+            tcpPort = 1234 + numberOfSite;
+            TestWebSite testSite2 = new TestWebSite(IISConfigUtility.AppPoolBitness.noChange, "DoStressTest2", startIISExpress: false, publishing: false, tcpPort: 1234 + numberOfSite);
+            InitializeSite(testSite2, timeoutValue: timeoutValue, disableGracefulShutdown: true);
+            numberOfSite++;
+
+            tcpPort = 1234 + numberOfSite;
+            TestWebSite testSite3 = new TestWebSite(IISConfigUtility.AppPoolBitness.enable32Bit, "DoStressTest3", startIISExpress: false, publishing: false, tcpPort: 1234 + numberOfSite);
+            InitializeSite(testSite3, timeoutValue: timeoutValue, disableGracefulShutdown: true);
+            numberOfSite++;
+
+            if (enableAppVerifier)
+            {
+                // enable AppVerifier 
+                testSite.AttachAppverifier();
+            }
+
+            // reset existing worker process process
+            TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
+            Thread.Sleep(1000);
+
             try
             {
+                ///////////////////////////////////
+                // Start test sceanrio
+                ///////////////////////////////////
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
-                    // Prepare https binding
-                    string hostName = "";
-                    string subjectName = "localhost";
-                    string ipAddress = "*";
-                    string hexIPAddress = "0x00";
-                    int sslPort = InitializeTestMachine.SiteId + 6300;
-                    string thumbPrint = null;
-                    int timeoutValue = 5;
-
-                    if (useHttps)
-                    {
-                        // Add https binding and get https uri information
-                        iisConfig.AddBindingToSite(testSite.SiteName, ipAddress, sslPort, hostName, "https");
-
-                        // Create a self signed certificate
-                        thumbPrint = iisConfig.CreateSelfSignedCertificate(subjectName);
-
-                        // Export the self signed certificate to rootCA
-                        iisConfig.ExportCertificateTo(thumbPrint, sslStoreTo: @"Cert:\LocalMachine\Root");
-
-                        // Configure http.sys ssl certificate mapping to IP:Port endpoint with the newly created self signed certificage
-                        iisConfig.SetSSLCertificate(sslPort, hexIPAddress, thumbPrint);
-                    }
-
-                    if (startUpMode == DoAppVerifierTest_StartUpMode.DontUseGracefulShutdown)
-                    {
-                        // enable preloadEnabled for the site
-                        iisConfig.SetSiteRooAppConfig(testSite.SiteName, "preloadEnabled", true);
-                        iisConfig.SetWarmUpConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "skipManagedModules", true);
-                        iisConfig.SetWarmUpConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "doAppInitAfterRestart", true);
-                        iisConfig.SetWarmUpConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "initializationPage", "DoSleep1000");
-                        
-                        // Set shutdownTimeLimit with 3 seconds and use 5 seconds for delay time to make the shutdownTimeout happen
-                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", timeoutValue);
-
-                        // set requestTimeout
-                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "requestTimeout", TimeSpan.Parse("00:00:5")); // 5 seconds
-
-                        // set startupTimeout
-                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "startupTimeLimit", timeoutValue);
-
-                        // Set shutdownTimeLimit 
-                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", timeoutValue);
-
-                        // Set starupTimeLimit and shutdownTimeLimit for test app
-                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestShutdownDelay", "1000" });
-                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestStartupDelay", "1000" });
-
-                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "GracefulShutdown", "disabled" });
-                    }
-
-                    // reset existing worker process process
-                    TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
-                    Thread.Sleep(1000);
-
-                    // starting IISExpress was deffered after creating test applications and now it is ready to start. 
-                    testSite.StartIISExpress();
-
-                    ///////////////////////////////////
-                    // Start test sceanrio
-                    ///////////////////////////////////
-
                     bool attachDebugger = true;
-                    while (true)
+                    for (int i=0; i<10; i++)
                     {
-                        if (attachDebugger)
+                        if (enableAppVerifier)
                         {
-                            // send a startup request to start a new worker process
-                            TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + testSite.TcpPort + " ).StatusCode", "200", retryCount: 5);
-                            Thread.Sleep(1000);
+                            if (attachDebugger)
+                            {
+                                // send a startup request to start a new worker process
+                                TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + testSite.TcpPort + " ).StatusCode", "200", retryCount: 5);
+                                Thread.Sleep(1000);
 
-                            // attach debugger to the worker process
-                            testSite.WorkerProcessID = 0;
-                            testSite.AttachWinDbg(testSite.WorkerProcessID, "sxi 80000003;g");
+                                // attach debugger to the worker process
+                                testSite.WorkerProcessID = 0;
 
-                            // verify windbg process is started
-                            await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", timeout: 10);
-                            TestUtility.RunPowershellScript("(get-process -name windbg 2> $null).count", "1", retryCount: 5);
-                            attachDebugger = false;
+                                // attach debugger
+                                testSite.AttachWinDbg(testSite.WorkerProcessID, "sxi 80000003;g");
+
+                                // verify windbg process is started
+                                await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", timeout: 10);
+                                TestUtility.RunPowershellScript("(get-process -name windbg 2> $null).count", "1", retryCount: 5);
+                         
+                                attachDebugger = false;
+                            }
+
+                            // verify debugger is running
+                            TestUtility.RunPowershellScript("(get-process -name windbg 2> $null).count", "1", retryCount: 1);
                         }
-
-                        TestUtility.RunPowershellScript("(get-process -name windbg 2> $null).count", "1", retryCount: 1);
 
                         // put delay time for each iteration
                         Thread.Sleep(3000);
@@ -2391,10 +2361,11 @@ namespace AspNetCoreModule.Test
                         // reset worker process id to refresh
                         testSite.WorkerProcessID = 0;
                         
-                        var shutDownMode = DoAppVerifierTest_ShutDownMode.CreateAppOfflineHtm;
-                        switch (shutDownMode)
+                        switch (i % 7)
                         {
-                            case DoAppVerifierTest_ShutDownMode.StopAndStartAppPool:
+                            case 0:
+                                
+                                // StopAndStartAppPool:
                                 iisConfig.StopAppPool(testSite.AspNetCoreApp.AppPoolName);
                                 Thread.Sleep((timeoutValue + 1) * 1000);
                                 iisConfig.StartAppPool(testSite.AspNetCoreApp.AppPoolName);
@@ -2403,55 +2374,146 @@ namespace AspNetCoreModule.Test
                                 attachDebugger = true;
                                 break;
 
-                            case DoAppVerifierTest_ShutDownMode.CreateAppOfflineHtm:
+                            case 1: 
+                                
+                                // CreateAppOfflineHtm
                                 testSite.AspNetCoreApp.DeleteFile("App_Offline.Htm");
                                 testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "App_Offline.Htm");
+                                break;
+
+                            case 2:
+
+                                // Re-create AppOfflineHtm
+                                testSite.AspNetCoreApp.DeleteFile("App_Offline.Htm");
+                                testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "App_Offline.Htm");
+                                break;
+
+                            case 3:
+
+                                // Rename appOfflineHtm
                                 testSite.AspNetCoreApp.MoveFile("App_Offline.Htm", "_App_Offline.Htm");
                                 break;
 
-                            case DoAppVerifierTest_ShutDownMode.ConfigurationChangeNotification:
+                            case 4:
+
+                                // ConfigurationChangeNotification
                                 iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", timeoutValue + 1);
                                 Thread.Sleep(1000);
-                                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", timeoutValue + 1);
+                                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", timeoutValue - 1);
+                                Thread.Sleep(1000);
 
                                 if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
                                 {
                                     attachDebugger = true;
                                 }
                                 break;
+
+                            case 5:
+                                iisConfig.SetAppPoolSetting(testSite.AspNetCoreApp.AppPoolName, "enable32BitAppOnWin64", true);
+                                break;
+
+                            case 6:
+                                iisConfig.SetAppPoolSetting(testSite.AspNetCoreApp.AppPoolName, "enable32BitAppOnWin64", false);
+                                break;
+
+                            default:
+                                throw new Exception("Not supported value");
                         }
                     }
 
-                    // clean up https test environment
-
-                    if (useHttps)
-                    {
-                        // Remove the SSL Certificate mapping
-                        iisConfig.RemoveSSLCertificate(sslPort, hexIPAddress);
-
-                        // Remove the newly created self signed certificate
-                        iisConfig.DeleteCertificate(thumbPrint);
-
-                        // Remove the exported self signed certificate on rootCA
-                        iisConfig.DeleteCertificate(thumbPrint, @"Cert:\LocalMachine\Root");
-                    }
+                    InitializeSite(testSite, cleanup: true);
+                    InitializeSite(testSite2, cleanup: true);
+                    InitializeSite(testSite3, cleanup: true);
                 }
             }
             finally
             {
-                // cleanup Appverifier
-                if (testSite != null)
+                if (enableAppVerifier)
                 {
-                    testSite.DetachAppverifier();
+                    // cleanup Appverifier
+                    if (testSite != null)
+                    {
+                        testSite.DetachAppverifier();
+                    }
                 }
             }
 
             TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
 
-            // cleanup windbg process incase it is still running
-            if (!testResult)
+            if (enableAppVerifier)
             {
+                // cleanup windbg process incase it is still running
                 TestUtility.RunPowershellScript("stop-process -Name windbg -Force -Confirm:$false 2> $null");
+            }
+        }
+
+        private static void InitializeSite(TestWebSite testSite, int timeoutValue = 0, bool disableGracefulShutdown = false, bool cleanup = false)
+        {
+            using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
+            {
+                string hexIPAddress = "0x00";
+                int sslPort = testSite.TcpPort + 6300;
+
+                if (cleanup)
+                {
+                    // Remove the SSL Certificate mapping
+                    iisConfig.RemoveSSLCertificate(sslPort, hexIPAddress);
+
+                    // Remove the newly created self signed certificate
+                    iisConfig.DeleteCertificate(testSite.ThumbPrint);
+
+                    // Remove the exported self signed certificate on rootCA
+                    iisConfig.DeleteCertificate(testSite.ThumbPrint, @"Cert:\LocalMachine\Root");
+                    return;
+                }
+
+                string hostName = "";
+                string subjectName = "localhost";
+                string ipAddress = "*";
+                string thumbPrint = null;
+                if (disableGracefulShutdown)
+                {
+                    // disable graceful shutdown for the second site
+                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "GracefulShutdown", "disabled" });
+                }
+
+                // Add https binding and get https uri information
+                iisConfig.AddBindingToSite(testSite.SiteName, ipAddress, sslPort, hostName, "https");
+
+                // Create a self signed certificate
+                thumbPrint = iisConfig.CreateSelfSignedCertificate(subjectName);
+
+                // Export the self signed certificate to rootCA
+                iisConfig.ExportCertificateTo(thumbPrint, sslStoreTo: @"Cert:\LocalMachine\Root");
+
+                // Configure http.sys ssl certificate mapping to IP:Port endpoint with the newly created self signed certificage
+                iisConfig.SetSSLCertificate(sslPort, hexIPAddress, thumbPrint);
+                testSite.ThumbPrint = thumbPrint;
+
+                // enable preloadEnabled for the site
+                iisConfig.SetSiteRooAppConfig(testSite.SiteName, "preloadEnabled", true);
+                iisConfig.SetWarmUpConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "skipManagedModules", true);
+                iisConfig.SetWarmUpConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "doAppInitAfterRestart", true);
+                iisConfig.SetWarmUpConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "initializationPage", "DoSleep1000");
+
+                // Set shutdownTimeLimit with 3 seconds and use 5 seconds for delay time to make the shutdownTimeout happen
+                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", timeoutValue);
+
+                // set requestTimeout
+                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "requestTimeout", TimeSpan.Parse("00:00:5")); // 5 seconds
+
+                // set startupTimeout
+                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "startupTimeLimit", timeoutValue);
+
+                // Set shutdownTimeLimit 
+                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", timeoutValue);
+
+                // Set starupTimeLimit and shutdownTimeLimit for test app
+                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestShutdownDelay", "1000" });
+                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestStartupDelay", "1000" });
+
+                // starting IISExpress was deffered after creating test applications and now it is ready to start. 
+                testSite.StartIISExpress();
             }
         }
 

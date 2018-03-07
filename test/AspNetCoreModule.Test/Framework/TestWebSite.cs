@@ -67,6 +67,8 @@ namespace AspNetCoreModule.Test.Framework
             }
         }
 
+        public string ThumbPrint { get; set; }
+
         public string _siteName = null;
         public string SiteName
         {
@@ -157,7 +159,7 @@ namespace AspNetCoreModule.Test.Framework
         private int _siteId { get; set; }
         private IISConfigUtility.AppPoolBitness _appPoolBitness { get; set; }
 
-        public TestWebSite(IISConfigUtility.AppPoolBitness appPoolBitness, string loggerPrefix = "ANCMTest", bool startIISExpress = true, bool copyAllPublishedFiles = false, bool attachAppVerifier = false, bool publishing = true)
+        public TestWebSite(IISConfigUtility.AppPoolBitness appPoolBitness, string loggerPrefix = "ANCMTest", bool startIISExpress = true, bool copyAllPublishedFiles = false, bool attachAppVerifier = false, bool publishing = true, int tcpPort = -1)
         {
             _appPoolBitness = appPoolBitness;
             
@@ -302,9 +304,6 @@ namespace AspNetCoreModule.Test.Framework
                 TestUtility.FileCopy(Path.Combine(publishPathOutput, "web.config"), Path.Combine(aspnetCoreAppRootPath, "web.config"));
             }
 
-            int tcpPort = InitializeTestMachine.SiteId++;
-            _siteId = tcpPort;
-
             //
             // initialize class member variables
             //
@@ -322,7 +321,16 @@ namespace AspNetCoreModule.Test.Framework
             _hostName = "localhost";
             _siteName = siteName;
             _postFix = postfix;
-            _tcpPort = tcpPort;
+            if (tcpPort != -1)
+            {
+                _tcpPort = tcpPort;
+            }
+            else
+            {
+                _tcpPort = InitializeTestMachine.SiteId++;
+                InitializeTestMachine.SiteId++;
+            }
+            _siteId = _tcpPort;
 
             RootAppContext = new TestWebApplication("/", Path.Combine(siteRootPath, "WebSite1"), this);
             RootAppContext.RestoreFile("web.config");

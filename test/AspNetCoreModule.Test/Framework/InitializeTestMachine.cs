@@ -385,7 +385,14 @@ namespace AspNetCoreModule.Test.Framework
             if (_referenceCount == 0)
             {
                 TestUtility.LogInformation("InitializeTestMachine::Dispose() Start");
-                TestUtility.ResetHelper(ResetHelperMode.KillIISExpress);
+                try
+                {
+                    TestUtility.ResetHelper(ResetHelperMode.KillIISExpress);
+                }
+                catch
+                {
+                    // ignore
+                }
                 RollbackIISApplicationhostConfigFile();
                 TestUtility.LogInformation("InitializeTestMachine::Dispose() End");
             }
