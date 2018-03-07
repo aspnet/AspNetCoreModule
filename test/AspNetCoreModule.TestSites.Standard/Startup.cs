@@ -390,10 +390,11 @@ namespace AspnetCoreModule.TestSites.Standard
                 // Sleep before starting
                 if (Startup.SleeptimeWhileStarting > 0)
                 {
-                    Console.WriteLine("Begin: SleeptimeWhileStarting " + Startup.SleeptimeWhileStarting);
-                    Thread.Sleep(Startup.SleeptimeWhileStarting);
-                    Console.WriteLine("End: SleeptimeWhileStarting");
+                    int temp = Startup.SleeptimeWhileStarting;
                     Startup.SleeptimeWhileStarting = 0;
+                    Console.WriteLine("Begin: SleeptimeWhileStarting " + temp);
+                    Thread.Sleep(temp);
+                    Console.WriteLine("End: SleeptimeWhileStarting");
                 }
 
                 return context.Response.WriteAsync(response);

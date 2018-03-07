@@ -368,6 +368,16 @@ namespace AspNetCoreModule.Test
             return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
         }
 
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
+        [InlineData(false)]
+        public Task V21_StressTest(bool enableAppVerifier)
+        {
+            return DoStressTest(enableAppVerifier);
+        }
+
         //////////////////////////////////////////////////////////
         // NOTE: below test scenarios are not valid for Win7 OS
         //////////////////////////////////////////////////////////

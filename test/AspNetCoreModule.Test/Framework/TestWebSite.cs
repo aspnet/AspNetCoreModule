@@ -37,7 +37,7 @@ namespace AspNetCoreModule.Test.Framework
                 }
                 catch
                 {
-                    if (this.AspNetCoreApp.HostingModel == "inprocess")
+                    if (this.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
                     {
                         // IISExpress seems to be already recycled under Inprocess mode.
                     }
@@ -66,6 +66,8 @@ namespace AspNetCoreModule.Test.Framework
                 _hostName = value;
             }
         }
+
+        public string ThumbPrint { get; set; }
 
         public string _siteName = null;
         public string SiteName
@@ -156,8 +158,8 @@ namespace AspNetCoreModule.Test.Framework
         public string IisExpressConfigPath { get; set; }
         private int _siteId { get; set; }
         private IISConfigUtility.AppPoolBitness _appPoolBitness { get; set; }
-        
-        public TestWebSite(IISConfigUtility.AppPoolBitness appPoolBitness, string loggerPrefix = "ANCMTest", bool startIISExpress = true, bool copyAllPublishedFiles = false, bool attachAppVerifier = false)
+
+        public TestWebSite(IISConfigUtility.AppPoolBitness appPoolBitness, string loggerPrefix = "ANCMTest", bool startIISExpress = true, bool copyAllPublishedFiles = false, bool attachAppVerifier = false, bool publishing = true, int tcpPort = -1)
         {
             _appPoolBitness = appPoolBitness;
             
@@ -253,10 +255,18 @@ namespace AspNetCoreModule.Test.Framework
             //
             if (_publishedAspnetCoreApp != true)
             {
-                string argumentForDotNet = "publish " + srcPath + " --framework " + SDKVersion;
-                TestUtility.LogInformation("TestWebSite::TestWebSite() StandardTestApp is not published, trying to publish on the fly: dotnet.exe " + argumentForDotNet);
-                TestUtility.DeleteDirectory(publishPath);
-                TestUtility.RunCommand("dotnet", argumentForDotNet);
+                if (publishing == false && File.Exists(Path.Combine(publishPath, "AspNetCoreModule.TestSites.Standard.dll")))
+                {
+                    // skip publishing
+                }
+                else
+                {
+                    string argumentForDotNet = "publish " + srcPath + " --framework " + SDKVersion;
+                    TestUtility.LogInformation("TestWebSite::TestWebSite() StandardTestApp is not published, trying to publish on the fly: dotnet.exe " + argumentForDotNet);
+                    TestUtility.DeleteDirectory(publishPath);
+                    TestUtility.RunCommand("dotnet", argumentForDotNet);
+                }
+
                 if (!File.Exists(Path.Combine(publishPath, "AspNetCoreModule.TestSites.Standard.dll")))
                 {
                     throw new Exception("Failed to publish");
@@ -294,9 +304,6 @@ namespace AspNetCoreModule.Test.Framework
                 TestUtility.FileCopy(Path.Combine(publishPathOutput, "web.config"), Path.Combine(aspnetCoreAppRootPath, "web.config"));
             }
 
-            int tcpPort = InitializeTestMachine.SiteId++;
-            _siteId = tcpPort;
-
             //
             // initialize class member variables
             //
@@ -314,7 +321,16 @@ namespace AspNetCoreModule.Test.Framework
             _hostName = "localhost";
             _siteName = siteName;
             _postFix = postfix;
-            _tcpPort = tcpPort;
+            if (tcpPort != -1)
+            {
+                _tcpPort = tcpPort;
+            }
+            else
+            {
+                _tcpPort = InitializeTestMachine.SiteId++;
+                InitializeTestMachine.SiteId++;
+            }
+            _siteId = _tcpPort;
 
             RootAppContext = new TestWebApplication("/", Path.Combine(siteRootPath, "WebSite1"), this);
             RootAppContext.RestoreFile("web.config");
@@ -385,8 +401,8 @@ namespace AspNetCoreModule.Test.Framework
                 // Configure hostingModel for aspnetcore app
                 if (TestFlags.Enabled(TestFlags.InprocessMode))
                 {
-                    AspNetCoreApp.HostingModel = "inprocess";
-                    iisConfig.SetANCMConfig(siteName, AspNetCoreApp.Name, "hostingModel", "inprocess");
+                    AspNetCoreApp.HostingModel = TestWebApplication.HostingModelValue.Inprocess;
+                    iisConfig.SetANCMConfig(siteName, AspNetCoreApp.Name, "hostingModel", TestWebApplication.HostingModelValue.Inprocess);
                 }
             }
 
@@ -405,30 +421,58 @@ namespace AspNetCoreModule.Test.Framework
 
         public void VerifyWorkerProcessRecycledUnderInprocessMode(string backendProcessId, int timeout = 5000)
         {
-            if (AspNetCoreApp.HostingModel == "inprocess")
+            if (AspNetCoreApp.HostingModel != TestWebApplication.HostingModelValue.Inprocess)
             {
-                if (backendProcessId == null)
-                {
-                    System.Threading.Thread.Sleep(3000);
+                return; // do nothing for outofprocess
+            }
+
+            bool succeeded = false;
+            for (int i = 0; i < (timeout / 1000); i++)
+            {
+                Process backendProcess = null;
+                try
+                { 
+                    backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
                 }
-                else
+                catch
                 {
-                    try
-                    {
-                        var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
-                        backendProcess.WaitForExit(timeout);
-                    }
-                    catch
-                    {
-                        // IISExpress process is already recycled.
-                    }
+                    succeeded = true;
+                    TestUtility.LogInformation("Process not found.");
+                    break;
                 }
 
-                if (IisServerType == ServerType.IISExpress)
+                if (backendProcess == null)
                 {
-                    // restart IISExpress
-                    StartIISExpress();
+                    succeeded = true;
+                    break;
                 }
+                backendProcess.WaitForExit(1000);
+
+                if (this.IisServerType == ServerType.IISExpress && i == 3)
+                {
+                    // exit after 3 seconds for IISExpress case
+                    break;
+                }
+            }
+            
+            if (succeeded == false)
+            {
+                if (this.IisServerType == ServerType.IIS)
+                {
+                    throw new Exception("Failed to recycle IIS worker process");
+                }
+                else
+                { 
+                    // IISExpress should be killed if it can't be recycled
+                    TestUtility.LogInformation("BugBug: Restart IISExpress...");
+                    TestUtility.ResetHelper(ResetHelperMode.KillIISExpress);
+                }
+            }
+                
+            if (IisServerType == ServerType.IISExpress)
+            {
+                // restart IISExpress
+                StartIISExpress();
             }
         }
 
@@ -457,15 +501,9 @@ namespace AspNetCoreModule.Test.Framework
             _iisExpressPidBackup = TestUtility.RunCommand(cmdline, argument, false, false);
         }
         
-        public void AttachAppverifier()
+        public string GetAppVerifierPath()
         {
-            string cmdline;
-            string processName = "iisexpress.exe";
-            if (IisServerType == ServerType.IIS)
-            {
-                processName = "w3wp.exe";
-            }
-            string argument = "-enable Heaps COM RPC Handles Locks Memory TLS Exceptions Threadpool Leak SRWLock -for " + processName;
+            string cmdline = null;
             if (Directory.Exists(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%")) && _appPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
             {
                 cmdline = Path.Combine(Environment.ExpandEnvironmentVariables("%windir%"), "syswow64", "appverif.exe");
@@ -482,6 +520,18 @@ namespace AspNetCoreModule.Test.Framework
                     throw new ApplicationException("Not found :" + cmdline + "; this test requires appverif.exe.");
                 }
             }
+            return cmdline;
+        }
+
+        public void AttachAppverifier()
+        {
+            string cmdline = GetAppVerifierPath();
+            string processName = "iisexpress.exe";
+            if (IisServerType == ServerType.IIS)
+            {
+                processName = "w3wp.exe";
+            }
+            string argument = "-enable Heaps COM RPC Handles Locks Memory TLS Exceptions Threadpool Leak SRWLock -for " + processName;
 
             try
             {
