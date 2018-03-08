@@ -20,10 +20,8 @@ namespace AspNetCoreModule.Test.WebSocketClient
         public byte[][] HandShakeRequest { get; set; }
         public WebSocketState WebSocketState { get; set; }
 
-        public bool ExpectedDisposedConnection { get; set; }
         public WebSocketClientHelper()
         {
-            ExpectedDisposedConnection = false;
         }
 
         public void Dispose()
@@ -65,7 +63,7 @@ namespace AspNetCoreModule.Test.WebSocketClient
                 }
                 else
                 {
-                    if (ExpectedDisposedConnection && expectedState == WebSocketState.ConnectionClosed)
+                    if (expectedState == WebSocketState.ConnectionClosed)
                     {
                         if (this.Connection.IsDisposed || this.Connection.TcpClient.IsDead || this.Connection.TcpClient.Connected == false)
                         {
@@ -289,6 +287,9 @@ namespace AspNetCoreModule.Test.WebSocketClient
                         nextFrameIndex = frame.IndexOfNextFrame;
                     }
 
+                    if (this.WebSocketState == WebSocketState.ConnectionClosed)
+                        return;
+
                     if (client.IsDisposed)
                         return;
 
@@ -302,11 +303,15 @@ namespace AspNetCoreModule.Test.WebSocketClient
             }
             catch (Exception ex)
             {
-                TestUtility.LogInformation("ReadDataCallback() Unexpected error: " + ex.Message);
-                if (!this.ExpectedDisposedConnection)
+                if (this.WebSocketState == WebSocketState.ConnectionClosed)
+                {
+                    // Todo: Remove try and catch
+                    TestUtility.LogInformation("ReadDataCallback(). Connection is already closed. Ignoring this exception: " + ex.Message);
+                }                
+                else
                 {
                     throw ex;
-                }                
+                }
             }
         }
 
