@@ -43,6 +43,7 @@ namespace AspNetCoreModule.Test.WebSocketClient
 
         public bool WaitForWebSocketState(WebSocketState expectedState, int timeout = 10000)
         {
+            TestUtility.LogInformation("WaitForWebSocketState() " + expectedState + ", timeout = " + timeout);
             bool result = false;
             int RETRYMAX = 300;
             int INTERVAL = 100; // ms
