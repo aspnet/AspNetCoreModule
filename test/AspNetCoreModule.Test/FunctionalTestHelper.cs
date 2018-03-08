@@ -1757,6 +1757,7 @@ namespace AspNetCoreModule.Test
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", 10);
+                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestShutdownDelay", "3000" });
                 }
 
                 testSite.StartIISExpress();
@@ -1765,7 +1766,6 @@ namespace AspNetCoreModule.Test
 
                 // Get Process ID
                 Thread.Sleep(500);
-                string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
 
                 // Verify websocket with app_offline.htm
                 using (WebSocketClientHelper websocketClient = new WebSocketClientHelper())
@@ -1774,9 +1774,10 @@ namespace AspNetCoreModule.Test
                     string fileContent = "WebSocketApp_offline";
                     for (int jj = 0; jj < 5; jj++)
                     {
-                        backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                         testSite.AspNetCoreApp.DeleteFile("App_Offline.Htm");
                         Thread.Sleep(1000);
+
+                        string recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
 
                         // send a simple request and verify the response body
                         await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
@@ -1791,32 +1792,22 @@ namespace AspNetCoreModule.Test
 
                         // put app_offline
                         testSite.AspNetCoreApp.CreateFile(new string[] { fileContent }, "App_Offline.Htm");
-
-                        //websocketClient.ExpectedDisposedConnection = true;
+                        
                         bool connectionClosedFromServer = websocketClient.WaitForWebSocketState(WebSocketState.ConnectionClosed);
+                        Assert.True(connectionClosedFromServer, "Closing Handshake initiated from Server");
 
-                        //if (connectionClosedFromServer)
-                        //{
-                            // Verify server side connection closing is done successfully
-                            Assert.True(connectionClosedFromServer, "Closing Handshake initiated from Server");
+                        // extract text data from the last frame, which is the close frame
+                        int lastIndex = websocketClient.Connection.DataReceived.Count - 1;
 
-                            // extract text data from the last frame, which is the close frame
-                            int lastIndex = websocketClient.Connection.DataReceived.Count - 1;
-
-                            // Verify text data is matched to the string sent by server
-                            Assert.Contains("ClosingFromServer", websocketClient.Connection.DataReceived[lastIndex].TextData);
-                        //}
-                        //else
-                        //{
-                        //    failureCount++;
-                        //}
+                        // Verify text data is matched to the string sent by server
+                        Assert.Contains("ClosingFromServer", websocketClient.Connection.DataReceived[lastIndex].TextData);
                         
                         // Verify the application file can be removed under app_offline mode
                         testSite.AspNetCoreApp.BackupFile(appDllFileName);
                         testSite.AspNetCoreApp.DeleteFile(appDllFileName);
                         testSite.AspNetCoreApp.RestoreFile(appDllFileName);
 
-                        testSite.VerifyWorkerProcessRecycledUnderInprocessMode(backendProcessId);
+                        testSite.VerifyWorkerProcessRecycledUnderInprocessMode(recycledProcessId);
 
                         // verify app_offline.htm
                         await SendReceive(testSite.RootAppContext.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
@@ -1836,18 +1827,17 @@ namespace AspNetCoreModule.Test
 
         public static async Task DoWebSocketRecycledWithConfigChangeTest(IISConfigUtility.AppPoolBitness appPoolBitness, string testData)
         {
-            using (var testSite = new TestWebSite(appPoolBitness, "DoWebSocketRecycledWithConfigChangeTest"))
+            using (var testSite = new TestWebSite(appPoolBitness, "DoWebSocketRecycledWithConfigChangeTest", startIISExpress : false))
             {
-                string recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
-
                 string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
 
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", 10);
-
-                    testSite.VerifyWorkerProcessRecycledUnderInprocessMode(recycledProcessId);
+                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestShutdownDelay", "3000" });
                 }
+
+                testSite.StartIISExpress();
 
                 await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
 
@@ -1856,6 +1846,8 @@ namespace AspNetCoreModule.Test
                 {
                     for (int jj = 0; jj < 3; jj++)
                     {
+                        string recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+
                         var frameReturned = websocketClient.Connect(testSite.AspNetCoreApp.GetUri("websocket"), true, true);
                         Assert.Contains("Connection: Upgrade", frameReturned.Content);
                         Assert.Contains("HTTP/1.1 101 Switching Protocols", frameReturned.Content);
@@ -1866,8 +1858,7 @@ namespace AspNetCoreModule.Test
 
                         using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                         {
-                            iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "startupTimeLimit", 11 + jj);
-                            Thread.Sleep(1000);
+                            iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", 11 + jj);
                         }
                         
                         bool connectionClosedFromServer = websocketClient.WaitForWebSocketState(WebSocketState.ConnectionClosed); 
@@ -1880,6 +1871,8 @@ namespace AspNetCoreModule.Test
 
                         // Verify text data is matched to the string sent by server
                         Assert.Contains("ClosingFromServer", websocketClient.Connection.DataReceived[lastIndex].TextData);
+
+                        testSite.VerifyWorkerProcessRecycledUnderInprocessMode(recycledProcessId);
                     }
                 }
 

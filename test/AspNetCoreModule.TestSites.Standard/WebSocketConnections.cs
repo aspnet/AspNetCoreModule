@@ -27,6 +27,9 @@ namespace AspnetCoreModule.TestSites.Standard
 
         public async static void CloseAll()
         {
+            var buffer = new byte[1024 * 4];
+
+            // send close message to client
             foreach (KeyValuePair<int, WebSocket> entry in WebSockets)
             {
                 await entry.Value.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, ClosingFromServer, CancellationToken.None);
