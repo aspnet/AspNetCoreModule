@@ -1878,9 +1878,6 @@ namespace AspNetCoreModule.Test
                         await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
                     }
                 }
-
-                // send a simple request and verify the response body
-                await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
             }
         }
         
