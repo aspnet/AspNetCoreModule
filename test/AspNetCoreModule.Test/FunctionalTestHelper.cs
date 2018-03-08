@@ -1854,7 +1854,7 @@ namespace AspNetCoreModule.Test
                         Thread.Sleep(500);
 
                         VerifySendingWebSocketData(websocketClient, testData);
-                        Thread.Sleep(500);
+                        Thread.Sleep(1000);
 
                         using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                         {
@@ -1873,6 +1873,9 @@ namespace AspNetCoreModule.Test
                         Assert.Contains("ClosingFromServer", websocketClient.Connection.DataReceived[lastIndex].TextData);
 
                         testSite.VerifyWorkerProcessRecycledUnderInprocessMode(recycledProcessId);
+
+                        Thread.Sleep(500);
+                        await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
                     }
                 }
 

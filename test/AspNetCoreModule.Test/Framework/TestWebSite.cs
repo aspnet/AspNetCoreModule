@@ -446,7 +446,12 @@ namespace AspNetCoreModule.Test.Framework
                     succeeded = true;
                     break;
                 }
-                backendProcess.WaitForExit(1000);
+
+                if (backendProcess.WaitForExit(1000))
+                {
+                    succeeded = true;
+                    break;
+                }
 
                 if (this.IisServerType == ServerType.IISExpress && i == 3)
                 {
