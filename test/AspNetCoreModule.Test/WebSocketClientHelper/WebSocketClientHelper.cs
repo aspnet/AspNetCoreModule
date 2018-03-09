@@ -14,7 +14,10 @@ namespace AspNetCoreModule.Test.WebSocketClient
     {
         public bool IsOpened { get; private set; }
         public WebSocketConnect Connection { get; set; }
-        public bool StoreData { get; set; }
+        public bool StoreData {
+            get;
+            set;
+        }
         public bool IsAlwaysReading { get; private set; }
         public Uri Address { get; set; }
         public byte[][] HandShakeRequest { get; set; }
@@ -41,19 +44,18 @@ namespace AspNetCoreModule.Test.WebSocketClient
             }
         }
 
-        public bool WaitForWebSocketState(WebSocketState expectedState, int timeout = 10000)
+        public bool WaitForWebSocketState(WebSocketState expectedState, int timeout = 5000)
         {
-            TestUtility.LogInformation("WaitForWebSocketState() " + expectedState + ", timeout = " + timeout);
             bool result = false;
             int RETRYMAX = 300;
             int INTERVAL = 100; // ms
             if (timeout > RETRYMAX * INTERVAL)
             {
-                throw new Exception("timeout should be less than " + 100 * 300);
+                throw new Exception("timeout should be less than " + INTERVAL * RETRYMAX);
             }
             for (int i=0; i<RETRYMAX; i++)
             {
-                if (i*100 > timeout)
+                if (i * INTERVAL > timeout)
                 {
                     break;
                 }
@@ -69,11 +71,13 @@ namespace AspNetCoreModule.Test.WebSocketClient
                         if (this.Connection.IsDisposed || this.Connection.TcpClient.IsDead || this.Connection.TcpClient.Connected == false)
                         {
                             // reset connection state with ConnectionClosed
+                            TestUtility.LogInformation("WaitForWebSocketState() connection closed ungracefully");
                             this.WebSocketState = WebSocketState.ConnectionClosed;
                             result = true;
                             break;
                         }
                     }
+                    TestUtility.LogInformation(i + ": WaitForWebSocketState()... " + expectedState + ", timeout = " + timeout);
                     Thread.Sleep(INTERVAL);
                 }
             }
@@ -225,14 +229,33 @@ namespace AspNetCoreModule.Test.WebSocketClient
 
         public void ReadDataCallback(IAsyncResult result)
         {
+            WebSocketConnect client = (WebSocketConnect)result.AsyncState;
+
             try
             {
-                WebSocketConnect client = (WebSocketConnect)result.AsyncState;
+
+                if (!client.TcpClient.Connected)
+                {
+                    TestUtility.LogInformation("Failed to ReadDataCallback() because connection is gone");
+                    return;
+                }
 
                 if (client.IsDisposed)
+                {
                     return;
+                }
 
-                int bytesRead = client.Stream.EndRead(result); // wait until the buffer is filled 
+                int bytesRead = 0;
+                try
+                {
+                    // wait until the buffer is filled
+                    bytesRead = client.Stream.EndRead(result); 
+                }
+                catch (Exception ex)
+                {
+                    return;
+                }
+
                 int bytesReadIntotal = bytesRead;
                 ArrayList InputDataArray = new ArrayList();
                 byte[] tempBuffer = null;
@@ -289,10 +312,19 @@ namespace AspNetCoreModule.Test.WebSocketClient
                     }
 
                     if (this.WebSocketState == WebSocketState.ConnectionClosed)
-                        return;
+                    {
+                        client.Dispose();
+                    }
 
                     if (client.IsDisposed)
+                    {
                         return;
+                    }
+
+                    if (client.TcpClient.IsDead || client.TcpClient.Connected == false)
+                    {
+                        throw new Exception("Connection closed unexpectedly");
+                    }
 
                     // Start the Async Read to handle the next frame comming from server
                     client.Stream.BeginRead(client.InputData, 0, client.InputData.Length, ReadDataCallback, client);
@@ -304,15 +336,16 @@ namespace AspNetCoreModule.Test.WebSocketClient
             }
             catch (Exception ex)
             {
-                if (this.WebSocketState == WebSocketState.ConnectionClosed)
+                if (this.WebSocketState != WebSocketState.ConnectionClosed)
                 {
-                    // Todo: Remove try and catch
-                    TestUtility.LogInformation("ReadDataCallback(). Connection is already closed. Ignoring this exception: " + ex.Message);
-                }                
+                    TestUtility.LogInformation("ReadDataCallback: Error on EndRead()" + ex.Message);
+                    this.WebSocketState = WebSocketState.ConnectionClosed;
+                }
                 else
                 {
-                    throw ex;
+                    TestUtility.LogInformation("ReadDataCallback() failed: WebSocketState is in closed state.");
                 }
+                client.Dispose();
             }
         }
 
@@ -333,7 +366,6 @@ namespace AspNetCoreModule.Test.WebSocketClient
 
                     TestUtility.LogInformation("Client {0:D3}: Read Type {1} : {2} ", Connection.Id, frame.FrameType, frame.Content.Length);
                 }
-
             }
 
             return frame;
@@ -418,12 +450,27 @@ namespace AspNetCoreModule.Test.WebSocketClient
             ProcessSentData(frame);
             if (Connection.TcpClient.Connected)
             {
-                var result = Connection.Stream.BeginWrite(outputData, 0, outputData.Length, WriteCallback, Connection);
-                TestUtility.LogInformation("Client {0:D3}: Write Type {1} : {2} ", Connection.Id, frame.FrameType, frame.Content.Length);
+                try
+                {
+                    var result = Connection.Stream.BeginWrite(outputData, 0, outputData.Length, WriteCallback, Connection);
+                    TestUtility.LogInformation("Client {0:D3}: Write Type {1} : {2} ", Connection.Id, frame.FrameType, frame.Content.Length);
+                }
+                catch (Exception ex)
+                {
+                    if (this.WebSocketState != WebSocketState.ConnectionClosed)
+                    {
+                        TestUtility.LogInformation("Send(): Exception error: ");
+                        this.WebSocketState = WebSocketState.ConnectionClosed;
+                    }
+                    else
+                    {
+                        TestUtility.LogInformation("Send() failed: WebSocketState is in closed state.");
+                    }
+                }
             }
             else
             {
-                TestUtility.LogInformation("Connection is disconnected");
+                TestUtility.LogInformation("Failed to Send() because connection is gone");
             }
 
             return frame;

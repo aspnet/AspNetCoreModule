@@ -17,7 +17,7 @@ namespace AspNetCoreModule.Test.WebSocketClient
         public bool IsDead { get; set; }
         protected override void Dispose(bool disposing)
         {
-            Console.WriteLine("MyClient is disposed");
+            Console.WriteLine("MyTcpClient is disposed");
             IsDead = true;
             base.Dispose(disposing);
         }
@@ -30,7 +30,8 @@ namespace AspNetCoreModule.Test.WebSocketClient
         public WebSocketConnect()
         {
             Id = ++globalID;
-            InputData = new byte[10240];            
+            InputData = new byte[10240];
+            IsDisposed = false;
         }
         
         public byte[] InputData { get; set; }
