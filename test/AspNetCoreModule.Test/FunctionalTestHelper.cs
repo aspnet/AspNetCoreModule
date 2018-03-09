@@ -818,8 +818,8 @@ namespace AspNetCoreModule.Test
                         iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "GracefulShutdown", "disabled" });
                         iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestStartupClassName", "StartupWithShutdownDisabled" });
                         expectedGracefulShutdownResponseStatusCode = "200";
-                        Thread.Sleep(500);
                     }
+                    Thread.Sleep(1000);
 
                     testSite.StartIISExpress();
 
