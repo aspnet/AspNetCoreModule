@@ -406,13 +406,15 @@ namespace AspNetCoreModule.Test.Framework
                 }
             }
 
-            if (startIISExpress)
+            if (IisServerType == ServerType.IISExpress && startIISExpress)
             {
                 // clean up IISExpress before starting a new instance
                 TestUtility.KillIISExpressProcess();
-
                 StartIISExpress();
+            }
 
+            if (startIISExpress)
+            {
                 // send a startup request to make sure that workerprocess is ready to use before starting actual test scenarios
                 TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + TcpPort + " ).StatusCode", "200");
             }
@@ -504,6 +506,7 @@ namespace AspNetCoreModule.Test.Framework
             }
             TestUtility.LogInformation("TestWebSite::TestWebSite() Start IISExpress: " + cmdline + " " + argument);
             _iisExpressPidBackup = TestUtility.RunCommand(cmdline, argument, false, false);
+            System.Threading.Thread.Sleep(1000);
         }
         
         public string GetAppVerifierPath()

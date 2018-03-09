@@ -1671,8 +1671,6 @@ namespace AspNetCoreModule.Test
 
                 DateTime startTime = DateTime.Now;
 
-                await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
-
                 // Get Process ID
                 string backendProcessId_old = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
 

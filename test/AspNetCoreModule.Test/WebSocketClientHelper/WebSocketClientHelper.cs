@@ -245,17 +245,9 @@ namespace AspNetCoreModule.Test.WebSocketClient
                     return;
                 }
 
-                int bytesRead = 0;
-                try
-                {
-                    // wait until the buffer is filled
-                    bytesRead = client.Stream.EndRead(result); 
-                }
-                catch (Exception ex)
-                {
-                    return;
-                }
-
+                // wait until the buffer is filled
+                int bytesRead = client.Stream.EndRead(result); 
+                
                 int bytesReadIntotal = bytesRead;
                 ArrayList InputDataArray = new ArrayList();
                 byte[] tempBuffer = null;
@@ -459,7 +451,7 @@ namespace AspNetCoreModule.Test.WebSocketClient
                 {
                     if (this.WebSocketState != WebSocketState.ConnectionClosed)
                     {
-                        TestUtility.LogInformation("Send(): Exception error: ");
+                        TestUtility.LogInformation("Send(): Exception error: " + ex.Message);
                         this.WebSocketState = WebSocketState.ConnectionClosed;
                     }
                     else
