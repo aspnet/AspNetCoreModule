@@ -156,8 +156,22 @@ namespace AspNetCoreModule.Test.WebSocketClient
                 closeFrame = ReadData();
             else
             {
+                for (int i = 0; i < 5; i++)
+                {
+                    if (Connection.DataReceived.Count == 0)
+                    {
+                        Thread.Sleep(1000);
+                        TestUtility.LogInformation(i + ": Connection.DataReceived is empty, retrying...");
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
                 closeFrame = Connection.DataReceived[Connection.DataReceived.Count - 1];
             }
+
+            TestUtility.LogInformation("Close message ", closeFrame.Content);
 
             IsOpened = false;
             return closeFrame;

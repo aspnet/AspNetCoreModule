@@ -890,9 +890,9 @@ namespace AspNetCoreModule.Test
                         iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "GracefulShutdown", "disabled" });
                         iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestStartupClassName", "StartupWithShutdownDisabled" });
                         expectedGracefulShutdownResponseStatusCode = "200";
-                        Thread.Sleep(500);
+                        
                     }
-
+                    Thread.Sleep(1000);
                     testSite.StartIISExpress();
 
                     string response = (await SendReceive(testSite.AspNetCoreApp.GetUri(""))).ResponseBody;
@@ -1872,8 +1872,17 @@ namespace AspNetCoreModule.Test
 
                         testSite.VerifyWorkerProcessRecycledUnderInprocessMode(recycledProcessId);
 
-                        Thread.Sleep(500);
+                        Thread.Sleep(1000);
                         await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
+
+                        // wait untl app is ready
+                        for (int i = 0; i < 3; i++)
+                        {
+                            if ((await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody == null)
+                            {
+                                Thread.Sleep(1000);
+                            }
+                        }
                     }
                 }
             }
@@ -1936,7 +1945,7 @@ namespace AspNetCoreModule.Test
             DontUseGracefulShutdown
         }
 
-        public static async Task DoAppVerifierTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool verifyTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount = 2)
+        public static async Task DoAppVerifierTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool verifyTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount = 2, bool enableAppVerifier = true)
         {
             TestWebSite testSite = null;
             bool testResult = false;
@@ -1948,8 +1957,11 @@ namespace AspNetCoreModule.Test
                 return;
             }
 
-            // enable AppVerifier 
-            testSite.AttachAppverifier();
+            if (enableAppVerifier)
+            {
+                // enable AppVerifier 
+                testSite.AttachAppverifier();
+            }
 
             // add try finally module here to cleanup Appverifier incase testing fialed in run. 
             try
@@ -2018,6 +2030,9 @@ namespace AspNetCoreModule.Test
 
                     // reset existing worker process process
                     TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
+
+                    // verify w3wp.exe process is gone, which means there was no unexpected error
+                    TestUtility.RunPowershellScript("(get-process -name w3wp 2> $null).count", "0", retryCount: 3);
                     Thread.Sleep(1000);
 
                     for (int i = 0; i < repeatCount; i++)
@@ -2026,17 +2041,20 @@ namespace AspNetCoreModule.Test
                         testSite.WorkerProcessID = 0;
 
                         // send a startup request to start a new worker process
-                        TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + testSite.TcpPort + " ).StatusCode", "200", retryCount: 5);
-                        Thread.Sleep(1000);
+                        await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", timeout: 10);
+                        Thread.Sleep(3000);
 
-                        // attach debugger to the worker process
-                        testSite.AttachWinDbg(testSite.WorkerProcessID, "sxi 80000003;g");
-                        Thread.Sleep(1000);
+                        if (enableAppVerifier)
+                        {
+                            // attach debugger to the worker process
+                            testSite.AttachWinDbg(testSite.WorkerProcessID, "sxi 80000003;g");
+                            Thread.Sleep(5000);
 
-                        TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + testSite.TcpPort + " ).StatusCode", "200", retryCount: 30);
+                            TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + testSite.TcpPort + " ).StatusCode", "200", retryCount: 30);
 
-                        // verify windbg process is started
-                        TestUtility.RunPowershellScript("(get-process -name windbg 2> $null).count", "1", retryCount: 5);
+                            // verify windbg process is started
+                            TestUtility.RunPowershellScript("(get-process -name windbg 2> $null).count", "1", retryCount: 5);
+                        }
 
                         DateTime startTime = DateTime.Now;
 
@@ -2176,10 +2194,10 @@ namespace AspNetCoreModule.Test
                             Thread.Sleep(500);
 
                             VerifySendingWebSocketData(websocketClient, testData);
-                            Thread.Sleep(500);
+                            Thread.Sleep(1000);
 
                             frameReturned = websocketClient.Close();
-                            Thread.Sleep(500);
+                            Thread.Sleep(1000);
 
                             Assert.True(frameReturned.FrameType == FrameType.Close, "Closing Handshake");
                         }
@@ -2235,8 +2253,11 @@ namespace AspNetCoreModule.Test
                                 break;
                         }
 
-                        // verify windbg process is gone, which means there was no unexpected error
-                        TestUtility.RunPowershellScript("(get-process -name windbg 2> $null).count", "0", retryCount: 5);
+                        if (enableAppVerifier)
+                        {
+                            // verify windbg process is gone, which means there was no unexpected error
+                            TestUtility.RunPowershellScript("(get-process -name windbg 2> $null).count", "0", retryCount: 5);
+                        }
                     }
 
 
@@ -2257,7 +2278,10 @@ namespace AspNetCoreModule.Test
                 // cleanup Appverifier
                 if (testSite != null)
                 {
-                    testSite.DetachAppverifier();
+                    if (enableAppVerifier)
+                    {
+                        testSite.DetachAppverifier();
+                    }
                 }
             }
             TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);

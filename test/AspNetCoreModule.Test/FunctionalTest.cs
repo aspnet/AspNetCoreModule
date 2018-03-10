@@ -345,7 +345,8 @@ namespace AspNetCoreModule.Test
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
         public Task AppVerifierTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
         {
-            return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
+            return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: true);
+            //return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: false);
         }
 
         [ConditionalTheory]
@@ -355,7 +356,7 @@ namespace AspNetCoreModule.Test
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.DontUseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
         public Task AppVerifier2Test(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
         {
-            return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
+            return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: true);
         }
 
         [ConditionalTheory]
@@ -365,7 +366,7 @@ namespace AspNetCoreModule.Test
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.StopAndStartAppPool, 1)]
         public Task AppVerifier3Test(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
         {
-            return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
+            return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: true);
         }
 
         [ConditionalTheory]
