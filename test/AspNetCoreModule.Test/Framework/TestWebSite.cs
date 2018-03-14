@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace AspNetCoreModule.Test.Framework
 {
@@ -18,7 +19,7 @@ namespace AspNetCoreModule.Test.Framework
         public TestWebApplication URLRewriteApp;
         public TestUtility testHelper;
         private ILogger _logger;
-        private int _iisExpressPidBackup = -1;
+        public int IisExpressPidBackup = -1;
 
         private string postfix = string.Empty;
 
@@ -26,11 +27,11 @@ namespace AspNetCoreModule.Test.Framework
         {
             TestUtility.LogInformation("TestWebSite::Dispose() Start");
 
-            if (_iisExpressPidBackup != -1)
+            if (IisExpressPidBackup != -1)
             {
                 try
                 {
-                    var iisExpressProcess = Process.GetProcessById(Convert.ToInt32(_iisExpressPidBackup));
+                    var iisExpressProcess = Process.GetProcessById(Convert.ToInt32(IisExpressPidBackup));
                     iisExpressProcess.Kill();
                     iisExpressProcess.WaitForExit();
                     iisExpressProcess.Close();
@@ -43,7 +44,7 @@ namespace AspNetCoreModule.Test.Framework
                     }
                     else
                     {
-                        TestUtility.RunPowershellScript("stop-process -id " + _iisExpressPidBackup);
+                        TestUtility.RunPowershellScript("stop-process -id " + IisExpressPidBackup);
                     }
                 }
             }
@@ -156,12 +157,12 @@ namespace AspNetCoreModule.Test.Framework
 
         public ServerType IisServerType { get; set; }
         public string IisExpressConfigPath { get; set; }
-        private int _siteId { get; set; }
-        private IISConfigUtility.AppPoolBitness _appPoolBitness { get; set; }
+        public int SiteId { get; set; }
+        public IISConfigUtility.AppPoolBitness AppPoolBitness { get; set; }
 
-        public TestWebSite(IISConfigUtility.AppPoolBitness appPoolBitness, string loggerPrefix = "ANCMTest", bool startIISExpress = true, bool copyAllPublishedFiles = false, bool attachAppVerifier = false, bool publishing = true, int tcpPort = -1)
+        public TestWebSite(IISConfigUtility.AppPoolBitness appPoolBitness, string loggerPrefix = "ANCMTest", bool copyAllPublishedFiles = false, bool attachAppVerifier = false, bool publishing = true, int tcpPort = -1)
         {
-            _appPoolBitness = appPoolBitness;
+            AppPoolBitness = appPoolBitness;
             
             //
             // Initialize IisServerType
@@ -184,10 +185,10 @@ namespace AspNetCoreModule.Test.Framework
                 //
                 // In Wow64/IISExpress test context, always use 32 bit worker process
                 //
-                if (_appPoolBitness == IISConfigUtility.AppPoolBitness.noChange)
+                if (AppPoolBitness == IISConfigUtility.AppPoolBitness.noChange)
                 {
                     TestUtility.LogInformation("Warning!!! In Wow64, _appPoolBitness should be set with enable32bit");
-                    _appPoolBitness = IISConfigUtility.AppPoolBitness.enable32Bit;
+                    AppPoolBitness = IISConfigUtility.AppPoolBitness.enable32Bit;
                 }
             }
 
@@ -330,7 +331,7 @@ namespace AspNetCoreModule.Test.Framework
                 _tcpPort = InitializeTestMachine.SiteId++;
                 InitializeTestMachine.SiteId++;
             }
-            _siteId = _tcpPort;
+            SiteId = _tcpPort;
 
             RootAppContext = new TestWebApplication("/", Path.Combine(siteRootPath, "WebSite1"), this);
             RootAppContext.RestoreFile("web.config");
@@ -378,7 +379,7 @@ namespace AspNetCoreModule.Test.Framework
                 {
                     if (TestUtility.IsOSAmd64)
                     {
-                        if (_appPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
+                        if (AppPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
                         {
                             iisConfig.AddModule("AspNetCoreModule", (InitializeTestMachine.IisExpressAspnetcore_X86_path), null);
                         }
@@ -393,7 +394,7 @@ namespace AspNetCoreModule.Test.Framework
                     }
                 }
 
-                iisConfig.CreateSite(siteName, HostNameBinding, RootAppContext.PhysicalPath, _siteId, TcpPort, appPoolName);
+                iisConfig.CreateSite(siteName, HostNameBinding, RootAppContext.PhysicalPath, SiteId, TcpPort, appPoolName);
                 iisConfig.CreateApp(siteName, AspNetCoreApp.Name, AspNetCoreApp.PhysicalPath, appPoolName);
                 iisConfig.CreateApp(siteName, WebSocketApp.Name, WebSocketApp.PhysicalPath, appPoolName);
                 iisConfig.CreateApp(siteName, URLRewriteApp.Name, URLRewriteApp.PhysicalPath, appPoolName);
@@ -407,114 +408,13 @@ namespace AspNetCoreModule.Test.Framework
                 }
             }
 
-            if (IisServerType == ServerType.IISExpress && startIISExpress)
-            {
-                // clean up IISExpress before starting a new instance
-                TestUtility.KillIISExpressProcess();
-                StartIISExpress();
-            }
-
-            if (startIISExpress)
-            {
-                // send a startup request to make sure that workerprocess is ready to use before starting actual test scenarios
-                TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + TcpPort + " ).StatusCode", "200");
-            }
             TestUtility.LogInformation("TestWebSite::TestWebSite() End");
         }
 
-        public void VerifyWorkerProcessRecycledUnderInprocessMode(string backendProcessId, int timeout = 5000)
-        {
-            if (AspNetCoreApp.HostingModel != TestWebApplication.HostingModelValue.Inprocess)
-            {
-                return; // do nothing for outofprocess
-            }
-
-            bool succeeded = false;
-            for (int i = 0; i < (timeout / 1000); i++)
-            {
-                Process backendProcess = null;
-                try
-                { 
-                    backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
-                }
-                catch
-                {
-                    succeeded = true;
-                    TestUtility.LogInformation("Process not found.");
-                    break;
-                }
-
-                if (backendProcess == null)
-                {
-                    succeeded = true;
-                    break;
-                }
-
-                if (backendProcess.WaitForExit(1000))
-                {
-                    succeeded = true;
-                    break;
-                }
-
-                if (this.IisServerType == ServerType.IISExpress && i == 3)
-                {
-                    // exit after 3 seconds for IISExpress case
-                    break;
-                }
-            }
-            
-            if (succeeded == false)
-            {
-                if (this.IisServerType == ServerType.IIS)
-                {
-                    throw new Exception("Failed to recycle IIS worker process");
-                }
-                else
-                { 
-                    // IISExpress should be killed if it can't be recycled
-                    TestUtility.LogInformation("BugBug: Restart IISExpress...");
-                    TestUtility.ResetHelper(ResetHelperMode.KillIISExpress);
-                }
-            }
-                
-            if (IisServerType == ServerType.IISExpress)
-            {
-                // restart IISExpress
-                StartIISExpress();
-            }
-        }
-
-        public void StartIISExpress()
-        {
-            if (IisServerType == ServerType.IIS)
-            {
-                return;
-            }
-
-            // reset workerProcessID
-            this.WorkerProcessID = 0;
-
-            string cmdline;
-            string argument = "/siteid:" + _siteId + " /config:" + IisExpressConfigPath;
-
-            if (Directory.Exists(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%")) 
-                && _appPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
-            {
-                cmdline = Path.Combine(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%"), "IIS Express", "iisexpress.exe");
-            }
-            else
-            {
-                cmdline = Path.Combine(Environment.ExpandEnvironmentVariables("%ProgramFiles%"), "IIS Express", "iisexpress.exe");
-            }
-            TestUtility.LogInformation("TestWebSite::TestWebSite() Start IISExpress: " + cmdline + " " + argument);
-            _iisExpressPidBackup = TestUtility.RunCommand(cmdline, argument, false, false);
-            System.Threading.Thread.Sleep(1000);
-        }
-        
         public string GetAppVerifierPath()
         {
             string cmdline = null;
-            if (Directory.Exists(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%")) && _appPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
+            if (Directory.Exists(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%")) && AppPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
             {
                 cmdline = Path.Combine(Environment.ExpandEnvironmentVariables("%windir%"), "syswow64", "appverif.exe");
                 if (!File.Exists(cmdline))
@@ -563,7 +463,7 @@ namespace AspNetCoreModule.Test.Framework
                 processName = "w3wp.exe";
             }
             string argument = "-enable Heaps COM RPC Handles Locks Memory TLS Exceptions Threadpool Leak SRWLock -for " + processName;
-            if (Directory.Exists(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%")) && _appPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
+            if (Directory.Exists(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%")) && AppPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
             {
                 debuggerCmdline = Path.Combine(Environment.ExpandEnvironmentVariables("%ProgramFiles%"), "Debugging Tools for Windows (x64)", "wow64", "windbg.exe");
                 if (!File.Exists(debuggerCmdline))
@@ -618,7 +518,7 @@ namespace AspNetCoreModule.Test.Framework
                 }
 
                 string argument = "-disable * -for " + processName;
-                if (Directory.Exists(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%")) && _appPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
+                if (Directory.Exists(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%")) && AppPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
                 {
                     cmdline = Path.Combine(Environment.ExpandEnvironmentVariables("%windir%"), "syswow64", "appverif.exe");
                     if (!File.Exists(cmdline))
