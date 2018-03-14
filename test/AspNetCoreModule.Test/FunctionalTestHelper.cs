@@ -88,7 +88,7 @@ namespace AspNetCoreModule.Test
                 
                 await StartIISExpress(testSite);
 
-                string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                string backendProcessId = await GetAspnetCoreAppProcessId(testSite); 
                 if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess && backendProcessId_old != null)
                 {
                     Assert.Equal(backendProcessId_old, backendProcessId);
@@ -118,18 +118,18 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoRecycleApplicationAfterBackendProcessBeingKilled"))
             {
+                await StartIISExpress(testSite);
+
                 string backendProcessId_old = null;
                 const int repeatCount = 3;
                 for (int i = 0; i < repeatCount; i++)
                 {
-                    await StartIISExpress(testSite);
-
                     // check JitDebugger before continuing 
                     CleanupVSJitDebuggerWindow();
 
                     DateTime startTime = DateTime.Now;
                     
-                    string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     Assert.NotEqual(backendProcessId_old, backendProcessId);
                     backendProcessId_old = backendProcessId;
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
@@ -154,12 +154,12 @@ namespace AspNetCoreModule.Test
                     return;
                 }
 
-                string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
-
                 await StartIISExpress(testSite);
 
+                string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
                 string backendProcessId_old = null;
                 const int repeatCount = 3;
+
                 for (int i = 0; i < repeatCount; i++)
                 {
                     // check JitDebugger before continuing 
@@ -168,7 +168,7 @@ namespace AspNetCoreModule.Test
                     DateTime startTime = DateTime.Now;
                     Thread.Sleep(1000);
 
-                    string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     Assert.NotEqual(backendProcessId_old, backendProcessId);
                     backendProcessId_old = backendProcessId;
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
@@ -199,7 +199,6 @@ namespace AspNetCoreModule.Test
 
                 string backendProcessId_old = null;
                 string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
-
                 const int repeatCount = 3;
                 
                 // configuration change from same level
@@ -211,7 +210,7 @@ namespace AspNetCoreModule.Test
                     DateTime startTime = DateTime.Now;
                     Thread.Sleep(1000);
 
-                    string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
                     Assert.NotEqual(backendProcessId_old, backendProcessId);
                     backendProcessId_old = backendProcessId;
@@ -238,7 +237,7 @@ namespace AspNetCoreModule.Test
                     DateTime startTime = DateTime.Now;
                     Thread.Sleep(1000);
 
-                    string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
                     Assert.NotEqual(backendProcessId_old, backendProcessId);
                     backendProcessId_old = backendProcessId;
@@ -270,6 +269,7 @@ namespace AspNetCoreModule.Test
 
                 string backendProcessId_old = null;
                 const int repeatCount = 3;
+
                 for (int i = 0; i < repeatCount; i++)
                 {
                     // check JitDebugger before continuing 
@@ -307,6 +307,7 @@ namespace AspNetCoreModule.Test
 
                 string backendProcessId_old = null;
                 const int repeatCount = 3;
+
                 for (int i = 0; i < repeatCount; i++)
                 {
                     // check JitDebugger before continuing 
@@ -351,7 +352,7 @@ namespace AspNetCoreModule.Test
 
                     string totalNumber = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetEnvironmentVariables"))).ResponseBody;
                     Assert.True(totalNumber == (await SendReceive(testSite.AspNetCoreApp.GetUri("GetEnvironmentVariables"))).ResponseBody);
-                    string recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string recycledProcessId = await GetAspnetCoreAppProcessId(testSite);
                     string backendProcessId = recycledProcessId;
 
                     iisConfig.SetANCMConfig(
@@ -395,7 +396,7 @@ namespace AspNetCoreModule.Test
                         }
 
                         await SendReceive(testSite.AspNetCoreApp.GetUri(""), expectedResponseBody: "Running", numberOfRetryCount: 10);
-                        recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                        recycledProcessId = await GetAspnetCoreAppProcessId(testSite);
 
                         iisConfig.EnableIISAuthentication(testSite.SiteName, windows, basic, anonymous);
                     }
@@ -409,7 +410,7 @@ namespace AspNetCoreModule.Test
                     if (setEnvironmentVariableConfiguration)
                     {
                         await SendReceive(testSite.AspNetCoreApp.GetUri(""), expectedResponseBody: "Running", numberOfRetryCount: 10);
-                        recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                        recycledProcessId = await GetAspnetCoreAppProcessId(testSite);
 
                         iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { environmentVariableName, environmentVariableValue });
 
@@ -487,7 +488,7 @@ namespace AspNetCoreModule.Test
                     // rename app_offline.htm to _app_offline.htm and verify 200
                     testSite.AspNetCoreApp.MoveFile("App_Offline.Htm", "_App_Offline.Htm");
                     
-                    string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
                     Assert.Equal(backendProcess.ProcessName.ToLower().Replace(".exe", ""), testSite.AspNetCoreApp.GetProcessFileName().ToLower().Replace(".exe", ""));
                     Assert.NotEqual(backendProcessId_old, backendProcessId);
@@ -574,7 +575,7 @@ namespace AspNetCoreModule.Test
             {
                 await StartIISExpress(testSite);
 
-                string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
 
                 testSite.AspNetCoreApp.DeleteFile("custom502-3.htm");
                 string curstomErrorMessage = "ANCMTest502-3";
@@ -629,14 +630,14 @@ namespace AspNetCoreModule.Test
                     TestUtility.LogInformation("This test is not valid for Inprocess mode");
                     return;
                 }
-
-                await StartIISExpress(testSite);
-
+                
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
                     bool rapidFailsTriggered = false;
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "rapidFailsPerMinute", valueOfRapidFailsPerMinute);
-                
+
+                    await StartIISExpress(testSite);
+
                     string backendProcessId_old = null;
                     const int repeatCount = 10;
 
@@ -662,7 +663,7 @@ namespace AspNetCoreModule.Test
                             break;
                         }
 
-                        string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                        string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                         Assert.NotEqual(backendProcessId_old, backendProcessId);
                         backendProcessId_old = backendProcessId;
                         var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
@@ -690,8 +691,6 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoProcessesPerApplicationTest"))
             {
-                await StartIISExpress(testSite);
-
                 if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
                 {
                     TestUtility.LogInformation("This test is not valid for Inprocess mode");
@@ -704,11 +703,14 @@ namespace AspNetCoreModule.Test
                     Thread.Sleep(3000);
 
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "processesPerApplication", valueOfProcessesPerApplication);
+
+                    await StartIISExpress(testSite);
+
                     HashSet<int> processIDs = new HashSet<int>();
 
                     for (int i = 0; i < 20; i++)
                     {
-                        string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                        string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                         int id = Convert.ToInt32(backendProcessId);
                         if (!processIDs.Contains(id))
                         {
@@ -741,7 +743,7 @@ namespace AspNetCoreModule.Test
 
                     for (int i = 0; i < 20; i++)
                     {
-                        string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                        string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                         int id = Convert.ToInt32(backendProcessId);
                         if (!processIDs.Contains(id))
                         {
@@ -848,7 +850,7 @@ namespace AspNetCoreModule.Test
 
                     await StartIISExpress(testSite);
 
-                    string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
 
                     // Set a new configuration value to make the backend process being recycled
@@ -884,7 +886,7 @@ namespace AspNetCoreModule.Test
                     Assert.True(difference.Seconds < tempExpectedClosingTime + offSetSecond, "Actual: " + difference.Seconds + ", Expected" + tempExpectedClosingTime + 3);
                     Assert.True(difference.Seconds >= expectedClosingTime, "Actual: " + difference.Seconds + ", Expected: " + expectedClosingTime);
 
-                    string newBackendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string newBackendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     Assert.True(backendProcessId != newBackendProcessId);
 
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", numberOfRetryCount: 5);
@@ -924,10 +926,10 @@ namespace AspNetCoreModule.Test
                         expectedGracefulShutdownResponseStatusCode = "200";
                         
                     }
-                    Thread.Sleep(1000);
+
                     await StartIISExpress(testSite);
 
-                    string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
 
                     // put app_offline.htm to make the backend process being recycled
@@ -978,7 +980,7 @@ namespace AspNetCoreModule.Test
                     Assert.True(difference.Seconds < tempExpectedClosingTime + offSetSecond, "Actual: " + difference.Seconds + ", Expected" + tempExpectedClosingTime + 3);
                     Assert.True(difference.Seconds >= expectedClosingTime, "Actual: " + difference.Seconds + ", Expected: " + expectedClosingTime);
 
-                    string newBackendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string newBackendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     Assert.True(backendProcessId != newBackendProcessId);
 
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
@@ -1022,7 +1024,7 @@ namespace AspNetCoreModule.Test
 
                     await StartIISExpress(testSite);
 
-                    string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     if (Directory.Exists(logPath))
                     {
                         bool fileLocked = false;
@@ -1060,7 +1062,7 @@ namespace AspNetCoreModule.Test
 
                         // create dummy file named logs
                         testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "logs");
-                        backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                        backendProcessId = await GetAspnetCoreAppProcessId(testSite);
 
                         Thread.Sleep(2000);
                         testSite.AspNetCoreApp.DeleteFile("logs");
@@ -1081,13 +1083,13 @@ namespace AspNetCoreModule.Test
 
                     // verify the log file is not created because backend process is not recycled
                     Assert.True(Directory.GetFiles(logPath).Length == 0);
-                    Assert.True(backendProcessId == (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody);
+                    Assert.True(backendProcessId == (await GetAspnetCoreAppProcessId(testSite)));
 
                     // reset web.config to recycle backend process and give write permission to the Users local group to which IIS workerprocess identity belongs
                     SecurityIdentifier sid = new SecurityIdentifier(WellKnownSidType.BuiltinUsersSid, null);
                     TestUtility.GiveWritePermissionTo(logPath, sid);
 
-                    backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    backendProcessId = await GetAspnetCoreAppProcessId(testSite);
 
                     startTime = DateTime.Now;
                     Thread.Sleep(500);
@@ -1099,14 +1101,22 @@ namespace AspNetCoreModule.Test
 
                     await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId);
 
-                    Assert.True(backendProcessId != (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody);
+                    Assert.True(backendProcessId != (await GetAspnetCoreAppProcessId(testSite)));
 
                     // Verify log file is created now after backend process is recycled
                     Assert.True(TestUtility.RetryHelper(p => { return Directory.GetFiles(p).Length > 0 ? true : false; }, logPath));
 
+                    backendProcessId = await GetAspnetCoreAppProcessId(testSite);
+
                     // put app_offline and delete log directory
                     testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "App_Offline.Htm");
                     Thread.Sleep(1000);
+
+                    if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess && testSite.IisServerType == ServerType.IIS)
+                    {
+                        iisConfig.RecycleAppPool(testSite.AspNetCoreApp.AppPoolName);
+                        await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId);
+                    }
 
                     testSite.AspNetCoreApp.DeleteDirectory("logs");
                     Assert.False(Directory.Exists(logPath));
@@ -1125,14 +1135,28 @@ namespace AspNetCoreModule.Test
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
                     string arguments = argumentsPrefix + testSite.AspNetCoreApp.GetArgumentFileName();
-                    string tempProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string tempProcessId = await GetAspnetCoreAppProcessId(testSite);
                     var tempBackendProcess = Process.GetProcessById(Convert.ToInt32(tempProcessId));
 
                     // replace $env with the actual test value
                     if (processPath == "$env")
                     {
                         string tempString = Environment.ExpandEnvironmentVariables("%systemdrive%").ToLower();
-                        processPath = Path.Combine(tempBackendProcess.MainModule.FileName).ToLower().Replace(tempString, "%systemdrive%");
+                        if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
+                        {
+                            if (appPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
+                            {
+                                processPath = @"%ProgramFiles(x86)%\dotnet\dotnet.exe";
+                            }
+                            else
+                            {
+                                processPath = @"%ProgramFiles%\dotnet\dotnet.exe";
+                            }
+                        }
+                        else
+                        {
+                            processPath = Path.Combine(tempBackendProcess.MainModule.FileName).ToLower().Replace(tempString, "%systemdrive%");
+                        }
                         arguments = testSite.AspNetCoreApp.GetDirectoryPathWith(arguments).ToLower().Replace(tempString, "%systemdrive%");
                     }
 
@@ -1141,15 +1165,13 @@ namespace AspNetCoreModule.Test
 
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "processPath", processPath);
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "arguments", arguments);
-
-                    await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, tempProcessId);
-
+                    
                     Thread.Sleep(500);
                     // check JitDebugger before continuing 
                     CleanupVSJitDebuggerWindow();
                     Thread.Sleep(500);
 
-                    string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     Assert.True(TestUtility.RetryHelper((arg1, arg2) => VerifyANCMStartEvent(arg1, arg2), startTime, backendProcessId));
                 }
 
@@ -1175,7 +1197,7 @@ namespace AspNetCoreModule.Test
                     Assert.DoesNotContain("MS-ASPNETCORE-WINAUTHTOKEN", requestHeaders, StringComparison.InvariantCultureIgnoreCase);
 
                     iisConfig.EnableIISAuthentication(testSite.SiteName, windows: true, basic: false, anonymous: false);
-                    Thread.Sleep(500);
+                    
                     await StartIISExpress(testSite);
 
                     // check JitDebugger before continuing 
@@ -1231,12 +1253,11 @@ namespace AspNetCoreModule.Test
 
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
-
                     // allocating 128,000 KB
                     await SendReceive(testSite.AspNetCoreApp.GetUri("MemoryLeak128000"));
 
                     // get backend process id
-                    string pocessIdBackendProcess = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string pocessIdBackendProcess = await GetAspnetCoreAppProcessId(testSite);
 
                     // get process id of IIS worker process (w3wp.exe)
                     string userName = testSite.RootAppContext.AppPoolName;
@@ -1287,7 +1308,7 @@ namespace AspNetCoreModule.Test
                     int y = Convert.ToInt32(TestUtility.GetProcessWMIAttributeValue("w3wp.exe", "Handle", userName));
                     Assert.True(x == y && !foundVSJit, "worker process is not recycled after 30 seconds");
 
-                    string backupPocessIdBackendProcess = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    string backupPocessIdBackendProcess = await GetAspnetCoreAppProcessId(testSite);
                     string newPocessIdBackendProcess = backupPocessIdBackendProcess;
 
                     // Verify IIS recycling happens while there is memory leak
@@ -1299,7 +1320,7 @@ namespace AspNetCoreModule.Test
                         // allocating 256,000 KB
                         await SendReceive(testSite.AspNetCoreApp.GetUri("MemoryLeak256000"));
 
-                        newPocessIdBackendProcess = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                        newPocessIdBackendProcess = await GetAspnetCoreAppProcessId(testSite);
                         if (foundVSJit || backupPocessIdBackendProcess != newPocessIdBackendProcess)
                         {
                             // worker process is recycled expectedly and backend process is recycled together
@@ -1326,7 +1347,7 @@ namespace AspNetCoreModule.Test
                     z = Convert.ToInt32(TestUtility.GetProcessWMIAttributeValue("w3wp.exe", "Handle", userName));
                     Assert.True(x != z, "worker process is recycled");
 
-                    newPocessIdBackendProcess = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                    newPocessIdBackendProcess = await GetAspnetCoreAppProcessId(testSite);
                     Assert.True(backupPocessIdBackendProcess != newPocessIdBackendProcess, "backend process is recycled");
                 }
                 testSite.AspNetCoreApp.RestoreFile("web.config");
@@ -1491,7 +1512,6 @@ namespace AspNetCoreModule.Test
                     // Configure http.sys ssl certificate mapping to IP:Port endpoint with the newly created self signed certificage
                     iisConfig.SetSSLCertificate(sslPort, hexIPAddress, thumbPrint);
 
-                    // starting IISExpress was deffered after creating test applications and now it is ready to start it 
                     await StartIISExpress(testSite);
 
                     // Verify http request
@@ -1540,7 +1560,6 @@ namespace AspNetCoreModule.Test
                     // Configure http.sys ssl certificate mapping to IP:Port endpoint with the newly created self signed certificage
                     iisConfig.SetSSLCertificate(sslPort, hexIPAddress, thumbPrint);
 
-                    // starting IISExpress was deffered after creating test applications and now it is ready to start it 
                     await StartIISExpress(testSite);
 
                     // Verify http request
@@ -1653,10 +1672,9 @@ namespace AspNetCoreModule.Test
                         Assert.True(File.Exists(pfxFilePath));
                     }
 
-                    // starting IISExpress was deffered after creating test applications and now it is ready to start it 
-                    Uri rootHttpsUri = testSite.RootAppContext.GetUri(null, sslPort, protocol: "https");
                     await StartIISExpress(testSite);
 
+                    Uri rootHttpsUri = testSite.RootAppContext.GetUri(null, sslPort, protocol: "https");
                     TestUtility.RunPowershellScript("( invoke-webrequest " + rootHttpsUri.OriginalString + " -CertificateThumbprint " + thumbPrintForClientAuthentication + ").StatusCode", "200");
 
                     // Verify http request with using client certificate
@@ -1723,7 +1741,7 @@ namespace AspNetCoreModule.Test
                 DateTime startTime = DateTime.Now;
 
                 // Get Process ID
-                string backendProcessId_old = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                string backendProcessId_old = await GetAspnetCoreAppProcessId(testSite);
 
                 //echo.aspx has hard coded path for the websocket server; commented out until the hard - coded path issue is fixed
                 /* 
@@ -1755,7 +1773,7 @@ namespace AspNetCoreModule.Test
                 await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
 
                 Thread.Sleep(500);
-                string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                 Assert.Equal(backendProcessId_old, backendProcessId);
 
                 // Verify server side websocket disconnection
@@ -1789,7 +1807,7 @@ namespace AspNetCoreModule.Test
                 await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
 
                 Thread.Sleep(500);
-                backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                 Assert.Equal(backendProcessId_old, backendProcessId);
 
                 // send a simple request and verify the response body
@@ -1826,10 +1844,8 @@ namespace AspNetCoreModule.Test
                         testSite.AspNetCoreApp.DeleteFile("App_Offline.Htm");
                         Thread.Sleep(1000);
 
-                        string recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
-
-                        // send a simple request and verify the response body
-                        await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
+                        await SendReceive(testSite.AspNetCoreApp.GetUri(""), expectedResponseBody: "Running", numberOfRetryCount: 10);
+                        string recycledProcessId = await GetAspnetCoreAppProcessId(testSite);
 
                         var frameReturned = websocketClient.Connect(testSite.AspNetCoreApp.GetUri("websocket"), true, true);
                         Assert.Contains("Connection: Upgrade", frameReturned.Content);
@@ -1893,7 +1909,9 @@ namespace AspNetCoreModule.Test
                 {
                     for (int jj = 0; jj < 3; jj++)
                     {
-                        string recycledProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                        await SendReceive(testSite.AspNetCoreApp.GetUri(""), expectedResponseBody: "Running", numberOfRetryCount: 10);
+
+                        string recycledProcessId = await GetAspnetCoreAppProcessId(testSite);
 
                         var frameReturned = websocketClient.Connect(testSite.AspNetCoreApp.GetUri("websocket"), true, true);
                         Assert.Contains("Connection: Upgrade", frameReturned.Content);
@@ -1922,16 +1940,7 @@ namespace AspNetCoreModule.Test
                         await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, recycledProcessId);
 
                         Thread.Sleep(1000);
-                        await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
-
-                        // wait untl app is ready
-                        for (int i = 0; i < 3; i++)
-                        {
-                            if ((await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody == null)
-                            {
-                                Thread.Sleep(1000);
-                            }
-                        }
+                        await SendReceive(testSite.AspNetCoreApp.GetUri(""), expectedResponseBody: "Running", numberOfRetryCount: 10);
                     }
                 }
             }
@@ -2058,7 +2067,6 @@ namespace AspNetCoreModule.Test
                         iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestShutdownDelay", "10" });
                     }
 
-                    // starting IISExpress was deffered after creating test applications and now it is ready to start. 
                     await StartIISExpress(testSite);
 
                     if (verifyTimeout)
@@ -2116,7 +2124,7 @@ namespace AspNetCoreModule.Test
                         await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", timeout: 10);
 
                         // Get Process ID
-                        string backendProcessId_old = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
+                        string backendProcessId_old = await GetAspnetCoreAppProcessId(testSite);
 
                         // Verify WebSocket without setting subprotocol
                         await SendReceive(testSite.WebSocketApp.GetUri("echo.aspx"), expectedStringsInResponseBody: new string[] { "Socket Open" }, timeout: 10); // echo.aspx has hard coded path for the websocket server
@@ -2824,6 +2832,22 @@ namespace AspNetCoreModule.Test
             }
         }
 
+        private static async Task<string> GetAspnetCoreAppProcessId(TestWebSite testSite, Uri uri = null)
+        {
+            Uri tempUri = uri;
+            if (uri == null)
+            {
+                tempUri = testSite.AspNetCoreApp.GetUri("GetProcessId");
+            }
+            await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", numberOfRetryCount: 10);
+            string processId = (await SendReceive(tempUri)).ResponseBody;
+            if (processId == null)
+            {
+                throw new Exception("Failed to get process ID with " + tempUri);
+            }
+            return processId;
+        }
+
         private static async Task StartIISExpress(TestWebSite testSite, bool verifyAppRunning = true)
         {
             if (testSite.IisServerType == ServerType.IISExpress)
@@ -2857,7 +2881,7 @@ namespace AspNetCoreModule.Test
             }
         }
 
-        private static async Task VerifyWorkerProcessRecycledUnderInprocessMode(TestWebSite testSite, string backendProcessId, int timeout = 5000)
+        private static async Task VerifyWorkerProcessRecycledUnderInprocessMode(TestWebSite testSite, string backendProcessId, int timeout = 10000)
         {
             if (testSite.AspNetCoreApp.HostingModel != TestWebApplication.HostingModelValue.Inprocess)
             {
