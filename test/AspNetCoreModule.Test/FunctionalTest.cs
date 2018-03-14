@@ -52,15 +52,24 @@ namespace AspNetCoreModule.Test
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, 0, 0, false)]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, 0, 0, true)]
+        public Task ShutdownTimeLimitTest2(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
+        {
+            return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
+        }
+
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
+        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 0, 0, false)]
+        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 0, 0, true)]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 5, 4, true)]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 5, 4, false)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, 5, 4, true)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, 5, 4, false)]
-        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 0, 0, false)]
-        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 0, 0, true)]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, 0, 0, false)]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, 0, 0, true)]
-        public Task ShutdownTimeLimitTest2(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
+        public Task ShutdownTimeLimitTest3(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
         {
             return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
         }

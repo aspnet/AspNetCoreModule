@@ -365,6 +365,7 @@ namespace AspNetCoreModule.Test.Framework
                 if (IisServerType == ServerType.IIS)
                 {
                     iisConfig.CreateAppPool(appPoolName);
+                    iisConfig.SetAppPoolSetting(appPoolName, "rapidFailProtectionMaxCrashes", 100);
 
                     // Switch bitness
                     if (TestUtility.IsOSAmd64 && appPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
@@ -496,7 +497,8 @@ namespace AspNetCoreModule.Test.Framework
             string cmdline;
             string argument = "/siteid:" + _siteId + " /config:" + IisExpressConfigPath;
 
-            if (Directory.Exists(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%")) && _appPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
+            if (Directory.Exists(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%")) 
+                && _appPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
             {
                 cmdline = Path.Combine(Environment.ExpandEnvironmentVariables("%ProgramFiles(x86)%"), "IIS Express", "iisexpress.exe");
             }

@@ -155,12 +155,6 @@ namespace AspNetCoreModule.Test
                     return;
                 }
 
-                // Encrease rapidFailProtectionMaxCrashes for the current apppool
-                using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
-                {
-                    iisConfig.SetAppPoolSetting(testSite.RootAppContext.AppPoolName, "rapidFailProtectionMaxCrashes", 100);
-                }
-
                 string backendProcessId_old = null;
                 const int repeatCount = 3;
                 for (int i = 0; i < repeatCount; i++)
@@ -823,9 +817,8 @@ namespace AspNetCoreModule.Test
 
                     testSite.StartIISExpress();
 
-                    string response = (await SendReceive(testSite.AspNetCoreApp.GetUri(""))).ResponseBody;
-                    Assert.True(response == "Running");
-
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(""), expectedResponseBody: "Running", numberOfRetryCount: 5);
+                    
                     string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
 
@@ -843,17 +836,26 @@ namespace AspNetCoreModule.Test
                     // Verify shutdown time
                     int tempExpectedClosingTime = expectedClosingTime;
                     int offSetSecond = 3;
-                    if ((difference.Seconds < tempExpectedClosingTime + offSetSecond) == false && tempExpectedClosingTime > 10)
+                    if ((difference.Seconds < tempExpectedClosingTime + offSetSecond) == false)
                     {
-                        // add 1 second to adjust expectedClosing time
-                        tempExpectedClosingTime++;
+                        if (testSite.IisServerType == ServerType.IIS && testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
+                        {
+                            // Need to add the time for recycling worker process in inprocess mode
+                            tempExpectedClosingTime += 10;
+                        }
+                        if (tempExpectedClosingTime > 10)
+                        {
+                            // add 1 second to adjust expectedClosing time
+                            tempExpectedClosingTime++;
+                        }
                     }
                     Assert.True(difference.Seconds < tempExpectedClosingTime + offSetSecond, "Actual: " + difference.Seconds + ", Expected" + tempExpectedClosingTime + 3);
                     Assert.True(difference.Seconds >= expectedClosingTime, "Actual: " + difference.Seconds + ", Expected: " + expectedClosingTime);
 
                     string newBackendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                     Assert.True(backendProcessId != newBackendProcessId);
-                    await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
+
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", numberOfRetryCount: 5);
 
                     // if expectedClosing time is less than the shutdownDelay time, gracefulshutdown is supposed to fail and failure event is expected
                     if (expectedClosingTime * 1000 + 1000 == shutdownDelayTime)
@@ -876,8 +878,6 @@ namespace AspNetCoreModule.Test
             {
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
-                    iisConfig.SetAppPoolSetting(testSite.RootAppContext.AppPoolName, "rapidFailProtectionMaxCrashes", 100);
-
                     DateTime startTime = DateTime.Now;
 
                     // Make shutdownDelay time with hard coded value such as 10 seconds and test vairious shutdonwTimeLimit, either less than 10 seconds or bigger then 10 seconds
@@ -895,29 +895,30 @@ namespace AspNetCoreModule.Test
                     Thread.Sleep(1000);
                     testSite.StartIISExpress();
 
-                    string response = (await SendReceive(testSite.AspNetCoreApp.GetUri(""))).ResponseBody;
+                    string response = (await SendReceive(testSite.AspNetCoreApp.GetUri(""), numberOfRetryCount: 5)).ResponseBody;
                     Assert.True(response == "Running");
 
                     string backendProcessId = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetProcessId"))).ResponseBody;
                     var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
 
                     // put app_offline.htm to make the backend process being recycled
-                    DateTime startTime2 = DateTime.Now;
                     string fileContent = "BackEndAppOffline";
                     testSite.AspNetCoreApp.CreateFile(new string[] { fileContent }, "App_Offline.Htm");
 
                     Thread.Sleep(1000);
-                    await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: fileContent +"\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), numberOfRetryCount: 5, expectedResponseBody: fileContent +"\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
 
                     // remove app_offline
                     testSite.AspNetCoreApp.MoveFile("App_Offline.Htm", "_App_Offline.Htm");
                     Thread.Sleep(1000);
-                    await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), numberOfRetryCount: 5, expectedResponseBody: "Running");
 
                     // add back app_offline.htm
+                    DateTime startTime2 = DateTime.Now;
+
                     testSite.AspNetCoreApp.MoveFile("_App_Offline.Htm", "App_Offline.Htm");
                     Thread.Sleep(1000);
-                    await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), numberOfRetryCount: 5, expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
 
                     backendProcess.WaitForExit(30000);
 
@@ -946,7 +947,7 @@ namespace AspNetCoreModule.Test
                     testSite.AspNetCoreApp.MoveFile("App_Offline.Htm", "_App_Offline.Htm");
                     Thread.Sleep(1000);
 
-                    await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running");
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), numberOfRetryCount: 5, expectedResponseBody: "Running");
 
                     // if expectedClosing time is less than the shutdownDelay time, gracefulshutdown is supposed to fail and failure event is expected
                     if (expectedClosingTime * 1000 + 1000 == shutdownDelayTime)
@@ -1219,7 +1220,6 @@ namespace AspNetCoreModule.Test
                     iisConfig.SetAppPoolSetting(testSite.AspNetCoreApp.AppPoolName, "privateMemory", totalPrivateMemoryKB);
 
                     // set 100 for rapidFailProtection counter for both IIS worker process and aspnetcore backend process
-                    iisConfig.SetAppPoolSetting(testSite.AspNetCoreApp.AppPoolName, "rapidFailProtectionMaxCrashes", 100);
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "rapidFailsPerMinute", 100);
                     Thread.Sleep(3000);
 
@@ -1928,6 +1928,11 @@ namespace AspNetCoreModule.Test
 
             // roback configuration 
             IISConfigUtility.RestoreAppHostConfig("DoWebSocketErrorhandlingTest", true);
+
+            // check JitDebugger before continuing 
+            Thread.Sleep(1000);
+            CleanupVSJitDebuggerWindow(@"https://github.com/aspnet/IISIntegration/issues/662");
+
         }
 
         public enum DoAppVerifierTest_ShutDownMode
@@ -2532,10 +2537,17 @@ namespace AspNetCoreModule.Test
             }
         }
 
-        private static bool CleanupVSJitDebuggerWindow()
+        private static bool CleanupVSJitDebuggerWindow(string bugNumber = null)
         {
             bool result = TestUtility.ResetHelper(ResetHelperMode.KillVSJitDebugger);
-            Assert.False(result, "There should be VSJitDebugger window");
+            if (bugNumber == null)
+            {
+                Assert.False(result, "There should be VSJitDebugger window");
+            }
+            else
+            {
+                TestUtility.LogInformation("There is a bug: " + bugNumber);
+            }
             return result;
         }
 
@@ -2762,7 +2774,7 @@ namespace AspNetCoreModule.Test
             }
         }
 
-        private static async Task<SendReceiveContext> SendReceive(Uri uri, HttpStatusCode expectedResponseStatus = HttpStatusCode.OK, string[] requestHeaders = null, string expectedResponseBody = null, string[] expectedStringsInResponseBody = null, int timeout = 5, int numberOfRetryCount = 1, bool verifyResponseFlag = true, KeyValuePair<string, string>[] postData = null)
+        private static async Task<SendReceiveContext> SendReceive(Uri uri, HttpStatusCode expectedResponseStatus = HttpStatusCode.OK, string[] requestHeaders = null, string expectedResponseBody = null, string[] expectedStringsInResponseBody = null, int timeout = 5, int numberOfRetryCount = 2, bool verifyResponseFlag = true, KeyValuePair<string, string>[] postData = null)
         {
             using (SendReceiveContext context = new SendReceiveContext())
             {
@@ -2775,7 +2787,35 @@ namespace AspNetCoreModule.Test
                 context.VerifyResponseFlag = verifyResponseFlag;
                 context.PostData = postData;
                 context.Timeout = timeout;
-                return await SendReceive(context);
+
+                //return await SendReceive(context);
+                
+                SendReceiveContext result = null;
+                for (int i = 0; i < numberOfRetryCount; i++)
+                {
+                    bool success = false;
+                    try
+                    {
+                        result = await SendReceive(context);
+                        success = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (i == numberOfRetryCount - 1)
+                        {
+                            throw ex;
+                        }
+                        success = false;
+                    }
+                    if (!success || result == null || result.ResponseBody == null)
+                    {
+                        TestUtility.LogInformation(i + ": SendReceive() retrying...");
+                        Thread.Sleep(1000);
+                        continue;
+                    }
+                    break;
+                }
+                return result; 
             }
         }
 

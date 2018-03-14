@@ -73,11 +73,12 @@ namespace AspnetCoreModule.TestSites.Standard
                     string pfxPassword = "testPassword";
                     if (File.Exists(@".\TestResources\testcert.pfx"))
                     {
+                        Console.WriteLine("Certificate file found");
                         _x509Certificate2 = new X509Certificate2(@".\TestResources\testcert.pfx", pfxPassword);
                     }
                     else
                     {
-                        throw new Exception(@"Certificate file not found: .\TestResources\testcert.pfx of which password should " + pfxPassword);
+                        Console.WriteLine("Error!!! Certificate file not found");
                     }
                 }
                 else if (startUpClassString == "StartupCompressionCaching" || startUpClassString == "StartupNoCompressionCaching")
