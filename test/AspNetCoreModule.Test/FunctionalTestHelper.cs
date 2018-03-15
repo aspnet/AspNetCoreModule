@@ -887,6 +887,7 @@ namespace AspNetCoreModule.Test
                     {
                         if (testSite.IisServerType == ServerType.IIS && testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
                         {
+                            // BugBug: ToDo: remove when the related issue is fixed
                             // Inprocess mode does not support shutdownTimeLimit
                             // So need to add 20 seconds for recycling worker process in inprocess mode
                             tempExpectedClosingTime += shutdownDelayTime / 1000;
@@ -981,6 +982,7 @@ namespace AspNetCoreModule.Test
 
                         if (testSite.IisServerType == ServerType.IIS && testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
                         {
+                            // BugBug: ToDo: remove when the related issue is fixed
                             // Inprocess mode does not support shutdownTimeLimit
                             // So need to add 20 seconds for recycling worker process in inprocess mode
                             tempExpectedClosingTime += shutdownDelayTime / 1000;
@@ -995,15 +997,17 @@ namespace AspNetCoreModule.Test
                     Assert.True(difference.Seconds < tempExpectedClosingTime + offSetSecond, "Actual: " + difference.Seconds + ", Expected" + tempExpectedClosingTime + 3);
                     Assert.True(difference.Seconds >= expectedClosingTime, "Actual: " + difference.Seconds + ", Expected: " + expectedClosingTime);
 
-                    string newBackendProcessId = await GetAspnetCoreAppProcessId(testSite);
-                    Assert.True(backendProcessId != newBackendProcessId);
-
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
+
+                    string newBackendProcessId = "";
 
                     // remove app_offline
                     testSite.AspNetCoreApp.MoveFile("App_Offline.Htm", "_App_Offline.Htm");
                     Thread.Sleep(1000);
 
+                    newBackendProcessId = await GetAspnetCoreAppProcessId(testSite);
+                    
+                    Assert.True(backendProcessId != newBackendProcessId);
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), numberOfRetryCount: 5, expectedResponseBody: "Running");
 
                     // if expectedClosing time is less than the shutdownDelay time, gracefulshutdown is supposed to fail and failure event is expected
@@ -2864,7 +2868,19 @@ namespace AspNetCoreModule.Test
             {
                 tempUri = testSite.AspNetCoreApp.GetUri("GetProcessId");
             }
-            await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", numberOfRetryCount: 10);
+
+            if (testSite.IisServerType == ServerType.IIS && testSite.AspNetCoreApp.HostingModel != TestWebApplication.HostingModelValue.Inprocess)
+            {
+                // bugbug: Inprocess mode requires more time because recycling worker process is slow
+                // https://github.com/aspnet/IISIntegration/issues/664
+                // this line should be removed when the bug is fixed
+                await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", numberOfRetryCount: 20);
+            }
+            else
+            {
+                await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", numberOfRetryCount: 10);
+            }
+
             string processId = (await SendReceive(tempUri, timeout: timeout, numberOfRetryCount: numberOfRetryCount)).ResponseBody;
             if (processId == null)
             {
