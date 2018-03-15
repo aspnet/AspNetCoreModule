@@ -311,7 +311,7 @@ namespace AspNetCoreModule.Test
                 for (int i = 0; i < repeatCount; i++)
                 {
                     // check JitDebugger before continuing 
-                    CleanupVSJitDebuggerWindow();
+                    CleanupVSJitDebuggerWindow("https://github.com/aspnet/IISIntegration/issues/670");
 
                     DateTime startTime = DateTime.Now;
                     Thread.Sleep(1000);
