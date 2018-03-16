@@ -243,7 +243,8 @@ namespace AspNetCoreModule.Test.Framework
             // By default we use DotnetCore v2.0
             //
             string SDKVersion = "netcoreapp2.0";
-            if (TestFlags.Enabled(TestFlags.UseSDK2Dot1))
+
+            if (TestFlags.Enabled(TestFlags.UseDotNetCore21))
             {
                 SDKVersion = "netcoreapp2.1";
             }
@@ -265,6 +266,23 @@ namespace AspNetCoreModule.Test.Framework
                     string argumentForDotNet = "publish " + srcPath + " --framework " + SDKVersion;
                     TestUtility.LogInformation("TestWebSite::TestWebSite() StandardTestApp is not published, trying to publish on the fly: dotnet.exe " + argumentForDotNet);
                     TestUtility.DeleteDirectory(publishPath);
+
+                    try
+                    {
+                        if (TestFlags.Enabled(TestFlags.UseDotNetCore21))
+                        {
+                            TestUtility.FileCopy(Path.Combine(srcPath, "AspNetCoreModule.TestSites.Standard.csproj.UseDotNetCore21"), Path.Combine(srcPath, "AspNetCoreModule.TestSites.Standard.csproj"));
+                        }
+                        else
+                        {
+                            TestUtility.FileCopy(Path.Combine(srcPath, "AspNetCoreModule.TestSites.Standard.csproj.UseDotNetCore20"), Path.Combine(srcPath, "AspNetCoreModule.TestSites.Standard.csproj"));
+                        }
+                    }
+                    catch
+                    {
+                        TestUtility.LogInformation("Failed to overwrite project file, update the project file manually");
+                    }
+
                     TestUtility.RunCommand("dotnet", argumentForDotNet);
                 }
 

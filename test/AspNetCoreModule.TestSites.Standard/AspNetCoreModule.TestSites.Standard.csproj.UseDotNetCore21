@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<!-- compile option for v2.0 -->
+<!--
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="$(MicrosoftAspNetCoreAllPackageVersion)" />
+  </ItemGroup> 
+-->
+
+<!-- compile option for v2.1 Preview1 -->
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+<!-- compile option for building stand alone app -->
+<!-- 
+    <RuntimeIdentifiers>win-x86;win-x64</RuntimeIdentifiers>
+    <RuntimeFrameworkVersion>2.1.0-preview1-26115-03</RuntimeFrameworkVersion>
+    <NETStandardImplicitPackageVersion>2.0.1</NETStandardImplicitPackageVersion>
+    <Platforms>AnyCPU;x64;x86</Platforms>
+-->    
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.1.0-preview2-30169" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+</Project>
