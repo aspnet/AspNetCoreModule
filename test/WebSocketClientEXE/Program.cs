@@ -14,7 +14,7 @@ namespace WebSocketClientEXE
         static void Main(string[] args)
         {
             
-            string parameter = null;
+            string parameter = "";
             foreach (string item in args) { parameter += item; }
 
             if (!parameter.ToLower().Contains("http"))
@@ -37,6 +37,7 @@ namespace WebSocketClientEXE
                 }
                 
                 string consoleInput = null;
+                string dataValue = "dataValue";
                 int repeatcount = 0;
                 while (true)
                 {
@@ -56,7 +57,7 @@ namespace WebSocketClientEXE
                         if (repeatcount <= 0 || consoleInput == "")
                         {
                             // 'q' to quit, 'close' or 'CloseFromServer' to disconnect, 'connect' to connect, 'repeat;<count>' to repeat the next command
-                            Console.WriteLine("Type any data to send (Commands: 'q' to quit, 'close' or 'CloseFromServer', 'connect' 'repeat;<count>'");
+                            Console.WriteLine("Type any data to send ('q' to quit, 'close', 'CloseFromServer', 'connect', 'repeat;<number>', 'datavalue;<string>'");
                             consoleInput = Console.ReadLine();
 
                             string[] tempTokens = consoleInput.Split(new char[] { ';' });
@@ -64,7 +65,15 @@ namespace WebSocketClientEXE
                             if (tempTokens.Length == 2 && tempTokens[0].ToLower() == "repeat")
                             {
                                 repeatcount = Convert.ToInt32(tempTokens[1]);
-                                TestUtility.LogInformation("Initialzing repeat count " + repeatcount + "...");
+                                TestUtility.LogInformation("Repeat count is set with " + repeatcount + ".");
+                                consoleInput = "";
+                                continue;
+                            }
+
+                            if (tempTokens.Length == 2 && tempTokens[0].ToLower() == "datavalue")
+                            {
+                                dataValue = tempTokens[1].Trim();
+                                TestUtility.LogInformation("DataValue is set with " + dataValue + ".");
                                 consoleInput = "";
                                 continue;
                             }
@@ -91,13 +100,19 @@ namespace WebSocketClientEXE
 
                         if (temp == "connect")
                         {
+                            try
+                            {
+                                frameReturned = websocketClient.Connect(
+                                    new Uri(url),   // target url
+                                    true,           // store data
+                                    true);          // always reading
 
-                            frameReturned = websocketClient.Connect(
-                            new Uri(url),   // target url
-                            true,           // store data
-                            true);          // always reading
-
-                            TestUtility.LogInformation(frameReturned.Content);
+                                TestUtility.LogInformation(frameReturned.Content);
+                            }
+                            catch
+                            {
+                                TestUtility.LogInformation("Failed to connect!!! Check app_offline.htm and retry after deleting the file.");
+                            }
                             continue;
                         }
 
@@ -108,7 +123,7 @@ namespace WebSocketClientEXE
                                 TestUtility.LogInformation("Connection is already closed, skipping websocket close handshaking...");
                                 if (!websocketClient.WaitForWebSocketState(WebSocketState.ConnectionClosed))
                                 {
-                                    throw new Exception("Failed to close a connection");
+                                    throw new Exception("Failed to close a connection!!!");
                                 }
                             }
                             else
@@ -154,6 +169,10 @@ namespace WebSocketClientEXE
                             continue;
                         }
 
+                        if (temp == "data")
+                        {
+                            data = dataValue;
+                        }
                         websocketClient.SendTextData(data);
                     }
                 }

@@ -52,15 +52,33 @@ namespace AspNetCoreModule.Test
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, 0, 0, false)]
+        [InlineData(IISConfigUtility.AppPoolBitness.noChange, 0, 0, true)]
+        public Task ShutdownTimeLimitTest2(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
+        {
+            return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
+        }
+
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
+        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 0, 0, false)]
+        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 0, 0, true)]
+        public Task ShutdownTimeLimitTest3(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
+        {
+            return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
+        }
+
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 5, 4, true)]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 5, 4, false)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, 5, 4, true)]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, 5, 4, false)]
-        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 0, 0, false)]
-        [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, 0, 0, true)]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, 0, 0, false)]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, 0, 0, true)]
-        public Task ShutdownTimeLimitTest2(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
+        public Task ShutdownTimeLimitTest4(IISConfigUtility.AppPoolBitness appPoolBitness, int valueOfshutdownTimeLimit, int expectedClosingTime, bool isGraceFullShutdownEnabled)
         {
             return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
         }
@@ -336,47 +354,47 @@ namespace AspNetCoreModule.Test
         {
             return DoClientCertificateMappingTest(appPoolBitness, useHTTPSMiddleWare);
         }
+        
+        //[ConditionalTheory]
+        //[ANCMTestFlags(ANCMTestCondition)]
+        //[OSSkipCondition(OperatingSystems.Linux)]
+        //[OSSkipCondition(OperatingSystems.MacOSX)]
+        //[InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
+        //public Task AppVerifierTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
+        //{
+        //    return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: false);
+        //    //return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: true);
+        //}
 
+        //[ConditionalTheory]
+        //[ANCMTestFlags(ANCMTestCondition)]
+        //[OSSkipCondition(OperatingSystems.Linux)]
+        //[OSSkipCondition(OperatingSystems.MacOSX)]
+        //[InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.DontUseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
+        //public Task AppVerifier2Test(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
+        //{
+        //    return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: false);
+        //}
 
-        [ConditionalTheory]
-        [ANCMTestFlags(ANCMTestCondition)]
-        [OSSkipCondition(OperatingSystems.Linux)]
-        [OSSkipCondition(OperatingSystems.MacOSX)]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
-        public Task AppVerifierTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
-        {
-            return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
-        }
+        //[ConditionalTheory]
+        //[ANCMTestFlags(ANCMTestCondition)]
+        //[OSSkipCondition(OperatingSystems.Linux)]
+        //[OSSkipCondition(OperatingSystems.MacOSX)]
+        //[InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.StopAndStartAppPool, 1)]
+        //public Task AppVerifier3Test(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
+        //{
+        //    return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: false);
+        //}
 
-        [ConditionalTheory]
-        [ANCMTestFlags(ANCMTestCondition)]
-        [OSSkipCondition(OperatingSystems.Linux)]
-        [OSSkipCondition(OperatingSystems.MacOSX)]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.DontUseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
-        public Task AppVerifier2Test(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
-        {
-            return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
-        }
-
-        [ConditionalTheory]
-        [ANCMTestFlags(ANCMTestCondition)]
-        [OSSkipCondition(OperatingSystems.Linux)]
-        [OSSkipCondition(OperatingSystems.MacOSX)]
-        [InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.StopAndStartAppPool, 1)]
-        public Task AppVerifier3Test(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
-        {
-            return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount);
-        }
-
-        [ConditionalTheory]
-        [ANCMTestFlags(ANCMTestCondition)]
-        [OSSkipCondition(OperatingSystems.Linux)]
-        [OSSkipCondition(OperatingSystems.MacOSX)]
-        [InlineData(false)]
-        public Task V21_StressTest(bool enableAppVerifier)
-        {
-            return DoStressTest(enableAppVerifier);
-        }
+        //[ConditionalTheory]
+        //[ANCMTestFlags(ANCMTestCondition)]
+        //[OSSkipCondition(OperatingSystems.Linux)]
+        //[OSSkipCondition(OperatingSystems.MacOSX)]
+        //[InlineData(false)]
+        //public Task V21_StressTest(bool enableAppVerifier)
+        //{
+        //    return DoStressTest(enableAppVerifier);
+        //}
 
         //////////////////////////////////////////////////////////
         // NOTE: below test scenarios are not valid for Win7 OS
@@ -426,6 +444,7 @@ namespace AspNetCoreModule.Test
         [OSSkipCondition(OperatingSystems.MacOSX)]
         [OSSkipCondition(OperatingSystems.Windows, WindowsVersions.Win7, SkipReason = "IIS does not support Websocket on Win7")]
         [InlineData(IISConfigUtility.AppPoolBitness.enable32Bit, "ab")]
+        // ToDo: add this test case as a seperate stress test
         //[InlineData(IISConfigUtility.AppPoolBitness.noChange, "abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789")]
         [InlineData(IISConfigUtility.AppPoolBitness.noChange, "abcdefghijklmnopqrstuvwxyz0123456789")]
         public Task V21_WebSocketRecycledWithConfigChangeTest(IISConfigUtility.AppPoolBitness appPoolBitness, string testData)

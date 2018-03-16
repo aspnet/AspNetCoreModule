@@ -16,7 +16,7 @@ namespace AspNetCoreModule.Test.Framework
         public const string UsePrivateANCM = "UsePrivateANCM";
         public const string UseIISExpress = "UseIISExpress";
         public const string UseFullIIS = "UseFullIIS";
-        public const string UseSDK2Dot1 = "UseSDK2Dot1";
+        public const string UseDotNetCore21 = "UseDotNetCore21";
         public const string InprocessMode = "InprocessMode";
         public const string RunAsAdministrator = "RunAsAdministrator";
         public const string MakeCertExeAvailable = "MakeCertExeAvailable";
@@ -118,11 +118,11 @@ namespace AspNetCoreModule.Test.Framework
                         _globalTestFlags += ";" + TestFlags.InprocessMode;
                     }
 
-                    // add UseSDK2Dot1
-                    if (_globalTestFlags.Contains(TestFlags.UseSDK2Dot1.ToLower()))
+                    // add UseDotNetCore21
+                    if (_globalTestFlags.Contains(TestFlags.UseDotNetCore21.ToLower()))
                     {
-                        TestUtility.LogInformation("Added test context of " + TestFlags.UseSDK2Dot1);
-                        _globalTestFlags += ";" + TestFlags.UseSDK2Dot1;
+                        TestUtility.LogInformation("Added test context of " + TestFlags.UseDotNetCore21);
+                        _globalTestFlags += ";" + TestFlags.UseDotNetCore21;
                     }
 
                     //
