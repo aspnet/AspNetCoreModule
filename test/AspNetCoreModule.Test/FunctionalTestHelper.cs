@@ -461,14 +461,14 @@ namespace AspNetCoreModule.Test
             string appPoolName = null;
             using (var testSite = new TestWebSite(appPoolBitness, "DoAppOfflineTestWithRenaming"))
             {
-                await StartIISExpress(testSite);
-
                 appPoolName = testSite.AspNetCoreApp.AppPoolName;
                 string backendProcessId_old = null;
                 string fileContent = "BackEndAppOffline";
                 string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
 
                 testSite.AspNetCoreApp.CreateFile(new string[] { fileContent }, "App_Offline.Htm");
+
+                await StartIISExpress(testSite, expectedResponseStatus: HttpStatusCode.InternalServerError, expectedResponseBody: fileContent);
 
                 for (int i = 0; i < _repeatCount; i++)
                 {
@@ -498,7 +498,8 @@ namespace AspNetCoreModule.Test
                     // rename back to app_offline.htm
                     testSite.AspNetCoreApp.MoveFile("_App_Offline.Htm", "App_Offline.Htm");
 
-                    await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId_old);
+                    await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId_old, restartIISExpres: false);
+                    await StartIISExpress(testSite, expectedResponseStatus: HttpStatusCode.InternalServerError, expectedResponseBody: fileContent);
                 }
             }
         }
@@ -507,13 +508,13 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoAppOfflineTestWithUrlRewriteAndDeleting"))
             {
-                await StartIISExpress(testSite);
-
                 string backendProcessId_old = null;
                 string fileContent = "BackEndAppOffline2";
                 string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
 
                 testSite.AspNetCoreApp.CreateFile(new string[] { fileContent }, "App_Offline.Htm");
+
+                await StartIISExpress(testSite, expectedResponseStatus: HttpStatusCode.InternalServerError, expectedResponseBody: fileContent);
 
                 for (int i = 0; i < _repeatCount; i++)
                 {
@@ -544,7 +545,8 @@ namespace AspNetCoreModule.Test
                     // create app_offline.htm again
                     testSite.AspNetCoreApp.CreateFile(new string[] { fileContent }, "App_Offline.Htm");
 
-                    await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId_old);
+                    await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId_old, restartIISExpres: false);
+                    await StartIISExpress(testSite, expectedResponseStatus: HttpStatusCode.InternalServerError, expectedResponseBody: fileContent);
                 }
             }
         }
@@ -885,7 +887,7 @@ namespace AspNetCoreModule.Test
                     int offSetSecond = 3;
                     if ((difference.Seconds < tempExpectedClosingTime + offSetSecond) == false)
                     {
-                        if (testSite.IisServerType == ServerType.IIS && testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
+                        if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
                         {
                             // BugBug: ToDo: remove when the related issue is fixed
                             // Inprocess mode does not support shutdownTimeLimit
@@ -899,8 +901,10 @@ namespace AspNetCoreModule.Test
                             tempExpectedClosingTime++;
                         }
                     }
-                    Assert.True(difference.Seconds < tempExpectedClosingTime + offSetSecond, "Actual: " + difference.Seconds + ", Expected" + tempExpectedClosingTime + 3);
+                    Assert.True(difference.Seconds < tempExpectedClosingTime + offSetSecond, "Actual: " + difference.Seconds + ", Expected: " + tempExpectedClosingTime + 3);
                     Assert.True(difference.Seconds >= expectedClosingTime, "Actual: " + difference.Seconds + ", Expected: " + expectedClosingTime);
+
+                    await StartIISExpress(testSite);
 
                     string newBackendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     Assert.True(backendProcessId != newBackendProcessId);
@@ -930,47 +934,60 @@ namespace AspNetCoreModule.Test
                 {
                     DateTime startTime = DateTime.Now;
 
+                    // Enable logging
+                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "stdoutLogEnabled", true);
+                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "stdoutLogFile", @".\stdout");
+                    
                     // Make shutdownDelay time with hard coded value such as 10 seconds and test vairious shutdonwTimeLimit, either less than 10 seconds or bigger then 10 seconds
-                    int shutdownDelayTime = 10000;
+                    int shutdownDelayTime = (expectedClosingTime + 1) * 1000;
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", valueOfshutdownTimeLimit);
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestShutdownDelay", shutdownDelayTime.ToString() });
+
                     string expectedGracefulShutdownResponseStatusCode = "202";
                     if (!isGraceFullShutdownEnabled)
                     {
                         iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "GracefulShutdown", "disabled" });
                         iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestStartupClassName", "StartupWithShutdownDisabled" });
                         expectedGracefulShutdownResponseStatusCode = "200";
-                        
                     }
 
                     await StartIISExpress(testSite);
 
                     string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
-                    var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
-
+                    
                     // put app_offline.htm to make the backend process being recycled
                     string fileContent = "BackEndAppOffline";
                     testSite.AspNetCoreApp.CreateFile(new string[] { fileContent }, "App_Offline.Htm");
 
+                    await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId, restartIISExpres: false);
+                    await StartIISExpress(testSite, verifyAppRunning: false);
+
                     Thread.Sleep(1000);
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), numberOfRetryCount: 5, expectedResponseBody: fileContent +"\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
+                    Thread.Sleep(1000);
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), numberOfRetryCount: 5, expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
+                    Thread.Sleep(1000);
+                    await SendReceive(testSite.AspNetCoreApp.GetUri(), numberOfRetryCount: 5, expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
 
                     // remove app_offline
                     testSite.AspNetCoreApp.MoveFile("App_Offline.Htm", "_App_Offline.Htm");
                     Thread.Sleep(1000);
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), numberOfRetryCount: 5, expectedResponseBody: "Running");
 
+                    backendProcessId = await GetAspnetCoreAppProcessId(testSite);
+                    var backendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
+                                        
                     // add back app_offline.htm
                     DateTime startTime2 = DateTime.Now;
 
                     testSite.AspNetCoreApp.MoveFile("_App_Offline.Htm", "App_Offline.Htm");
-                    Thread.Sleep(1000);
-                    await SendReceive(testSite.AspNetCoreApp.GetUri(), numberOfRetryCount: 5, expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
 
-                    backendProcess.WaitForExit(30000);
-
+                    bool processExitOnTime = backendProcess.WaitForExit((expectedClosingTime + 5) * 1000);
+                    
                     DateTime endTime = DateTime.Now;
                     var difference = endTime - startTime2;
+
+                    Assert.True(processExitOnTime);
 
                     Thread.Sleep(500);
 
@@ -979,8 +996,7 @@ namespace AspNetCoreModule.Test
                     int offSetSecond = 3;
                     if ((difference.Seconds < tempExpectedClosingTime + offSetSecond) == false)
                     {
-
-                        if (testSite.IisServerType == ServerType.IIS && testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
+                        if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
                         {
                             // BugBug: ToDo: remove when the related issue is fixed
                             // Inprocess mode does not support shutdownTimeLimit
@@ -994,8 +1010,11 @@ namespace AspNetCoreModule.Test
                             tempExpectedClosingTime++;
                         }
                     }
-                    Assert.True(difference.Seconds < tempExpectedClosingTime + offSetSecond, "Actual: " + difference.Seconds + ", Expected" + tempExpectedClosingTime + 3);
-                    Assert.True(difference.Seconds >= expectedClosingTime, "Actual: " + difference.Seconds + ", Expected: " + expectedClosingTime);
+                    Assert.True(difference.Seconds < tempExpectedClosingTime + offSetSecond, "Actual: " + difference.Seconds + ", Expected: " + tempExpectedClosingTime + 3);
+                    Assert.True(difference.Seconds >= expectedClosingTime - 2, "Actual: " + difference.Seconds + ", Expected: " + expectedClosingTime);
+
+                    await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId, restartIISExpres: false);
+                    await StartIISExpress(testSite, verifyAppRunning:false);
 
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
 
@@ -1062,14 +1081,7 @@ namespace AspNetCoreModule.Test
                         iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "stdoutLogEnabled", false);
                         iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "stdoutLogEnabled", true);
 
-                        await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId);
-
-                        //if (testSite.IisServerType == ServerType.IISExpress && testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
-                        //{
-                        //    // for IISExpress/Inprocess mode, we need to put app_offline to close logfile handle
-                        //    testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "App_Offline.Htm");
-                        //    Thread.Sleep(1000)
-                        //}
+                        await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId, restartIISExpres: false);
 
                         Thread.Sleep(2000);
                         startTime = DateTime.Now;
@@ -1081,6 +1093,9 @@ namespace AspNetCoreModule.Test
 
                         // create dummy file named logs
                         testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "logs");
+
+                        await StartIISExpress(testSite);
+
                         backendProcessId = await GetAspnetCoreAppProcessId(testSite);
 
                         Thread.Sleep(2000);
@@ -1133,9 +1148,11 @@ namespace AspNetCoreModule.Test
 
                     if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess && testSite.IisServerType == ServerType.IIS)
                     {
+                        // in order to delete Logs directory, worker process should be gone in inprocess mode
                         iisConfig.RecycleAppPool(testSite.AspNetCoreApp.AppPoolName);
-                        await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId);
                     }
+
+                    await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId, restartIISExpres: false);
 
                     testSite.AspNetCoreApp.DeleteDirectory("logs");
                     Assert.False(Directory.Exists(logPath));
@@ -1154,8 +1171,8 @@ namespace AspNetCoreModule.Test
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
                     string arguments = argumentsPrefix + testSite.AspNetCoreApp.GetArgumentFileName();
-                    string tempProcessId = await GetAspnetCoreAppProcessId(testSite);
-                    var tempBackendProcess = Process.GetProcessById(Convert.ToInt32(tempProcessId));
+                    string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
+                    var tempBackendProcess = Process.GetProcessById(Convert.ToInt32(backendProcessId));
 
                     // replace $env with the actual test value
                     if (processPath == "$env")
@@ -1184,13 +1201,15 @@ namespace AspNetCoreModule.Test
 
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "processPath", processPath);
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "arguments", arguments);
-                    
+
+                    await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId);
+
                     Thread.Sleep(500);
                     // check JitDebugger before continuing 
                     CleanupVSJitDebuggerWindow();
                     Thread.Sleep(500);
 
-                    string backendProcessId = await GetAspnetCoreAppProcessId(testSite);
+                    backendProcessId = await GetAspnetCoreAppProcessId(testSite);
                     Assert.True(TestUtility.RetryHelper((arg1, arg2) => VerifyANCMStartEvent(arg1, arg2), startTime, backendProcessId));
                 }
 
@@ -1885,7 +1904,7 @@ namespace AspNetCoreModule.Test
 
                         // put app_offline
                         testSite.AspNetCoreApp.CreateFile(new string[] { fileContent }, "App_Offline.Htm");
-                        
+
                         bool connectionClosedFromServer = websocketClient.WaitForWebSocketState(WebSocketState.ConnectionClosed);
                         Assert.True(connectionClosedFromServer, "Closing Handshake initiated from Server");
 
@@ -1900,7 +1919,8 @@ namespace AspNetCoreModule.Test
                         testSite.AspNetCoreApp.DeleteFile(appDllFileName);
                         testSite.AspNetCoreApp.RestoreFile(appDllFileName);
 
-                        await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, recycledProcessId);
+                        await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, recycledProcessId, restartIISExpres: false);
+                        await StartIISExpress(testSite, expectedResponseStatus: HttpStatusCode.InternalServerError, expectedResponseBody: fileContent);
 
                         // verify app_offline.htm
                         await SendReceive(testSite.RootAppContext.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
@@ -2926,7 +2946,7 @@ namespace AspNetCoreModule.Test
             }
         }
 
-        private static async Task VerifyWorkerProcessRecycledUnderInprocessMode(TestWebSite testSite, string backendProcessId, int timeout = 10000)
+        private static async Task VerifyWorkerProcessRecycledUnderInprocessMode(TestWebSite testSite, string backendProcessId, int timeout = 10000, bool restartIISExpres = true)
         {
             if (testSite.AspNetCoreApp.HostingModel != TestWebApplication.HostingModelValue.Inprocess)
             {
@@ -2981,10 +3001,13 @@ namespace AspNetCoreModule.Test
                 }
             }
 
-            if (testSite.IisServerType == ServerType.IISExpress)
+            if (restartIISExpres)
             {
-                // restart IISExpress
-                await StartIISExpress(testSite);
+                if (testSite.IisServerType == ServerType.IISExpress)
+                {
+                    // restart IISExpress
+                    await StartIISExpress(testSite);
+                }
             }
         }
 
@@ -3003,9 +3026,9 @@ namespace AspNetCoreModule.Test
                 context.Timeout = timeout;
 
                 SendReceiveContext result = null;
+                bool success = false;
                 for (int i = 0; i < numberOfRetryCount; i++)
                 {
-                    bool success = false;
                     try
                     {
                         result = await SendReceive(context);
@@ -3013,19 +3036,27 @@ namespace AspNetCoreModule.Test
                     }
                     catch (Exception ex)
                     {
-                        if (i == numberOfRetryCount - 1)
-                        {
-                            throw ex;
-                        }
+                        TestUtility.LogInformation("Retrying... SendReceive failed : " + ex.Message);
                         success = false;
                     }
-                    if (!success || result == null || (result.ResponseBody == null && result.ExpectedResponseBody == null))
+
+                    if (result == null || (result.ExpectedResponseStatus == HttpStatusCode.OK && result.ExpectedResponseBody != null && result.ResponseBody == null))
                     {
-                        TestUtility.LogInformation(i + ": SendReceive() retrying...");
-                        Thread.Sleep(1000);
-                        continue;
+                        TestUtility.LogInformation("Retrying... SendReceive received null value for ResponseBody");
+                        success = false;
                     }
-                    break;
+
+                    if (success)
+                    {
+                        break;
+                    }
+
+                    TestUtility.LogInformation(i + ": SendReceive() retrying...");
+                    Thread.Sleep(1000);
+                }
+                if (!success)
+                {
+                    throw new Exception("SendReceive failed");
                 }
                 return result; 
             }
@@ -3168,7 +3199,7 @@ namespace AspNetCoreModule.Test
                             {
                                 responseText = await ReadContent(response);
                             }
-                            Assert.Equal(expectedResponseBody, responseText);
+                            Assert.Equal(expectedResponseBody, responseText.TrimEnd(new char[] { '\r', '\n' }));
                         }
 
                         if (expectedStringsInResponseBody != null)
