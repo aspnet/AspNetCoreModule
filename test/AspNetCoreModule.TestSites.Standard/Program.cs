@@ -166,18 +166,15 @@ namespace AspnetCoreModule.TestSites.Standard
                     Console.WriteLine("End: WebSocketConnections");
 
                     Console.WriteLine("Begin: AppLifetime.ApplicationStopping.Register(), sleeping " + Startup.SleeptimeWhileClosing / 2);
-                    Thread.Sleep(Startup.SleeptimeWhileClosing / 2);
-                    Startup.SleeptimeWhileClosing = Startup.SleeptimeWhileClosing / 2;
+                    Thread.Sleep(Startup.SleeptimeWhileClosing);
+                    Startup.SleeptimeWhileClosing = 0;
                     Console.WriteLine("End: AppLifetime.ApplicationStopping.Register()");
                 }
             );
             AppLifetime.ApplicationStopped.Register(
                 () =>
                 {
-                    Console.WriteLine("Begin: AppLifetime.ApplicationStopped.Register(), sleeping " + Startup.SleeptimeWhileClosing);
-                    Thread.Sleep(Startup.SleeptimeWhileClosing);
-                    Startup.SleeptimeWhileClosing = 0;
-                    Console.WriteLine("End: AppLifetime.ApplicationStopped.Register()");
+                    Console.WriteLine("AppLifetime.ApplicationStopped.Register()");
                 }
             );
 
