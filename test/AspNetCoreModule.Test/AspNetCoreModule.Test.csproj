@@ -1,4 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>4dda7560-aa29-4161-a5ea-a7e8f3997321</ProjectGuid>
+  </PropertyGroup>
   <PropertyGroup>
     <TargetFramework>net461</TargetFramework>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
