@@ -79,6 +79,7 @@ namespace AspnetCoreModule.TestSites.Standard
                     else
                     {
                         Console.WriteLine("Error!!! Certificate file not found");
+                        //throw new Exception("Error!!! Certificate file not found");
                     }
                 }
                 else if (startUpClassString == "StartupCompressionCaching" || startUpClassString == "StartupNoCompressionCaching")

@@ -34,6 +34,8 @@ namespace AspnetCoreModule.TestSites.Standard
         private async Task Echo(WebSocket webSocket)
         {
             int webSocketIndex = WebSocketConnections.GetLastIndex();
+
+            // add WebSocket connection to global WebSockets dictionary object so that we can use in graceful shutdown time
             WebSocketConnections.WebSockets.Add(webSocketIndex, webSocket);
 
             var buffer = new byte[1024 * 4];
@@ -91,6 +93,9 @@ namespace AspnetCoreModule.TestSites.Standard
 
                 result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
             }
+            
+            // clean up WebSocket connection
+            WebSocketConnections.WebSockets.Remove(webSocketIndex);
 
             if (closeFromServer)
             {
