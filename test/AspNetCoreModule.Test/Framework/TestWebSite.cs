@@ -383,6 +383,7 @@ namespace AspNetCoreModule.Test.Framework
                 // Create apppool
                 if (IisServerType == ServerType.IIS)
                 {
+                    iisConfig.DeleteAppPool(appPoolName);
                     iisConfig.CreateAppPool(appPoolName);
                     iisConfig.SetAppPoolSetting(appPoolName, "rapidFailProtectionMaxCrashes", 100);
 
