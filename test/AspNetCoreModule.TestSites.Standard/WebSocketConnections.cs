@@ -48,13 +48,19 @@ namespace AspnetCoreModule.TestSites.Standard
             _closeAllStarted = true;
             var buffer = new byte[1024 * 4];
 
-            // send close message to client
-            foreach (KeyValuePair<int, WebSocket> entry in _webSockets)
+            try
             {
-                await entry.Value.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, ClosingFromServer, CancellationToken.None);
+                // send close message to client
+                foreach (KeyValuePair<int, WebSocket> entry in _webSockets)
+                {
+                    await entry.Value.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, ClosingFromServer, CancellationToken.None);
+                }
+                _webSockets.Clear();
             }
-
-            _webSockets.Clear();
+            catch (Exception ex)
+            {
+                Console.WriteLine("CloseAll() run into exception error!!! " + ex.Message);
+            }
             _closeAllStarted = false;
         }
     }
