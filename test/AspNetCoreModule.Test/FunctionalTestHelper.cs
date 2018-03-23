@@ -505,8 +505,6 @@ namespace AspNetCoreModule.Test
                     // check JitDebugger before continuing 
                     CleanupVSJitDebuggerWindow();
 
-                    Thread.Sleep(1000);
-
                     // verify 503 
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
 
@@ -533,6 +531,7 @@ namespace AspNetCoreModule.Test
 
                     // reset start time
                     startTime = DateTime.Now;
+                    Thread.Sleep(1000);
                 }
             }
         }
