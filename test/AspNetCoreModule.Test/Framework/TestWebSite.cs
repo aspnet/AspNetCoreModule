@@ -423,6 +423,8 @@ namespace AspNetCoreModule.Test.Framework
                 {
                     AspNetCoreApp.HostingModel = TestWebApplication.HostingModelValue.Inprocess;
                     iisConfig.SetANCMConfig(siteName, AspNetCoreApp.Name, "hostingModel", TestWebApplication.HostingModelValue.Inprocess);
+                    AspNetCoreApp.DeleteFile("web.config.bak");
+                    AspNetCoreApp.BackupFile("web.config");
                 }
             }
 

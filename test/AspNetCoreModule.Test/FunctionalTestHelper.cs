@@ -84,6 +84,8 @@ namespace AspNetCoreModule.Test
             using (var testSite = new TestWebSite(appPoolBitness, "DoBasicTest"))
             {
                 string backendProcessId_old = null;
+
+                // set initial start time
                 DateTime startTime = DateTime.Now;
 
                 await StartIISExpress(testSite);
@@ -280,6 +282,9 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoRecycleApplicationWithURLRewrite"))
             {
+                // set initial startTime
+                DateTime startTime = DateTime.Now;
+
                 await StartIISExpress(testSite);
 
                 string backendProcessId_old = null;
@@ -289,9 +294,6 @@ namespace AspNetCoreModule.Test
                 {
                     // check JitDebugger before continuing 
                     CleanupVSJitDebuggerWindow();
-
-                    DateTime startTime = DateTime.Now;
-                    Thread.Sleep(1100);
 
                     string urlForUrlRewrite = testSite.URLRewriteApp.URL + "/Rewrite2/" + testSite.AspNetCoreApp.URL + "/GetProcessId";
                     string backendProcessId = (await GetAspnetCoreAppProcessId(testSite, testSite.RootAppContext.GetUri(urlForUrlRewrite)));
@@ -306,6 +308,10 @@ namespace AspNetCoreModule.Test
                     testSite.AspNetCoreApp.MoveFile("_web.config", "web.config");
 
                     await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId);
+
+                    // reset startTime
+                    startTime = DateTime.Now;
+                    Thread.Sleep(1000);
                 }
 
                 // restore web.config
@@ -318,6 +324,7 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoRecycleParentApplicationWithURLRewrite"))
             {
+                // set initial start time
                 DateTime startTime = DateTime.Now;
 
                 await StartIISExpress(testSite);
@@ -361,11 +368,13 @@ namespace AspNetCoreModule.Test
             }
             using (var testSite = new TestWebSite(appPoolBitness, "DoEnvironmentVariablesTest"))
             {
+                // set initial start time
+                DateTime startTime = DateTime.Now;
+
                 await StartIISExpress(testSite);
 
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
-                    DateTime startTime = DateTime.Now;
                     Thread.Sleep(500);
 
                     string totalNumber = (await SendReceive(testSite.AspNetCoreApp.GetUri("GetEnvironmentVariables"))).ResponseBody;
@@ -479,6 +488,9 @@ namespace AspNetCoreModule.Test
             string appPoolName = null;
             using (var testSite = new TestWebSite(appPoolBitness, "DoAppOfflineTestWithRenaming"))
             {
+                // set initial start time
+                DateTime startTime = DateTime.Now;
+
                 appPoolName = testSite.AspNetCoreApp.AppPoolName;
                 string backendProcessId_old = null;
                 string fileContent = "BackEndAppOffline";
@@ -493,8 +505,6 @@ namespace AspNetCoreModule.Test
                     // check JitDebugger before continuing 
                     CleanupVSJitDebuggerWindow();
 
-                    DateTime startTime = DateTime.Now;
-                    Thread.Sleep(1100);
                     // verify 503 
                     await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: fileContent + "\r\n", expectedResponseStatus: HttpStatusCode.ServiceUnavailable);
 
@@ -518,6 +528,10 @@ namespace AspNetCoreModule.Test
 
                     await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId_old, restartIISExpres: false);
                     await StartIISExpress(testSite, expectedResponseStatus: HttpStatusCode.InternalServerError, expectedResponseBody: fileContent);
+
+                    // reset start time
+                    startTime = DateTime.Now;
+                    Thread.Sleep(1000);
                 }
             }
         }
@@ -526,6 +540,9 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoAppOfflineTestWithUrlRewriteAndDeleting"))
             {
+                // set initial start time
+                DateTime startTime = DateTime.Now;
+
                 string backendProcessId_old = null;
                 string fileContent = "BackEndAppOffline2";
                 string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
@@ -538,9 +555,6 @@ namespace AspNetCoreModule.Test
                 {
                     // check JitDebugger before continuing 
                     CleanupVSJitDebuggerWindow();
-
-                    DateTime startTime = DateTime.Now;
-                    Thread.Sleep(1100);
 
                     // verify 503 
                     string urlForUrlRewrite = testSite.URLRewriteApp.URL + "/Rewrite2/" + testSite.AspNetCoreApp.URL + "/GetProcessId";
@@ -565,6 +579,10 @@ namespace AspNetCoreModule.Test
 
                     await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId_old, restartIISExpres: false);
                     await StartIISExpress(testSite, expectedResponseStatus: HttpStatusCode.InternalServerError, expectedResponseBody: fileContent);
+
+                    // reset start time
+                    startTime = DateTime.Now;
+                    Thread.Sleep(1000);
                 }
             }
         }
@@ -593,6 +611,9 @@ namespace AspNetCoreModule.Test
 
             using (var testSite = new TestWebSite(appPoolBitness, "DoDisableStartUpErrorPageTest"))
             {
+                // set initial start time
+                DateTime startTime = DateTime.Now;
+
                 testSite.AspNetCoreApp.DeleteFile("custom502-3.htm");
                 string curstomErrorMessage502 = "ANCMTest502-3";
                 testSite.AspNetCoreApp.CreateFile(new string[] { curstomErrorMessage502 }, "custom502-3.htm");
@@ -605,8 +626,7 @@ namespace AspNetCoreModule.Test
 
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
-                    DateTime startTime = DateTime.Now;
-                    Thread.Sleep(500);
+                    Thread.Sleep(1000);
 
                     iisConfig.ConfigureCustomLogging(testSite.SiteName, testSite.AspNetCoreApp.Name, 502, 3, "custom502-3.htm");
                     iisConfig.ConfigureCustomLogging(testSite.SiteName, testSite.AspNetCoreApp.Name, 500, 0, "custom500-0.htm");
@@ -660,6 +680,9 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoRapidFailsPerMinuteTest"))
             {
+                // set initial start time
+                DateTime startTime = DateTime.Now;
+
                 if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
                 {
                     TestUtility.LogInformation("This test is not valid for Inprocess mode");
@@ -676,7 +699,6 @@ namespace AspNetCoreModule.Test
                     string backendProcessId_old = null;
                     const int repeatCount = 10;
 
-                    DateTime startTime = DateTime.Now;
                     Thread.Sleep(50);
 
                     for (int i = 0; i < repeatCount; i++)
@@ -732,10 +754,12 @@ namespace AspNetCoreModule.Test
                     return;
                 }
 
+                // set initial start time
+                DateTime startTime = DateTime.Now;
+
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
-                    DateTime startTime = DateTime.Now;
-                    Thread.Sleep(3000);
+                    Thread.Sleep(1000);
 
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "processesPerApplication", valueOfProcessesPerApplication);
 
@@ -868,10 +892,11 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoShutdownTimeLimitTest"))
             {
+                // set initial start time
+                DateTime startTime = DateTime.Now;
+
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
-                    DateTime startTime = DateTime.Now;
-
                     // Make shutdownDelay time with hard coded value such as 20 seconds and test vairious shutdonwTimeLimit, either less than 20 seconds or bigger then 20 seconds
                     int shutdownDelayTime = 20000;
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", valueOfshutdownTimeLimit);
@@ -950,6 +975,7 @@ namespace AspNetCoreModule.Test
             {
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
+                    // set initial start time
                     DateTime startTime = DateTime.Now;
 
                     // Enable logging
@@ -977,7 +1003,7 @@ namespace AspNetCoreModule.Test
                     string fileContent = "BackEndAppOffline";
                     testSite.AspNetCoreApp.CreateFile(new string[] { fileContent }, "App_Offline.Htm");
 
-                    await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId, restartIISExpres: false);
+                    await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, backendProcessId, restartIISExpres: false, timeout:20);
                     await StartIISExpress(testSite, verifyAppRunning: false);
 
                     Thread.Sleep(1000);
@@ -1064,13 +1090,15 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoStdoutLogEnabledTest"))
             {
+                // set initial start time
+                DateTime startTime = DateTime.Now;
+
                 testSite.AspNetCoreApp.DeleteDirectory("logs");
                 string logPath = testSite.AspNetCoreApp.GetDirectoryPathWith("logs");
                 Assert.False(Directory.Exists(logPath));
 
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
-                    DateTime startTime = DateTime.Now;
                     Thread.Sleep(3000);
 
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "stdoutLogEnabled", true);
@@ -1182,6 +1210,9 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoProcessPathAndArgumentsTest", copyAllPublishedFiles: true))
             {
+                // set initial start time
+                DateTime startTime = DateTime.Now;
+
                 await StartIISExpress(testSite);
 
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
@@ -1212,7 +1243,6 @@ namespace AspNetCoreModule.Test
                         arguments = testSite.AspNetCoreApp.GetDirectoryPathWith(arguments).ToLower().Replace(tempString, "%systemdrive%");
                     }
 
-                    DateTime startTime = DateTime.Now;
                     Thread.Sleep(500);
 
                     iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "processPath", processPath);
@@ -1795,6 +1825,9 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoWebSocketTest"))
             {
+                // set initial start time
+                DateTime startTime = DateTime.Now;
+
                 string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
 
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
@@ -1803,8 +1836,6 @@ namespace AspNetCoreModule.Test
                 }
 
                 await StartIISExpress(testSite);
-
-                DateTime startTime = DateTime.Now;
 
                 // Get Process ID
                 string backendProcessId_old = await GetAspnetCoreAppProcessId(testSite);
@@ -1885,6 +1916,9 @@ namespace AspNetCoreModule.Test
         {
             using (var testSite = new TestWebSite(appPoolBitness, "DoWebSocketAppOfflineTest"))
             {
+                // set initial start time
+                DateTime startTime = DateTime.Now;
+
                 string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
 
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
@@ -1894,8 +1928,6 @@ namespace AspNetCoreModule.Test
                 }
 
                 await StartIISExpress(testSite);
-
-                DateTime startTime = DateTime.Now;
 
                 // Get Process ID
                 Thread.Sleep(500);
@@ -2087,6 +2119,9 @@ namespace AspNetCoreModule.Test
                 return;
             }
 
+            // set initial start time
+            DateTime startTime = DateTime.Now;
+
             if (enableAppVerifier)
             {
                 // enable AppVerifier 
@@ -2184,8 +2219,6 @@ namespace AspNetCoreModule.Test
                             // verify windbg process is started
                             TestUtility.RunPowershellScript("(get-process -name windbg 2> $null).count", "1", retryCount: 5);
                         }
-
-                        DateTime startTime = DateTime.Now;
 
                         // Verify http request
                         await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", timeout: 10);
@@ -3006,16 +3039,13 @@ namespace AspNetCoreModule.Test
 
             if (succeeded == false)
             {
-                if (testSite.IisServerType == ServerType.IIS)
-                {
-                    throw new Exception("Failed to recycle IIS worker process");
-                }
-                else
-                {
-                    // IISExpress should be killed if it can't be recycled
-                    TestUtility.LogInformation("BugBug: Restart IISExpress...");
-                    TestUtility.ResetHelper(ResetHelperMode.KillIISExpress);
-                }
+                TestUtility.LogInformation("Failed to wait IIS worker process or IISExpress is gone. Probably the process does not exist...");
+                //if (testSite.IisServerType == ServerType.IISExpress)
+                //{
+                //    // IISExpress should be killed if it can't be recycled
+                //    TestUtility.LogInformation("BugBug: Restart IISExpress...");
+                //    TestUtility.ResetHelper(ResetHelperMode.KillIISExpress);
+                //}
             }
 
             if (restartIISExpres)

@@ -162,9 +162,13 @@ namespace AspnetCoreModule.TestSites.Standard
             AppLifetime.ApplicationStopping.Register(
                 () =>
                 {
-                    Console.WriteLine("Begin: WebSocketConnections");
-                    WebSocketConnections.CloseAll();
-                    Console.WriteLine("End: WebSocketConnections");
+                    tempstring = Environment.GetEnvironmentVariable("ANCMTestDisableWebCocketConnectionsCloseAll");
+                    if (string.IsNullOrEmpty(tempstring))
+                    {
+                        Console.WriteLine("Begin: WebSocketConnections");
+                        WebSocketConnections.CloseAll();
+                        Console.WriteLine("End: WebSocketConnections");
+                    }
 
                     Console.WriteLine("Begin: AppLifetime.ApplicationStopping.Register(), sleeping " + Startup.SleeptimeWhileClosing / 2);
                     Thread.Sleep(Startup.SleeptimeWhileClosing);
