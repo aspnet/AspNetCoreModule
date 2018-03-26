@@ -257,7 +257,8 @@ namespace AspNetCoreModule.Test.Framework
             //
             if (_publishedAspnetCoreApp != true)
             {
-                if (publishing == false && File.Exists(Path.Combine(publishPath, "AspNetCoreModule.TestSites.Standard.dll")))
+                if ((publishing == false && File.Exists(Path.Combine(publishPath, "AspNetCoreModule.TestSites.Standard.dll")))
+                    || Debugger.IsAttached && File.Exists(Path.Combine(publishPath, "AspNetCoreModule.TestSites.Standard.dll")))
                 {
                     // skip publishing
                 }

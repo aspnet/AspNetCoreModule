@@ -832,7 +832,10 @@ namespace AspNetCoreModule.Test.Framework
                     }
                     else
                     {
-                        System.Threading.Thread.Sleep(1000);
+                        if (retryCount > 0)
+                        {
+                            Thread.Sleep(1000);
+                        }
                     }
                 }
                 else
