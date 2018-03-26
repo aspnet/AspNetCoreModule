@@ -354,47 +354,6 @@ namespace AspNetCoreModule.Test
         {
             return DoClientCertificateMappingTest(appPoolBitness, useHTTPSMiddleWare);
         }
-        
-        //[ConditionalTheory]
-        //[ANCMTestFlags(ANCMTestCondition)]
-        //[OSSkipCondition(OperatingSystems.Linux)]
-        //[OSSkipCondition(OperatingSystems.MacOSX)]
-        //[InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
-        //public Task AppVerifierTest(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
-        //{
-        //    return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: false);
-        //    //return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: true);
-        //}
-
-        //[ConditionalTheory]
-        //[ANCMTestFlags(ANCMTestCondition)]
-        //[OSSkipCondition(OperatingSystems.Linux)]
-        //[OSSkipCondition(OperatingSystems.MacOSX)]
-        //[InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.DontUseGracefulShutdown, DoAppVerifierTest_ShutDownMode.RecycleAppPool, 1)]
-        //public Task AppVerifier2Test(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
-        //{
-        //    return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: false);
-        //}
-
-        //[ConditionalTheory]
-        //[ANCMTestFlags(ANCMTestCondition)]
-        //[OSSkipCondition(OperatingSystems.Linux)]
-        //[OSSkipCondition(OperatingSystems.MacOSX)]
-        //[InlineData(IISConfigUtility.AppPoolBitness.noChange, false, DoAppVerifierTest_StartUpMode.UseGracefulShutdown, DoAppVerifierTest_ShutDownMode.StopAndStartAppPool, 1)]
-        //public Task AppVerifier3Test(IISConfigUtility.AppPoolBitness appPoolBitness, bool shutdownTimeout, DoAppVerifierTest_StartUpMode startUpMode, DoAppVerifierTest_ShutDownMode shutDownMode, int repeatCount)
-        //{
-        //    return DoAppVerifierTest(appPoolBitness, shutdownTimeout, startUpMode, shutDownMode, repeatCount, enableAppVerifier: false);
-        //}
-
-        //[ConditionalTheory]
-        //[ANCMTestFlags(ANCMTestCondition)]
-        //[OSSkipCondition(OperatingSystems.Linux)]
-        //[OSSkipCondition(OperatingSystems.MacOSX)]
-        //[InlineData(false)]
-        //public Task V21_StressTest(bool enableAppVerifier)
-        //{
-        //    return DoStressTest(enableAppVerifier);
-        //}
 
         //////////////////////////////////////////////////////////
         // NOTE: below test scenarios are not valid for Win7 OS
@@ -411,9 +370,6 @@ namespace AspNetCoreModule.Test
             return DoWebSocketErrorhandlingTest(appPoolBitness);
         }
 
-        //////////////////////////////////////////////////////////
-        // NOTE: below test scenarios are not valid for Win7 OS
-        //////////////////////////////////////////////////////////
         [ConditionalTheory]
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
@@ -463,5 +419,16 @@ namespace AspNetCoreModule.Test
         {
             return DoRecylingAppPoolTest(appPoolBitness);
         }
-    } 
+
+        [ConditionalTheory]
+        [ANCMTestFlags(ANCMTestCondition)]
+        [OSSkipCondition(OperatingSystems.Linux)]
+        [OSSkipCondition(OperatingSystems.MacOSX)]
+        [OSSkipCondition(OperatingSystems.Windows, WindowsVersions.Win7, SkipReason = "IIS does not support Websocket on Win7")]
+        [InlineData(120)]
+        public Task V21_StressTest(int timeout)
+        {
+            return DoStressTest(timeout);
+        }
+    }
 }

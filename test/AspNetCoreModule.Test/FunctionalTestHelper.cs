@@ -2457,41 +2457,36 @@ namespace AspNetCoreModule.Test
             }
         }
 
-        public static async Task DoStressTest(bool enableAppVerifier)
+        public static async Task DoStressTest(int timeout)
         {
-            if (!File.Exists(Environment.ExpandEnvironmentVariables("%systemdrive%\\ANCMStressTest.TXT")))
+            int maxRepeatTime = timeout / 2;
+            int pauseTime = 2000;
+            bool enableAppVerifier = false;
+            if (File.Exists(Environment.ExpandEnvironmentVariables("%systemdrive%\\ANCMStressTest.TXT")))
             {
-                TestUtility.LogInformation("Skipping stress test");
-                return;
+                enableAppVerifier = true;
             }
 
-            //
-            // While running this test, start stressing with running below command in a seperate powershell window
-            //
-            // (1..1000) | foreach { (Invoke-WebRequest http://localhost:1234/aspnetcoreapp/getprocessid).StatusCode; }
-            //
-
+            int index = 0;
             int timeoutValue = 5;
             int numberOfSite = 0;
 
             int tcpPort = 1234 + numberOfSite;
             TestWebSite testSite = new TestWebSite(IISConfigUtility.AppPoolBitness.noChange, "DoStressTest", publishing: false, tcpPort: tcpPort);
             InitializeSite(testSite, timeoutValue: timeoutValue);
-            await StartIISExpress(testSite);
+            await StartIISExpress(testSite, verifyAppRunning : false);
 
-            numberOfSite++;
-
-            tcpPort = 1234 + numberOfSite;
-            TestWebSite testSite2 = new TestWebSite(IISConfigUtility.AppPoolBitness.noChange, "DoStressTest2", publishing: false, tcpPort: 1234 + numberOfSite);
-            InitializeSite(testSite2, timeoutValue: timeoutValue, disableGracefulShutdown: true);
-            await StartIISExpress(testSite2);
-            numberOfSite++;
-
-            tcpPort = 1234 + numberOfSite;
-            TestWebSite testSite3 = new TestWebSite(IISConfigUtility.AppPoolBitness.enable32Bit, "DoStressTest3", publishing: false, tcpPort: 1234 + numberOfSite);
-            InitializeSite(testSite3, timeoutValue: timeoutValue, disableGracefulShutdown: true);
-            await StartIISExpress(testSite3);
-            numberOfSite++;
+            //numberOfSite++;
+            //tcpPort = 1234 + numberOfSite;
+            //TestWebSite testSite2 = new TestWebSite(IISConfigUtility.AppPoolBitness.noChange, "DoStressTest2", publishing: false, tcpPort: 1234 + numberOfSite);
+            //InitializeSite(testSite2, timeoutValue: timeoutValue, disableGracefulShutdown: true);
+            //await StartIISExpress(testSite2, verifyAppRunning: false);
+            //numberOfSite++;
+            //tcpPort = 1234 + numberOfSite;
+            //TestWebSite testSite3 = new TestWebSite(IISConfigUtility.AppPoolBitness.enable32Bit, "DoStressTest3", publishing: false, tcpPort: 1234 + numberOfSite);
+            //InitializeSite(testSite3, timeoutValue: timeoutValue, disableGracefulShutdown: true);
+            //await StartIISExpress(testSite3, verifyAppRunning: false);
+            //numberOfSite++;
 
             if (enableAppVerifier)
             {
@@ -2501,25 +2496,148 @@ namespace AspNetCoreModule.Test
 
             // reset existing worker process process
             TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
-            Thread.Sleep(1000);
+            Thread.Sleep(pauseTime);
 
+            Object resettingApp = new Object();
+            bool appofflineExist = true;
+
+            Thread t1 = new Thread(() => {
+                while (index < maxRepeatTime)
+                {
+                    int sslPort = testSite.SiteId + 6300;
+                    Uri httpUri = testSite.AspNetCoreApp.GetUri("getprocessid");
+                    try
+                    {
+                        lock (resettingApp)
+                        {
+                            if (appofflineExist)
+                            {
+                                TestUtility.RunPowershellScript("( invoke-webrequest " + httpUri.OriginalString + ").StatusCode");
+                                continue;
+                            }
+
+                            if (index % 2 == 0)
+                            {
+                                TestUtility.RunPowershellScript("( invoke-webrequest " + httpUri.OriginalString + ").StatusCode", "200");
+                            }
+                            else
+                            {
+                                Uri httpsUri = testSite.AspNetCoreApp.GetUri("getprocessid", port: sslPort, protocol: "https");
+                                TestUtility.RunPowershellScript("( invoke-webrequest " + httpsUri.OriginalString + ").StatusCode", "200");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        TestUtility.LogInformation(ex.Message);
+                    }
+
+                }
+            });
+
+            Thread t2 = new Thread(() => {
+                int numberOfSeconds = 0;
+                while (index < maxRepeatTime)
+                {
+                    try
+                    {
+                        Uri httpUri = testSite.AspNetCoreApp.GetUri(index.ToString() + "." + numberOfSeconds.ToString());
+                        TestUtility.RunPowershellScript("1..10 | foreach { ( invoke-webrequest " + httpUri.OriginalString + ").StatusCode }");
+                    }
+                    catch (Exception ex)
+                    {
+                        TestUtility.LogInformation(ex.Message);
+                    }
+
+                    try
+                    {
+                        int sslPort = testSite.SiteId + 6300;
+                        Uri httpsUri = testSite.AspNetCoreApp.GetUri(index.ToString() + "." + numberOfSeconds.ToString(), port: sslPort, protocol: "https");
+                        TestUtility.RunPowershellScript("(1..10) | foreach { ( invoke-webrequest " + httpsUri.OriginalString + ").StatusCode }");
+                    }
+                    catch (Exception ex)
+                    {
+                        TestUtility.LogInformation(ex.Message);
+                    }
+                    numberOfSeconds++;
+                }
+            });
+
+            Thread t3 = new Thread(p => {
+                int numberOfSeconds = 0;
+                while (index < maxRepeatTime)
+                {
+                    try
+                    {
+                        // Verify websocket 
+                        using (WebSocketClientHelper websocketClient = new WebSocketClientHelper())
+                        {
+                            var frameReturned = websocketClient.Connect(testSite.AspNetCoreApp.GetUri("websocket"), true, true);
+                            Assert.Contains("Connection: Upgrade", frameReturned.Content);
+                            Assert.Contains("HTTP/1.1 101 Switching Protocols", frameReturned.Content);
+                            Thread.Sleep(500);
+
+                            string testData = "aaa";
+                            for (int j = 0; j < 10; j++)
+                            {
+                                websocketClient.SendPing();
+                                websocketClient.SendTextData(testData);
+                                websocketClient.SendTextData(testData);
+                                websocketClient.SendTextData(testData, 0x01);  // 0x01: start of sending partial data
+                                websocketClient.SendPing();
+                                websocketClient.SendTextData(testData, 0x80);  // 0x80: end of sending partial data
+                                websocketClient.SendPing();
+
+                            }
+
+                            if (index % 2 == 0)
+                            {
+                                // Send a special string to initiate the server side connection closing
+                                websocketClient.SendTextData("CloseFromServer");
+                            }
+
+                            frameReturned = websocketClient.Close();
+                            Thread.Sleep(500);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        TestUtility.LogInformation(ex.Message);
+                    }
+                    numberOfSeconds++;
+                }
+            });
+
+            t1.Start();
+            t2.Start();
+            t3.Start();
+
+            ///////////////////////////////////
+            // Start test sceanrio
+            ///////////////////////////////////
             try
             {
-                ///////////////////////////////////
-                // Start test sceanrio
-                ///////////////////////////////////
+                string appDllFileName = testSite.AspNetCoreApp.GetArgumentFileName();
                 using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
                 {
-                    bool attachDebugger = true;
-                    for (int i = 0; i < 10; i++)
+                    // set initial start time
+                    DateTime startTime = DateTime.Now;
+                    bool recycledW3wp = true;
+
+                    for (index = 0; index < maxRepeatTime; index++)
                     {
+                        if ((DateTime.Now - startTime).TotalSeconds > timeout)
+                        {
+                            break;
+                        }
+
                         if (enableAppVerifier)
                         {
-                            if (attachDebugger)
+                            if (recycledW3wp)
                             {
                                 // send a startup request to start a new worker process
                                 TestUtility.RunPowershellScript("( invoke-webrequest http://localhost:" + testSite.TcpPort + " ).StatusCode", "200", retryCount: 5);
-                                Thread.Sleep(1000);
+                                Thread.Sleep(500);
 
                                 // attach debugger to the worker process
                                 testSite.WorkerProcessID = 0;
@@ -2530,83 +2648,141 @@ namespace AspNetCoreModule.Test
                                 // verify windbg process is started
                                 await SendReceive(testSite.AspNetCoreApp.GetUri(), expectedResponseBody: "Running", timeout: 10);
                                 TestUtility.RunPowershellScript("(get-process -name windbg 2> $null).count", "1", retryCount: 5);
-
-                                attachDebugger = false;
                             }
 
                             // verify debugger is running
                             TestUtility.RunPowershellScript("(get-process -name windbg 2> $null).count", "1", retryCount: 1);
                         }
 
+                        // reset recycledW3wp
+                        recycledW3wp = true;
+
                         // put delay time for each iteration
-                        Thread.Sleep(3000);
+                        Thread.Sleep(pauseTime);
 
                         // reset worker process id to refresh
                         testSite.WorkerProcessID = 0;
+                        
+                        Random rnd = new Random();
 
-                        switch (i % 7)
+                        int MaxVoteID = 7;
+                        int vote = rnd.Next(1, MaxVoteID);   // creates a number between 1 and MaxVoidID
+                        switch (vote)
                         {
-                            case 0:
-
-                                // StopAndStartAppPool:
-                                iisConfig.StopAppPool(testSite.AspNetCoreApp.AppPoolName);
-                                Thread.Sleep((timeoutValue + 1) * 1000);
-                                iisConfig.StartAppPool(testSite.AspNetCoreApp.AppPoolName);
-                                Thread.Sleep((timeoutValue + 1) * 1000);
-
-                                attachDebugger = true;
-                                break;
-
-                            case 1:
-
-                                // CreateAppOfflineHtm
-                                testSite.AspNetCoreApp.DeleteFile("App_Offline.Htm");
-                                testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "App_Offline.Htm");
-                                break;
-
-                            case 2:
-
-                                // Re-create AppOfflineHtm
-                                testSite.AspNetCoreApp.DeleteFile("App_Offline.Htm");
-                                testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "App_Offline.Htm");
-                                break;
-
-                            case 3:
-
-                                // Rename appOfflineHtm
-                                testSite.AspNetCoreApp.MoveFile("App_Offline.Htm", "_App_Offline.Htm");
-                                break;
-
-                            case 4:
-
-                                // ConfigurationChangeNotification
-                                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", timeoutValue + 1);
-                                Thread.Sleep(1000);
-                                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", timeoutValue - 1);
-                                Thread.Sleep(1000);
-
-                                if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
+                            case 1: // CreateAppOfflineHtm
+                                lock (resettingApp)
                                 {
-                                    attachDebugger = true;
+                                    testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "App_Offline.Htm");
+                                    appofflineExist = true;
+                                }
+                                // Verify the application file can be removed under app_offline mode
+                                Thread.Sleep(pauseTime);
+                                testSite.AspNetCoreApp.BackupFile(appDllFileName);
+                                testSite.AspNetCoreApp.DeleteFile(appDllFileName);
+                                testSite.AspNetCoreApp.RestoreFile(appDllFileName);
+                                lock (resettingApp)
+                                {
+                                    testSite.AspNetCoreApp.DeleteFile("App_Offline.Htm");
+                                    appofflineExist = false;
                                 }
                                 break;
-
-                            case 5:
-                                iisConfig.SetAppPoolSetting(testSite.AspNetCoreApp.AppPoolName, "enable32BitAppOnWin64", true);
+                            case 2: // Rename appOfflineHtm
+                                testSite.AspNetCoreApp.DeleteFile("_App_Offline.Htm");
+                                testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "_App_Offline.Htm");
+                                lock (resettingApp)
+                                {
+                                    testSite.AspNetCoreApp.MoveFile("_App_Offline.Htm", "App_Offline.Htm");
+                                    appofflineExist = true;
+                                }
+                                // Verify the application file can be removed under app_offline mode
+                                Thread.Sleep(pauseTime);
+                                testSite.AspNetCoreApp.BackupFile(appDllFileName);
+                                testSite.AspNetCoreApp.DeleteFile(appDllFileName);
+                                testSite.AspNetCoreApp.RestoreFile(appDllFileName);
+                                lock (resettingApp)
+                                {
+                                    testSite.AspNetCoreApp.MoveFile("App_Offline.Htm", "_App_Offline.Htm");
+                                    appofflineExist = false;
+                                }
                                 break;
-
-                            case 6:
-                                iisConfig.SetAppPoolSetting(testSite.AspNetCoreApp.AppPoolName, "enable32BitAppOnWin64", false);
+                            case 3: // ConfigurationChangeNotification
+                                lock (resettingApp)
+                                {
+                                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", timeoutValue + 1);
+                                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", timeoutValue - 1);
+                                    Thread.Sleep(pauseTime);
+                                }
                                 break;
-
+                            case 4: // Set invalid Path
+                                lock (resettingApp)
+                                {
+                                    testSite.AspNetCoreApp.DeleteFile("web.config.bak");
+                                    testSite.AspNetCoreApp.BackupFile("web.config");
+                                    // Set bogus value to make error page
+                                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "processPath", "bogus");
+                                    iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "arguments", "bogus");
+                                    Thread.Sleep(pauseTime);
+                                    testSite.AspNetCoreApp.RestoreFile("web.config");
+                                }
+                                break;
+                            case 5: // Switch hostingModel
+                                lock (resettingApp)
+                                {
+                                    if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
+                                    {
+                                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "hostingModel", "");
+                                        testSite.AspNetCoreApp.HostingModel = TestWebApplication.HostingModelValue.Outofprocess;
+                                    }
+                                    else
+                                    {
+                                        iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "hostingModel", "inprocess");
+                                        testSite.AspNetCoreApp.HostingModel = TestWebApplication.HostingModelValue.Inprocess;
+                                    }
+                                }
+                                break;
+                            case 6: // Switch bitness
+                                lock (resettingApp)
+                                {
+                                    if (testSite.AppPoolBitness == IISConfigUtility.AppPoolBitness.enable32Bit)
+                                    {
+                                        iisConfig.SetAppPoolSetting(testSite.AspNetCoreApp.AppPoolName, "enable32BitAppOnWin64", false);
+                                        testSite.AppPoolBitness = IISConfigUtility.AppPoolBitness.noChange;
+                                    }
+                                    else
+                                    {
+                                        iisConfig.SetAppPoolSetting(testSite.AspNetCoreApp.AppPoolName, "enable32BitAppOnWin64", true);
+                                        testSite.AppPoolBitness = IISConfigUtility.AppPoolBitness.enable32Bit;
+                                    }
+                                }
+                                break;
+                            case 7: // StopAndStartAppPool:
+                                lock (resettingApp)
+                                {
+                                    if (index % 2 == 0)
+                                    {
+                                        iisConfig.RecycleAppPool(testSite.AspNetCoreApp.AppPoolName);
+                                    }
+                                    else
+                                    {
+                                        if (testSite.AspNetCoreApp.HostingModel == TestWebApplication.HostingModelValue.Inprocess)
+                                        {
+                                            TestUtility.ResetHelper(ResetHelperMode.StopWasStartW3svc);
+                                        }
+                                        else
+                                        {
+                                            TestUtility.RunPowershellScript("stop-process -Name dotnet -Force -Confirm:$false 2> $null");
+                                        }
+                                    }
+                                }
+                                break;
                             default:
                                 throw new Exception("Not supported value");
                         }
                     }
 
                     InitializeSite(testSite, cleanup: true);
-                    InitializeSite(testSite2, cleanup: true);
-                    InitializeSite(testSite3, cleanup: true);
+                    //InitializeSite(testSite2, cleanup: true);
+                    //InitializeSite(testSite3, cleanup: true);
                 }
             }
             finally
@@ -2621,10 +2797,25 @@ namespace AspNetCoreModule.Test
                 }
             }
 
-            TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
+            t1.Abort();
+            t2.Abort();
+            t3.Abort();
+
+            //t1.Join();
+            //t2.Join();
+            //t3.Join();
+
+            // recyle app one more time
+            using (var iisConfig = new IISConfigUtility(testSite.IisServerType, testSite.IisExpressConfigPath))
+            {
+                iisConfig.RecycleAppPool(testSite.AspNetCoreApp.AppPoolName);
+            }
 
             if (enableAppVerifier)
             {
+                Thread.Sleep(pauseTime);
+                TestUtility.ResetHelper(ResetHelperMode.KillWorkerProcess);
+
                 // cleanup windbg process incase it is still running
                 TestUtility.RunPowershellScript("stop-process -Name windbg -Force -Confirm:$false 2> $null");
             }
@@ -2694,7 +2885,15 @@ namespace AspNetCoreModule.Test
                 // Set starupTimeLimit and shutdownTimeLimit for test app
                 iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestShutdownDelay", "1000" });
                 iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "environmentVariable", new string[] { "ANCMTestStartupDelay", "1000" });
+
+                // Enable ANCM logging
+                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "stdoutLogEnabled", true);
+                iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "stdoutLogFile", @".\stdout");
             }
+
+            testSite.AspNetCoreApp.CreateFile(new string[] { "test" }, "App_Offline.Htm");
+            testSite.AspNetCoreApp.DeleteFile("web.config.bak");
+            testSite.AspNetCoreApp.BackupFile("web.config");
         }
 
         private static bool CleanupVSJitDebuggerWindow(string bugNumber = null)
