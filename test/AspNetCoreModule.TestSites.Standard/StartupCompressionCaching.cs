@@ -3,11 +3,13 @@
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using System;
+using System.Linq;
 
 namespace AspnetCoreModule.TestSites.Standard
 {
@@ -19,7 +21,12 @@ namespace AspnetCoreModule.TestSites.Standard
         {
             if (CompressionMode)
             {
-                services.AddResponseCompression();
+                services.AddResponseCompression(options =>
+                {
+                    // adding video/mp4 is not a good idea because MP4 file is already compressed. This is only for testing purpose
+                    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] { "video/mp4" });
+                });
+
             }
             services.AddResponseCaching();
         } 
@@ -52,7 +59,16 @@ namespace AspnetCoreModule.TestSites.Standard
                         {
                             context.Context.Response.Headers.Append(HeaderNames.Vary, HeaderNames.AcceptEncoding);
                         }
-                        context.Context.Response.ContentType = "text/plain";
+
+                        // return video/mp4 content type if request ends with ".mp4"
+                        if (context.Context.Request.Path.Value.TrimEnd().EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
+                        {
+                            context.Context.Response.ContentType = "video/mp4";
+                        }
+                        else
+                        {
+                            context.Context.Response.ContentType = "text/plain";
+                        }
                     }
                 }
             );
