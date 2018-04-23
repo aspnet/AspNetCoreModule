@@ -593,7 +593,33 @@ namespace AspNetCoreModule.Test.Framework
                 throw ex;
             }
         }
-        
+
+        public void SetHandler(string siteName, string appName, string moduleName, string attributeName, object attributeValue)
+        {
+            try
+            {
+                using (ServerManager serverManager = GetServerManager())
+                {
+                    Configuration config = serverManager.GetWebConfiguration(siteName, appName);
+                    ConfigurationSection aspNetCoreSection = config.GetSection("system.webServer/handlers");
+
+                    ConfigurationElementCollection handlersCollection = aspNetCoreSection.GetCollection();
+                    var element = FindElement(handlersCollection, "add", "name", moduleName);
+                    if (element == null)
+                    {
+                        throw new ApplicationException("failed to find existing handler module");
+                    }
+                    element.SetAttributeValue(attributeName, attributeValue);
+                    
+                    serverManager.CommitChanges();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
         public void ConfigureCustomLogging(string siteName, string appName, int statusCode, int subStatusCode, string path)
         {
             using (ServerManager serverManager = GetServerManager())
@@ -725,6 +751,8 @@ namespace AspNetCoreModule.Test.Framework
             }
             return result;
         }
+
+        
 
         public bool AddModule(string moduleName, string image, string preCondition)
         {

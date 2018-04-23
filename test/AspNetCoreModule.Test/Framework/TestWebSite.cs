@@ -424,6 +424,7 @@ namespace AspNetCoreModule.Test.Framework
                 if (TestFlags.Enabled(TestFlags.InprocessMode))
                 {
                     AspNetCoreApp.HostingModel = TestWebApplication.HostingModelValue.Inprocess;
+                    iisConfig.SetHandler(siteName, AspNetCoreApp.Name, "aspNetCore", "modules", "AspNetCoreModuleV2");
                     iisConfig.SetANCMConfig(siteName, AspNetCoreApp.Name, "hostingModel", TestWebApplication.HostingModelValue.Inprocess);
                     AspNetCoreApp.DeleteFile("web.config.bak");
                     AspNetCoreApp.BackupFile("web.config");
