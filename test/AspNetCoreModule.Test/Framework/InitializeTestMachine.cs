@@ -112,29 +112,27 @@ namespace AspNetCoreModule.Test.Framework
                     //
                     _globalTestFlags = _globalTestFlags.ToLower();
 
-                    // add UseANCMV2
+                    // check UseANCMV2 is set
                     if (_globalTestFlags.Contains(TestFlags.UseANCMV2.ToLower()))
                     {
                         TestUtility.LogInformation("Added test context of " + TestFlags.UseANCMV2);
-                        _globalTestFlags += ";" + TestFlags.UseANCMV2;
                     }
 
-                    // add InprocessMode
+                    // check InprocessMode is set
                     if (_globalTestFlags.Contains(TestFlags.InprocessMode.ToLower()))
                     {
                         TestUtility.LogInformation("Added test context of " + TestFlags.InprocessMode);
-                        _globalTestFlags += ";" + TestFlags.InprocessMode;
                         if (!_globalTestFlags.Contains(TestFlags.UseANCMV2.ToLower()))
                         {
+                            TestUtility.LogInformation("Added test context of " + TestFlags.UseANCMV2);
                             _globalTestFlags += ";" + TestFlags.UseANCMV2;
                         }
                     }
 
-                    // add UseDotNetCore21
+                    // check UseDotNetCore21 is set
                     if (_globalTestFlags.Contains(TestFlags.UseDotNetCore21.ToLower()))
                     {
                         TestUtility.LogInformation("Added test context of " + TestFlags.UseDotNetCore21);
-                        _globalTestFlags += ";" + TestFlags.UseDotNetCore21;
                     }
 
                     //
@@ -142,7 +140,7 @@ namespace AspNetCoreModule.Test.Framework
                     //
                     if (_globalTestFlags.Contains(TestFlags.UseIISExpress.ToLower()) && _globalTestFlags.Contains(TestFlags.UseFullIIS.ToLower()))
                     {
-                        _globalTestFlags = _globalTestFlags.Replace(TestFlags.UseFullIIS.ToLower(), "");                        
+                        _globalTestFlags = _globalTestFlags.Replace(TestFlags.UseFullIIS.ToLower(), "");
                     }
 
                     //
