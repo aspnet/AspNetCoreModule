@@ -419,12 +419,15 @@ namespace AspNetCoreModule.Test.Framework
                 iisConfig.CreateApp(siteName, WebSocketApp.Name, WebSocketApp.PhysicalPath, appPoolName);
                 iisConfig.CreateApp(siteName, URLRewriteApp.Name, URLRewriteApp.PhysicalPath, appPoolName);
 
+                if (TestFlags.Enabled(TestFlags.UseANCMV2))
+                {
+                    iisConfig.SetHandler(siteName, AspNetCoreApp.Name, "aspNetCore", "modules", "AspNetCoreModuleV2");
+                }
 
                 // Configure hostingModel for aspnetcore app
                 if (TestFlags.Enabled(TestFlags.InprocessMode))
                 {
                     AspNetCoreApp.HostingModel = TestWebApplication.HostingModelValue.Inprocess;
-                    iisConfig.SetHandler(siteName, AspNetCoreApp.Name, "aspNetCore", "modules", "AspNetCoreModuleV2");
                     iisConfig.SetANCMConfig(siteName, AspNetCoreApp.Name, "hostingModel", TestWebApplication.HostingModelValue.Inprocess);
                     AspNetCoreApp.DeleteFile("web.config.bak");
                     AspNetCoreApp.BackupFile("web.config");

@@ -17,6 +17,7 @@ namespace AspNetCoreModule.Test.Framework
         public const string UseIISExpress = "UseIISExpress";
         public const string UseFullIIS = "UseFullIIS";
         public const string UseDotNetCore21 = "UseDotNetCore21";
+        public const string UseANCMV2 = "UseANCMV2";
         public const string InprocessMode = "InprocessMode";
         public const string RunAsAdministrator = "RunAsAdministrator";
         public const string MakeCertExeAvailable = "MakeCertExeAvailable";
@@ -105,17 +106,28 @@ namespace AspNetCoreModule.Test.Framework
                             _globalTestFlags = TestFlags.UsePrivateANCM + ";" + TestFlags.UseIISExpress;
                         }
                     }
-                    
+
                     //
                     // convert in lower case 
                     //
                     _globalTestFlags = _globalTestFlags.ToLower();
+
+                    // add UseANCMV2
+                    if (_globalTestFlags.Contains(TestFlags.UseANCMV2.ToLower()))
+                    {
+                        TestUtility.LogInformation("Added test context of " + TestFlags.UseANCMV2);
+                        _globalTestFlags += ";" + TestFlags.UseANCMV2;
+                    }
 
                     // add InprocessMode
                     if (_globalTestFlags.Contains(TestFlags.InprocessMode.ToLower()))
                     {
                         TestUtility.LogInformation("Added test context of " + TestFlags.InprocessMode);
                         _globalTestFlags += ";" + TestFlags.InprocessMode;
+                        if (!_globalTestFlags.Contains(TestFlags.UseANCMV2.ToLower()))
+                        {
+                            _globalTestFlags += ";" + TestFlags.UseANCMV2;
+                        }
                     }
 
                     // add UseDotNetCore21
