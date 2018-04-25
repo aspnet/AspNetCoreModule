@@ -1,3 +1,3 @@
-THIS REPO IS OBSOLETE. Please file issues at https://github.com/aspnet/IISIntegration
+This repository has been deprecated.
 
-The source code for the ASP.NET Core Module now lives as part of the IISIntegration repo. This issue tracker will be closed as soon as all active bugs here have been migrated.
+Please open issues on https://github.com/aspnet/IISIntegration instead.
