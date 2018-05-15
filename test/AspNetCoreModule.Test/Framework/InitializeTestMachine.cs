@@ -17,6 +17,7 @@ namespace AspNetCoreModule.Test.Framework
         public const string UseIISExpress = "UseIISExpress";
         public const string UseFullIIS = "UseFullIIS";
         public const string UseDotNetCore21 = "UseDotNetCore21";
+        public const string UseDotNetCore22 = "UseDotNetCore22";
         public const string UseANCMV2 = "UseANCMV2";
         public const string InprocessMode = "InprocessMode";
         public const string RunAsAdministrator = "RunAsAdministrator";
