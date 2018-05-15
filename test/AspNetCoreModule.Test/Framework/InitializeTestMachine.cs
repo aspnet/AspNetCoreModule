@@ -136,6 +136,12 @@ namespace AspNetCoreModule.Test.Framework
                         TestUtility.LogInformation("Added test context of " + TestFlags.UseDotNetCore21);
                     }
 
+                    // check UseDotNetCore22 is set
+                    if (_globalTestFlags.Contains(TestFlags.UseDotNetCore22.ToLower()))
+                    {
+                        TestUtility.LogInformation("Added test context of " + TestFlags.UseDotNetCore22);
+                    }
+
                     //
                     // error handling: UseIISExpress and UseFullIIS can't be used together. 
                     //
