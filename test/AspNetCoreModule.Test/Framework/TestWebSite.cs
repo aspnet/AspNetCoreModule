@@ -248,6 +248,10 @@ namespace AspNetCoreModule.Test.Framework
             {
                 SDKVersion = "netcoreapp2.1";
             }
+            else if (TestFlags.Enabled(TestFlags.UseDotNetCore22))
+            {
+                SDKVersion = "netcoreapp2.2";
+            }
 
             string publishPath = Path.Combine(srcPath, "bin", "Debug", SDKVersion, "publish");
             string publishPathOutput = Path.Combine(InitializeTestMachine.TestRootDirectory, "publishPathOutput");
@@ -270,7 +274,11 @@ namespace AspNetCoreModule.Test.Framework
 
                     try
                     {
-                        if (TestFlags.Enabled(TestFlags.UseDotNetCore21))
+                        if (TestFlags.Enabled(TestFlags.UseDotNetCore22))
+                        {
+                            TestUtility.FileCopy(Path.Combine(srcPath, "AspNetCoreModule.TestSites.Standard.csproj.UseDotNetCore22"), Path.Combine(srcPath, "AspNetCoreModule.TestSites.Standard.csproj"));
+                        }
+                        else if (TestFlags.Enabled(TestFlags.UseDotNetCore21))
                         {
                             TestUtility.FileCopy(Path.Combine(srcPath, "AspNetCoreModule.TestSites.Standard.csproj.UseDotNetCore21"), Path.Combine(srcPath, "AspNetCoreModule.TestSites.Standard.csproj"));
                         }
