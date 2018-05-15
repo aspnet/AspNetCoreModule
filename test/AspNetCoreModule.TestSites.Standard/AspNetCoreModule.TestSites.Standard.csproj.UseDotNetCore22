@@ -3,8 +3,11 @@
   <!-- compile option for v2.2 Preview1 -->
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
+    <!-- Note: At the time we create this project, we selected AspNet.Core.All version 2.2.0-preview1-34194 from AspNet Build drop -->
+    <!-- RuntimeFrameworkVersion (Microsoft.NETCore.App) bundled with the package was 2.2.0-preview1-26509-06 -->
     <RuntimeFrameworkVersion>2.2.0-preview1-26509-06</RuntimeFrameworkVersion>
     <AspNetCoreAllRuntimeFrameworkVersion>2.2.0-preview1-34194</AspNetCoreAllRuntimeFrameworkVersion>
+    <!-- NETCoreAppMaximumVersion is currently required. By convention we use value 99.9 -->
     <NETCoreAppMaximumVersion>99.9</NETCoreAppMaximumVersion>
   </PropertyGroup>
   <ItemGroup>
