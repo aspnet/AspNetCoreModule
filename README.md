@@ -6,7 +6,7 @@ that it manages.
 
 ## Project Moved
 
-Asp.NET core module is now part of the [IIS Integration] (https://github.com/aspnet/IISIntegration) project. This repository currently only consist of integration tests which would also be migrated soon.
+Asp.NET core module is now part of the [IIS Integration](https://github.com/aspnet/IISIntegration) project. This repository currently only consist of integration tests which would also be migrated soon.
 
 ### .NET Foundation
 
