@@ -539,7 +539,7 @@ namespace AspNetCoreModule.Test.Framework
             var directoryInfo = new DirectoryInfo(applicationBasePath);
             do
             {
-                var solutionFile = new FileInfo(Path.Combine(directoryInfo.FullName, "AspNetCoreModule.sln"));
+                var solutionFile = new FileInfo(Path.Combine(directoryInfo.FullName, "AspNetCoreModuleE2E.sln"));
                 if (solutionFile.Exists)
                 {
                     return directoryInfo.FullName;
