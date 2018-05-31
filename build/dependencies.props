@@ -5,18 +5,14 @@
   <PropertyGroup Label="Package Versions">
     <MicrosoftAspNetCoreAllPackageVersion>2.2.0-preview1-34350</MicrosoftAspNetCoreAllPackageVersion>
     <MicrosoftAspNetCoreServerIISPackageVersion>2.2.0-preview1-34350</MicrosoftAspNetCoreServerIISPackageVersion>
-    <MicrosoftAspNetCoreTestingPackageVersion>2.2.0-preview1-34350</MicrosoftAspNetCoreTestingPackageVersion>
     <MicrosoftExtensionsLoggingConsolePackageVersion>2.2.0-preview1-34350</MicrosoftExtensionsLoggingConsolePackageVersion>
     <MicrosoftExtensionsLoggingDebugPackageVersion>2.2.0-preview1-34350</MicrosoftExtensionsLoggingDebugPackageVersion>
     <MicrosoftExtensionsLoggingPackageVersion>2.2.0-preview1-34350</MicrosoftExtensionsLoggingPackageVersion>
     <MicrosoftExtensionsPlatformAbstractionsPackageVersion>1.1.0</MicrosoftExtensionsPlatformAbstractionsPackageVersion>
     <MicrosoftNETCoreApp22PackageVersion>2.2.0-preview1-26529-01</MicrosoftNETCoreApp22PackageVersion>
     <MicrosoftNetHttpHeadersPackageVersion>2.2.0-preview1-34350</MicrosoftNetHttpHeadersPackageVersion>
-    <MicrosoftNETTestSdkPackageVersion>15.6.1</MicrosoftNETTestSdkPackageVersion>
     <MicrosoftWebAdministrationPackageVersion>7.0.0</MicrosoftWebAdministrationPackageVersion>
     <SystemManagementAutomationDllPackageVersion>10.0.10586</SystemManagementAutomationDllPackageVersion>
     <SystemRuntimeCompilerServicesUnsafePackageVersion>4.6.0-preview1-26525-01</SystemRuntimeCompilerServicesUnsafePackageVersion>
-    <XunitPackageVersion>2.3.1</XunitPackageVersion>
-    <XunitRunnerVisualstudioPackageVersion>2.4.0-beta.1.build3945</XunitRunnerVisualstudioPackageVersion>
   </PropertyGroup>
 </Project>
