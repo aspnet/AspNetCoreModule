@@ -292,6 +292,24 @@ namespace AspNetCoreModule.Test.Framework
                         TestUtility.LogInformation("Failed to overwrite project file, update the project file manually");
                     }
 
+
+                    if (TestFlags.Enabled(TestFlags.UseDotNetCore22))
+                    {
+                        string aspNetCoreModuleHostingModel, buildConstants;
+
+                        if (TestFlags.Enabled(TestFlags.InprocessMode))
+                        {
+                            aspNetCoreModuleHostingModel = "inprocess";
+                            buildConstants = "INPROC";
+                        }
+                        else
+                        {
+                            aspNetCoreModuleHostingModel = "OutOfProcess";
+                            buildConstants = "OUTOFPROC";
+                        }
+                        argumentForDotNet += $" /p:AspNetCoreModuleHostingModel={aspNetCoreModuleHostingModel} /p:DefineConstants={buildConstants}";
+                    }
+
                     TestUtility.RunCommand("dotnet", argumentForDotNet);
                 }
 

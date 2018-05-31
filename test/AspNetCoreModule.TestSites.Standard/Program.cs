@@ -88,7 +88,7 @@ namespace AspnetCoreModule.TestSites.Standard
                     {
                         StartupCompressionCaching.CompressionMode = false;
                     }
-                    host = WebHost.CreateDefaultBuilder(args)
+                    host = CreateDefaultBuilder(args)
                         .UseConfiguration(config)
                         // BUGBUG below line is commented out because it causes 404 error with inprocess mode
                         //.UseContentRoot(Directory.GetCurrentDirectory())
@@ -97,14 +97,14 @@ namespace AspnetCoreModule.TestSites.Standard
                 }
                 else if (startUpClassString == "StartupHelloWorld")
                 {
-                    host = WebHost.CreateDefaultBuilder(args)
+                    host = CreateDefaultBuilder(args)
                         .UseConfiguration(config)
                         .UseStartup<StartupHelloWorld>()
                         .Build();
                 }
                 else if (startUpClassString == "StartupNtlmAuthentication")
                 {
-                    host = WebHost.CreateDefaultBuilder(args)
+                    host = CreateDefaultBuilder(args)
                         .UseConfiguration(config)
                         .UseStartup<StartupNtlmAuthentication>()
                         .Build();
@@ -145,7 +145,7 @@ namespace AspnetCoreModule.TestSites.Standard
 
             if (host == null)
             {
-                host = WebHost.CreateDefaultBuilder(args)
+                host = CreateDefaultBuilder(args)
                     .UseStartup<Startup>()
                     .Build();
             }
@@ -203,6 +203,12 @@ namespace AspnetCoreModule.TestSites.Standard
                 Console.WriteLine("End: SleeptimeWhileClosing");
             }
             Console.WriteLine("END Main()");
+        }
+
+        private static IWebHostBuilder CreateDefaultBuilder(string[] args)
+        {
+            // Note, as of time of this code being authored, CreateDefaultBuilder calls UseIISIntegration but not UseIIS
+            return WebHost.CreateDefaultBuilder(args).UseIIS();
         }
     }
 }
