@@ -295,19 +295,8 @@ namespace AspNetCoreModule.Test.Framework
 
                     if (TestFlags.Enabled(TestFlags.UseDotNetCore22))
                     {
-                        string aspNetCoreModuleHostingModel, buildConstants;
-
-                        if (TestFlags.Enabled(TestFlags.InprocessMode))
-                        {
-                            aspNetCoreModuleHostingModel = "inprocess";
-                            buildConstants = "INPROC";
-                        }
-                        else
-                        {
-                            aspNetCoreModuleHostingModel = "OutOfProcess";
-                            buildConstants = "OUTOFPROC";
-                        }
-                        argumentForDotNet += $" /p:AspNetCoreModuleHostingModel={aspNetCoreModuleHostingModel} /p:DefineConstants={buildConstants}";
+                        var aspNetCoreModuleHostingModel = TestFlags.Enabled(TestFlags.InprocessMode) ? "inprocess" : "OutOfProcess";
+                        argumentForDotNet += $" /p:AspNetCoreModuleHostingModel={aspNetCoreModuleHostingModel}";
                     }
 
                     TestUtility.RunCommand("dotnet", argumentForDotNet);

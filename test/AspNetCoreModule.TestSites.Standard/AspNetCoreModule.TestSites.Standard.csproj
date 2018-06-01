@@ -6,7 +6,6 @@
     <NETCoreAppMaximumVersion>99.9</NETCoreAppMaximumVersion>
     <AspNetCoreAllRuntimeFrameworkVersion>$(MicrosoftAspNetCoreAllPackageVersion)</AspNetCoreAllRuntimeFrameworkVersion>
     <AspNetCoreModuleHostingModel>$(AspNetCoreModuleHostingModel)</AspNetCoreModuleHostingModel>
-    <DefineConstants>$(BuildConstants)</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.All" Version="$(MicrosoftAspNetCoreAllPackageVersion)" />
