@@ -82,9 +82,8 @@ function Invoke-UpdateAppHostConfig {
     ## Trick: if the worker process was running 32 bit modes, %windir%\System32 is actually redirected to %windir%\SysWOW64
     ## Hence we would always point to module to $inetSrvDirs.x64
     $aspNetCoreHandlerFilePath = Join-Path $inetSrvDirs.x64 "aspnetcorev2.dll"
-    Start-IISCommitDelay
-    $sm = Get-IISServerManager
 
+    $sm = Get-IISServerManager
     # Add AppSettings section
     # $sm.GetApplicationHostConfiguration().RootSectionGroup.Sections.Add("appSettings")
 
@@ -101,6 +100,7 @@ function Invoke-UpdateAppHostConfig {
     $sectionaspNetCore.OverrideModeDefault = "Allow"
     $sm.CommitChanges()
     
+    Start-IISCommitDelay
     # Configure module
     $modules = Get-IISConfigSection "system.webServer/modules" | Get-IISConfigCollection
     if (!($modules | Where-Object { $_.Attributes["name"].Value -eq "AspNetCoreModuleV2" })) {
