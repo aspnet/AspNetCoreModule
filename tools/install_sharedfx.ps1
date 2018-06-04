@@ -16,14 +16,18 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]
-    $dropLocation
+    $dropLocation,
+
+    [Alias('d')]
+    [string]
+    $dotnetHome = (Join-Path $env:USERPROFILE ".dotnet")
 )
 
 Import-Module -Name (Join-Path $PSScriptRoot versions.psm1) -Force
 
 function InstallDotnet([string] $arch) {
     $archiveFile = Join-Path $dropLocation 'aspnetcore-runtime-${netCoreAppVersion}-win-${arch}.zip'.Replace('${netCoreAppVersion}',$netCoreAppVersion).Replace('${arch}',$arch)
-    $dotnetInstallLocation = [System.IO.Path]::Combine($env:USERPROFILE, ".dotnet", $arch)
+    $dotnetInstallLocation = Join-Path $dotnetHome $arch
     Write-Debug "Installing $archiveFile to $dotnetInstallLocation"
     Expand-Archive -LiteralPath $archiveFile -DestinationPath $dotnetInstallLocation -Force
     Write-Debug "Done installing SharedFX for $arch"
