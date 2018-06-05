@@ -37,7 +37,7 @@ namespace AspNetCoreModule.Test
             return DoRapidFailsPerMinuteTest(appPoolBitness, valueOfRapidFailsPerMinute);
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "Pending investigation for flakiness")]
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
@@ -48,7 +48,7 @@ namespace AspNetCoreModule.Test
             return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "Pending investigation for flakiness")]
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
@@ -59,7 +59,7 @@ namespace AspNetCoreModule.Test
             return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "Pending investigation for flakiness")]
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
@@ -70,7 +70,7 @@ namespace AspNetCoreModule.Test
             return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "Pending investigation for flakiness")]
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
@@ -83,7 +83,7 @@ namespace AspNetCoreModule.Test
             return DoShutdownTimeLimitTest(appPoolBitness, valueOfshutdownTimeLimit, expectedClosingTime, isGraceFullShutdownEnabled);
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "Pending investigation for flakiness")]
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
@@ -343,7 +343,7 @@ namespace AspNetCoreModule.Test
             return DoFilterOutMSRequestHeadersTest(appPoolBitness, requestHeader, requestHeaderValue);
         }
 
-        [ConditionalTheory]
+        [ConditionalTheory(Skip = "Pending investigation for why failing on CI workflow")]
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
