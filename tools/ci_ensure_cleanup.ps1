@@ -16,7 +16,7 @@
 function KillVBCSCompilers() {
     $procs = Get-WmiObject Win32_Process | Where-Object { $_.Name.ToLower().StartsWith("dotnet") -and $_.CommandLine.ToLower().Contains("vbcscompiler") }
     foreach ($proc in $procs) {
-        Stop-Process -Id $proc.ProcessId
+        Stop-Process -Id $proc.ProcessId -Force
     }
 }
 
