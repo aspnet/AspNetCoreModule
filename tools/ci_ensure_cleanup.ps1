@@ -11,6 +11,7 @@
 .PARAMETER dropLocation
 
 #>
+$ErrorActionPreference = 'Stop'
 
 # If two tests are run too closely, VBCSCompiler process might still be alive for previous test preventing dotnet and packages to be cleand up
 function KillVBCSCompilers() {
@@ -27,9 +28,7 @@ function EnsureAppHostConfig() {
         $appConfigBackupLocation = "${appConfigLocation}.ancmtest.masterbackup"
         Copy-Item -Path $appConfigBackupLocation -Destination $appConfigLocation -Force
     }
-
 }
 
 KillVBCSCompilers
-
 EnsureAppHostConfig

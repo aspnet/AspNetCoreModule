@@ -22,7 +22,7 @@ param(
     [string]
     $dotnetHome = (Join-Path $env:USERPROFILE ".dotnet")
 )
-
+$ErrorActionPreference = 'Stop'
 Import-Module -Name (Join-Path $PSScriptRoot versions.psm1) -Force
 
 function InstallDotnet([string] $arch) {
