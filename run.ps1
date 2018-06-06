@@ -132,7 +132,7 @@ function Get-KoreBuild {
         }
     }
 
-    Move-Item -Path [System.IO.Path]::Combine($PSScriptRoot, "korebuild", "KoreBuild.psm1") -Destination [System.IO.Path]::Combine($korebuildPath, "scripts", "KoreBuild.psm1")
+    Move-Item -Force -Path ([System.IO.Path]::Combine($PSScriptRoot, "korebuild", "KoreBuild.psm1")) -Destination ([System.IO.Path]::Combine($korebuildPath, "scripts", "KoreBuild.psm1"))
 
     return $korebuildPath
 }
