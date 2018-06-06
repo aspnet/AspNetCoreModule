@@ -356,6 +356,7 @@ function Invoke-KoreBuildCommand(
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Arguments
 ) {
+    Write-Host "Entered Invoke-KoreBuildCommand"
     if (!(Get-Variable KoreBuildSettings -Scope Global -ErrorAction SilentlyContinue)) {
         throw "Set-KoreBuildSettings must be called before Invoke-KoreBuildCommand."
     }
