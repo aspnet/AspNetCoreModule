@@ -268,7 +268,8 @@ function Get-DotnetMajorVersion() {
     Write-Host "Get-DotnetMajorVersion A"
     if (Get-Variable "dotnet" -Scope Global -ErrorAction SilentlyContinue) {
         Write-Host "Get-DotnetMajorVersion B"
-        $infoOutput = dotnet --version
+        Write-Host "Dotnet exe: $global:dotnet"
+        $infoOutput = & $global:dotnet --version
 
         Write-Host "Get-DotnetMajorVersion C"
         $version = $infoOutput.SubString(0, $infoOutput.IndexOf('.'))
