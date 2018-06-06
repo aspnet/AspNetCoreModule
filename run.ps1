@@ -133,7 +133,9 @@ function Get-KoreBuild {
     }
 
     Copy-Item -Force -Path ([System.IO.Path]::Combine($PSScriptRoot, "korebuild", "KoreBuild.psm1")) -Destination ([System.IO.Path]::Combine($korebuildPath, "scripts", "KoreBuild.psm1"))
-    $env:PATH = "$DotNetHome;$env:PATH"
+    $dotnetExeHome = Join-Path $DotNetHome "x64"
+    $env:PATH = "$dotnetExeHome;$env:PATH"
+    Write-Host "run.ps1, path: $env:PATH"
 
     return $korebuildPath
 }

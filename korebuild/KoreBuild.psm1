@@ -5,6 +5,7 @@ Set-StrictMode -Version 2
 
 Import-Module -Force -Scope Local "$PSScriptRoot/common.psm1"
 
+Write-Host "korebuild.psm1, path: $env:PATH"
 if (Get-Command 'dotnet' -ErrorAction Ignore) {
     $global:dotnet = (Get-Command 'dotnet').Path
 }
