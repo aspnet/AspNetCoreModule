@@ -253,9 +253,13 @@ Ensure that Dotnet exists.
 Check if a dotnet of at least 2.0.0 exists, and install it if it doesn't.
 #>
 function Ensure-Dotnet() {
+    Write-Host "Ensure-Dotnet A"
     $dotnetVersion = Get-DotnetMajorVersion
+    Write-Host "Ensure-Dotnet B"
     if ($dotnetVersion -lt 2) {
+        Write-Host "Ensure-Dotnet C"
         Write-Verbose "Ensuring dotnet because $dotnetVersion wasn't >= 2.0.0"
+        Write-Host "Ensure-Dotnet D"
         Install-Tools
     }
 }
