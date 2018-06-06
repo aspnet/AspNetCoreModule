@@ -132,6 +132,9 @@ function Get-KoreBuild {
         }
     }
 
+    $dotnetExeHome = Join-Path $DotNetHome "x64"
+    $env:PATH = "$dotnetExeHome;$env:PATH"
+
     return $korebuildPath
 }
 
