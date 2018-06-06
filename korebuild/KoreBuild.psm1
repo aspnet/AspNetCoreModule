@@ -361,9 +361,11 @@ function Invoke-KoreBuildCommand(
         throw "Set-KoreBuildSettings must be called before Invoke-KoreBuildCommand."
     }
 
+    Write-Host "Point A"
     $sdkVersion = __get_dotnet_sdk_version
     $korebuildVersion = Get-KoreBuildVersion
     if ($sdkVersion -ne 'latest') {
+        Write-Host "Point B"
         "{ `"sdk`": { `n`"version`": `"$sdkVersion`" },`n`"msbuild-sdks`": {`n`"Microsoft.DotNet.GlobalTools.Sdk`": `"$korebuildVersion`"}`n }" | Out-File (Join-Path $global:KoreBuildSettings.RepoPath 'global.json') -Encoding ascii
     }
     else {
@@ -384,10 +386,14 @@ function Invoke-KoreBuildCommand(
         Write-Host -ForegroundColor DarkGreen 'Doing nothing because command = noop'
     }
     else {
+        
+        Write-Host "Point C"
         Ensure-Dotnet
 
+        Write-Host "Point D"
         $korebuildConsoleDll = Get-KoreBuildConsole
 
+        Write-Host "Point E"
         & dotnet $korebuildConsoleDll `
             --tools-source $global:KoreBuildSettings.ToolsSource `
             --dotnet-home $global:KoreBuildSettings.DotNetHome `
