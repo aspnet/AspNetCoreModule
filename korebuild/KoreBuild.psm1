@@ -265,14 +265,20 @@ function Ensure-Dotnet() {
 }
 
 function Get-DotnetMajorVersion() {
+    Write-Host "Get-DotnetMajorVersion A"
     if (Get-Variable "dotnet" -Scope Global -ErrorAction SilentlyContinue) {
+        Write-Host "Get-DotnetMajorVersion B"
         $infoOutput = dotnet --version
 
+        Write-Host "Get-DotnetMajorVersion C"
         $version = $infoOutput.SubString(0, $infoOutput.IndexOf('.'))
+        Write-Host "Get-DotnetMajorVersion D"
         $versionInt = [convert]::ToInt32($version, 10)
+        Write-Host "Get-DotnetMajorVersion E"
         return $versionInt
     }
     else {
+        Write-Host "Get-DotnetMajorVersion No dotnet"
         return 0
     }
 }
