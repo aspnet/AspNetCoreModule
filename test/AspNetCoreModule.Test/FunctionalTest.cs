@@ -343,7 +343,7 @@ namespace AspNetCoreModule.Test
             return DoFilterOutMSRequestHeadersTest(appPoolBitness, requestHeader, requestHeaderValue);
         }
 
-        [ConditionalTheory(Skip = "Pending investigation for why failing on CI workflow")]
+        [ConditionalTheory]
         [ANCMTestFlags(ANCMTestCondition)]
         [OSSkipCondition(OperatingSystems.Linux)]
         [OSSkipCondition(OperatingSystems.MacOSX)]
