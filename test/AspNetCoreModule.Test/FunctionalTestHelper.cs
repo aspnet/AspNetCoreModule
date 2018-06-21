@@ -1772,7 +1772,17 @@ namespace AspNetCoreModule.Test
                     await StartIISExpress(testSite, expectedResponseStatus: HttpStatusCode.Forbidden, expectedResponseBody: null);
 
                     Uri rootHttpsUri = testSite.RootAppContext.GetUri(null, sslPort, protocol: "https");
-                    TestUtility.RunPowershellScript("( invoke-webrequest " + rootHttpsUri.OriginalString + " -CertificateThumbprint " + thumbPrintForClientAuthentication + ").StatusCode", "200");
+                    try
+                    {
+                        TestUtility.RunPowershellScript("( invoke-webrequest " + rootHttpsUri.OriginalString + " -CertificateThumbprint " + thumbPrintForClientAuthentication + ").StatusCode", "200");
+                    } catch (Exception)
+                    {
+                        while (!File.Exists("C:\\wake.txt"))
+                        {
+                            await Task.Delay(60000);
+                        }
+                        throw;
+                    }
 
                     // Verify http request with using client certificate
                     Uri targetHttpsUri = testSite.AspNetCoreApp.GetUri(null, sslPort, protocol: "https");
