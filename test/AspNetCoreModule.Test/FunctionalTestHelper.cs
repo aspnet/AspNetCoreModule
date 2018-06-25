@@ -1709,6 +1709,8 @@ namespace AspNetCoreModule.Test
                     string thumbPrintForWebServer = iisConfig.CreateSelfSignedCertificateWithMakeCert(webServerCN, rootCN, extendedKeyUsage: "1.3.6.1.5.5.7.3.1");
                     string thumbPrintForKestrel = null;
 
+                    var certUser = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
+
                     // Create a certificate for client authentication setting its issuer with the root certificate subject name
                     string thumbPrintForClientAuthentication = iisConfig.CreateSelfSignedCertificateWithMakeCert(clientCN, rootCN, extendedKeyUsage: "1.3.6.1.5.5.7.3.2");
 
@@ -1774,6 +1776,8 @@ namespace AspNetCoreModule.Test
                     Uri rootHttpsUri = testSite.RootAppContext.GetUri(null, sslPort, protocol: "https");
                     try
                     {
+                        var reqUser = TestUtility.RunPowershellScript("[System.Security.Principal.WindowsIdentity]::GetCurrent().Name");
+                        Assert.Equal(certUser, reqUser);
                         TestUtility.RunPowershellScript("( invoke-webrequest " + rootHttpsUri.OriginalString + " -CertificateThumbprint " + thumbPrintForClientAuthentication + ").StatusCode", "200");
                     } catch (Exception)
                     {
