@@ -1777,13 +1777,15 @@ namespace AspNetCoreModule.Test
                     try
                     {
                         var reqUser = TestUtility.RunPowershellScript("[System.Security.Principal.WindowsIdentity]::GetCurrent().Name");
+
+                        TestUtility.LogInformation($"cert user: {certUser} req user: {reqUser}");
                         Assert.Equal(certUser, reqUser);
                         TestUtility.RunPowershellScript("( invoke-webrequest " + rootHttpsUri.OriginalString + " -CertificateThumbprint " + thumbPrintForClientAuthentication + ").StatusCode", "200");
                     } catch (Exception)
                     {
                         while (!File.Exists("C:\\wake.txt"))
                         {
-                            await Task.Delay(60000);
+                            await Task.Delay(1000);
                         }
                         throw;
                     }
