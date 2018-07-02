@@ -1781,19 +1781,12 @@ namespace AspNetCoreModule.Test
                         TestUtility.LogInformation($"cert user: {certUser} req user: {reqUser}");
                         Assert.Equal(certUser, reqUser);
                         TestUtility.RunPowershellScript("( invoke-webrequest " + rootHttpsUri.OriginalString + " -CertificateThumbprint " + thumbPrintForClientAuthentication + ").StatusCode", "200");
-                    } catch (Exception e)
-                    {
-                        if (File.Exists("\\\\funfile\\Scratch\\shhsu\temp\\control.txt"))
+                    } catch (Exception) {
+                        while (!File.Exists("C:\\wake.txt"))
                         {
-                            while (!File.Exists("\\\\funfile\\Scratch\\shhsu\temp\\wake.txt"))
-                            {
-                                await Task.Delay(1000);
-                            }
-                            throw;
-                        } else
-                        {
-                            throw new Exception("No control file found", e);
+                            await Task.Delay(1000);
                         }
+                        throw;
                     }
 
                     // Verify http request with using client certificate
