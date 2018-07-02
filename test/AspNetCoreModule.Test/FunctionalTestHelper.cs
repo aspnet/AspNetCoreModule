@@ -1774,14 +1774,16 @@ namespace AspNetCoreModule.Test
                     await StartIISExpress(testSite, expectedResponseStatus: HttpStatusCode.Forbidden, expectedResponseBody: null);
 
                     Uri rootHttpsUri = testSite.RootAppContext.GetUri(null, sslPort, protocol: "https");
+                    var requestCommand = "( invoke-webrequest " + rootHttpsUri.OriginalString + " -CertificateThumbprint " + thumbPrintForClientAuthentication + ").StatusCode";
                     try
                     {
                         var reqUser = TestUtility.RunPowershellScript("[System.Security.Principal.WindowsIdentity]::GetCurrent().Name");
 
                         TestUtility.LogInformation($"cert user: {certUser} req user: {reqUser}");
                         Assert.Equal(certUser, reqUser);
-                        TestUtility.RunPowershellScript("( invoke-webrequest " + rootHttpsUri.OriginalString + " -CertificateThumbprint " + thumbPrintForClientAuthentication + ").StatusCode", "200");
+                        TestUtility.RunPowershellScript(requestCommand, "200");
                     } catch (Exception) {
+                        TestUtility.LogInformation($"Failed to run {requestCommand}");
                         while (!File.Exists("C:\\wake.txt"))
                         {
                             await Task.Delay(1000);
