@@ -131,10 +131,6 @@ function Get-KoreBuild {
             Remove-Item $tmpfile -ErrorAction Ignore
         }
     }
-
-    $dotnetExeHome = Join-Path $DotNetHome "x64"
-    $env:PATH = "$dotnetExeHome;$env:PATH"
-
     return $korebuildPath
 }
 
