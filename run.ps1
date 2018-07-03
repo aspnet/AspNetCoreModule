@@ -131,7 +131,6 @@ function Get-KoreBuild {
             Remove-Item $tmpfile -ErrorAction Ignore
         }
     }
-
     return $korebuildPath
 }
 
