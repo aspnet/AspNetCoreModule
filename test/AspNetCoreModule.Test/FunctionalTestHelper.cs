@@ -2026,6 +2026,7 @@ namespace AspNetCoreModule.Test
                             iisConfig.SetANCMConfig(testSite.SiteName, testSite.AspNetCoreApp.Name, "shutdownTimeLimit", 11 + jj);
                         }
 
+                        websocketClient.CloseConnection();
                         bool connectionClosedFromServer = websocketClient.WaitForWebSocketState(WebSocketState.ConnectionClosed);
 
                         // Verify server side connection closing is done successfully
@@ -2035,7 +2036,7 @@ namespace AspNetCoreModule.Test
                         int lastIndex = websocketClient.Connection.DataReceived.Count - 1;
 
                         // Verify text data is matched to the string sent by server
-                        Assert.Contains("ClosingFromServer", websocketClient.Connection.DataReceived[lastIndex].TextData);
+                        Assert.Equal(FrameType.Close, websocketClient.Connection.DataReceived[lastIndex].FrameType);
 
                         await VerifyWorkerProcessRecycledUnderInprocessMode(testSite, recycledProcessId);
 
@@ -3085,13 +3086,6 @@ namespace AspNetCoreModule.Test
 
         private static bool VerifyEventLog(int eventId, DateTime startFrom, string includeThis = null)
         {
-            //bugbug
-            if (IISConfigUtility.ANCMInprocessMode)
-            {
-                // event verification fails in Inprocess mode
-                return true;
-            }
-
             var events = TestUtility.GetApplicationEvent(eventId, startFrom);
             Assert.True(events.Count > 0, "Verfiy expected event logs");
             bool findEvent = false;

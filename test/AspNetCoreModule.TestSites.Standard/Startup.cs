@@ -212,7 +212,7 @@ namespace AspnetCoreModule.TestSites.Standard
                 subApp.Run(async context =>
                 {
                     context.Response.Headers[HeaderNames.Connection] = "close";
-                    await context.Response.WriteAsync("Connnection Close");
+                    await context.Response.WriteAsync("Connection Close");
                     await context.Response.Body.FlushAsync(); // Bypass IIS write-behind buffering
                 });
             });
