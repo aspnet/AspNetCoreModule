@@ -9,7 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.All" Version="$(MicrosoftAspNetCoreAllPackageVersion)" />
-    <PackageReference Include="Microsoft.AspNetCore.Server.IIS" version="$(MicrosoftAspNetCoreServerIISPackageVersion)" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.IIS" Version="$(MicrosoftAspNetCoreServerIISPackageVersion)" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="wwwroot\" />
