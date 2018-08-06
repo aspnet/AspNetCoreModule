@@ -14,4 +14,9 @@
     <LineupPackageVersion>2.2.0-*</LineupPackageVersion>
     <LineupPackageRestoreSource>https://dotnet.myget.org/F/aspnetcore-dev/api/v3/index.json</LineupPackageRestoreSource>
   </PropertyGroup>
+
+  <ItemGroup>
+    <DotNetCoreRuntime Include="$(MicrosoftNETCoreApp22PackageVersion)" />
+    <!-- These are for functional test projects that are only runable on windows -->
+  </ItemGroup>
 </Project>

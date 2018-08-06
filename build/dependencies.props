@@ -3,20 +3,23 @@
     <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
   </PropertyGroup>
   <PropertyGroup Label="Package Versions">
-    <MicrosoftAspNetCoreAllPackageVersion>2.2.0-preview1-34350</MicrosoftAspNetCoreAllPackageVersion>
-    <MicrosoftAspNetCoreServerIISPackageVersion>2.2.0-preview1-34350</MicrosoftAspNetCoreServerIISPackageVersion>
-    <MicrosoftExtensionsLoggingConsolePackageVersion>2.2.0-preview1-34350</MicrosoftExtensionsLoggingConsolePackageVersion>
-    <MicrosoftExtensionsLoggingDebugPackageVersion>2.2.0-preview1-34350</MicrosoftExtensionsLoggingDebugPackageVersion>
-    <MicrosoftExtensionsLoggingPackageVersion>2.2.0-preview1-34350</MicrosoftExtensionsLoggingPackageVersion>
+    <InternalAspNetCoreSdkPackageVersion>2.2.0-preview1-17091</InternalAspNetCoreSdkPackageVersion>
+    <MicrosoftAspNetCoreAllPackageVersion>2.2.0-preview1-34825</MicrosoftAspNetCoreAllPackageVersion>
+    <MicrosoftAspNetCoreServerIISPackageVersion>2.2.0-preview1-34825</MicrosoftAspNetCoreServerIISPackageVersion>
+    <MicrosoftAspNetCoreTestingPackageVersion>2.1.0-preview1-27644</MicrosoftAspNetCoreTestingPackageVersion>
+    <MicrosoftExtensionsLoggingConsolePackageVersion>2.2.0-preview1-34825</MicrosoftExtensionsLoggingConsolePackageVersion>
+    <MicrosoftExtensionsLoggingDebugPackageVersion>2.2.0-preview1-34825</MicrosoftExtensionsLoggingDebugPackageVersion>
+    <MicrosoftExtensionsLoggingPackageVersion>2.2.0-preview1-34825</MicrosoftExtensionsLoggingPackageVersion>
     <MicrosoftExtensionsPlatformAbstractionsPackageVersion>1.1.0</MicrosoftExtensionsPlatformAbstractionsPackageVersion>
     <MicrosoftNETCoreApp22PackageVersion>2.2.0-preview1-26529-01</MicrosoftNETCoreApp22PackageVersion>
-    <MicrosoftNetHttpHeadersPackageVersion>2.2.0-preview1-34350</MicrosoftNetHttpHeadersPackageVersion>
-    <MicrosoftAspNetCoreTestingPackageVersion>2.1.0-preview1-27644</MicrosoftAspNetCoreTestingPackageVersion>
-    <MicrosoftNETTestSdkPackageVersion>15.3.0</MicrosoftNETTestSdkPackageVersion> 
+    <MicrosoftNetHttpHeadersPackageVersion>2.2.0-preview1-34825</MicrosoftNetHttpHeadersPackageVersion>
+    <MicrosoftNETTestSdkPackageVersion>15.3.0</MicrosoftNETTestSdkPackageVersion>
     <MicrosoftWebAdministrationPackageVersion>7.0.0</MicrosoftWebAdministrationPackageVersion>
     <SystemManagementAutomationDllPackageVersion>10.0.10586</SystemManagementAutomationDllPackageVersion>
     <SystemRuntimeCompilerServicesUnsafePackageVersion>4.6.0-preview1-26525-01</SystemRuntimeCompilerServicesUnsafePackageVersion>
     <XunitPackageVersion>2.3.1</XunitPackageVersion>
     <XunitRunnerVisualStudioPackageVersion>2.4.0</XunitRunnerVisualStudioPackageVersion>
   </PropertyGroup>
+  <Import Project="$(DotNetPackageVersionPropsPath)" Condition=" '$(DotNetPackageVersionPropsPath)' != '' " />
+
 </Project>
