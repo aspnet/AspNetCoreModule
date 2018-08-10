@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <RuntimeFrameworkVersion>$(MicrosoftNETCoreApp22PackageVersion)</RuntimeFrameworkVersion>
+    <NETCoreAppMaximumVersion>99.9</NETCoreAppMaximumVersion>
+    <AspNetCoreAllRuntimeFrameworkVersion>$(MicrosoftAspNetCoreAllPackageVersion)</AspNetCoreAllRuntimeFrameworkVersion>
+    <AspNetCoreModuleHostingModel>$(AspNetCoreModuleHostingModel)</AspNetCoreModuleHostingModel>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="$(MicrosoftAspNetCoreAllPackageVersion)" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.IIS" version="$(MicrosoftAspNetCoreServerIISPackageVersion)" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+</Project>
