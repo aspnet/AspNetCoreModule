@@ -449,6 +449,13 @@ namespace AspNetCoreModule.Test.WebSocketClient
         }
 
         #region Private Methods
+        public void TcpClose()
+        {
+            if (Connection.TcpClient.Connected)
+            {
+                Connection.TcpClient.Close();
+            }
+        }
 
         public Frame Send(byte[] outputData)
         {
