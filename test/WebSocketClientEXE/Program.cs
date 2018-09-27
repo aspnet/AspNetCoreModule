@@ -57,7 +57,7 @@ namespace WebSocketClientEXE
                         if (repeatcount <= 0 || consoleInput == "")
                         {
                             // 'q' to quit, 'close' or 'CloseFromServer' to disconnect, 'connect' to connect, 'repeat;<count>' to repeat the next command
-                            Console.WriteLine("Type any data to send ('q' to quit, 'close', 'CloseFromServer', 'connect', 'repeat;<number>', 'datavalue;<string>'");
+                            Console.WriteLine("Type any data to send ('q' to quit, 'close', 'tcpclose', 'CloseFromServer', 'connect', 'repeat;<number>', 'datavalue;<string>'");
                             consoleInput = Console.ReadLine();
 
                             string[] tempTokens = consoleInput.Split(new char[] { ';' });
@@ -116,7 +116,7 @@ namespace WebSocketClientEXE
                             continue;
                         }
 
-                        if (temp == "q" || temp == "close")
+                        if (temp == "q" || temp == "close" || temp == "tcpclose")
                         {
                             if (!websocketClient.IsOpened)
                             {
@@ -128,8 +128,15 @@ namespace WebSocketClientEXE
                             }
                             else
                             {
-                                frameReturned = websocketClient.Close();
-                                TestUtility.LogInformation(frameReturned.Content);
+                                if (temp == "tcpclose")
+                                {
+                                    websocketClient.TcpClose();
+                                }
+                                else
+                                {
+                                    frameReturned = websocketClient.Close();
+                                    TestUtility.LogInformation(frameReturned.Content);
+                                }
                             }
 
                             if (temp == "q")
